@@ -1,0 +1,4 @@
+﻿  SmashCharacter.cpp
+c:\users\ian\documents\github\boulder\boulder\platformerlibrary\drawable.h(45): warning C4018: '<': signed/unsigned mismatch
+  Boulder.vcxproj -> C:\Users\Ian\Documents\GitHub\Boulder\Debug\Boulder.exe
+  Boulder.vcxproj -> C:\Users\Ian\Documents\GitHub\Boulder\Debug\Boulder.pdb (Full PDB)
