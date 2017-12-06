@@ -61,6 +61,10 @@ private:
 	std::vector<AttackFrame*> MakeMoveForwardSmash();
 	std::vector<AttackFrame*> MakeMoveDownAir();
 	std::vector<AttackFrame*> MakeMoveForwardAir();
+	std::vector<AttackFrame*> MakeMoveBackAir();
+	std::vector<AttackFrame*> MakeMoveUpAir();
+	std::vector<AttackFrame*> MakeMoveDownSmash();
+	std::vector<AttackFrame*> MakeMoveNeutralAir();
 public:
 	Attack(b2Body* body, int index, int move_type);
 	void Update(sf::Uint64 curr_frame, bool facing_right);
@@ -71,6 +75,7 @@ public:
 	int GetHitStunFrames();
 	std::vector<AttackFrame*> Attack::GetAttackFrames(int move);
 	bool CanHitTarget(string);
+	void StopAttack();
 
 	enum Moves {
 		JAB = 0,

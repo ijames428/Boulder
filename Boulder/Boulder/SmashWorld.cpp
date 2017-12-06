@@ -3,9 +3,10 @@
 using namespace std;
 #include "stdafx.h"
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include "SmashWorld.h"
 #include "Constants.h"
-#include "PlatformerLibrary\Drawable.h"
 
 SmashWorld::SmashWorld() {
 }
@@ -19,48 +20,99 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 	gravity = new b2Vec2(0.0f, 30.0f);
 	world = new b2World(*gravity);
 
-	groundBodyDef.position.Set(10.0f, 10.0f);
-	groundBody = world->CreateBody(&groundBodyDef);
-	groundBox.SetAsBox(10.0f, 2.0f);
-
-	fixtureDef.shape = &groundBox;
-	fixtureDef.density = 0.0f;
-	fixtureDef.friction = 0.9f;
-	fixtureDef.m_color = new b2Color(1.0f, 1.0f, 0.0f, 1.0f);
-	fixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLATFORM;
-
-	groundBody->CreateFixture(&fixtureDef);
-
-	//bodyDef.type = b2_dynamicBody;
-	//bodyDef.position.Set(50.0f, 0.0f);
-	//body = world->CreateBody(&bodyDef);
-
-	//dynamicBox.SetAsBox(1.0f, 1.0f);
-	//fixtureDef.shape = &dynamicBox;
-
-	//fixtureDef.density = 1.0f;
-	//fixtureDef.friction = 0.3f;
-
-	//body->CreateFixture(&fixtureDef);
+	ParseWorld("C:\\Users\\Ian\\Documents\\GitHub\\Boulder\\Boulder\\Boulder\\Maps\\testmap00");
+	BuildWorld();
 
 	timeStep = 1.0f / 60.0f;
 	velocityIterations = 6;
 	positionIterations = 2;
 
-	test_drawable_rb = new Box2DRigidBody(window, sf::Vector2f(camera->viewport_dimensions.x / 2.0f, camera->viewport_dimensions.y / 2.0f), sf::Vector2f(0.3f, 1.0f), true);
-	test_drawable_rb->SetFlags(b2Draw::e_shapeBit);
+	test_drawable = new Drawable(window, camera);
+	test_drawable->SetFlags(b2Draw::e_shapeBit);
 	
-	world->SetDebugDraw(test_drawable_rb);
-
-	PlayerOne = new SmashCharacter(0, render_window, sf::Vector2f(5.0f, 7.0f), sf::Vector2f(0.3f, 1.0f));
-	//PlayerOne->SetPlayerIndex(0);
-	player_one_input = new InputHandler(PlayerOne);
-
-	PlayerTwo = new SmashCharacter(1, render_window, sf::Vector2f(7.0f, 7.0f), sf::Vector2f(0.3f, 1.0f));
-	//PlayerOne->SetPlayerIndex(1);
-	player_two_input = new InputHandler(PlayerTwo);
+	world->SetDebugDraw(test_drawable);
 
 	world->SetContactListener(&myContactListenerInstance);
+}
+
+void SmashWorld::ParseWorld(string file_path) {
+	rawWorldData = "";
+	string line;
+	ifstream myfile(file_path);
+
+	if (myfile.is_open()) {
+		while (getline(myfile, line)) {
+			rawWorldData += line;
+		}
+
+		myfile.close();
+	} else {
+		cout << "Unable to open file";
+	}
+
+	Json::Reader reader;
+	reader.parse(rawWorldData, jsonWorldData);
+}
+
+void SmashWorld::BuildWorld() {
+	float x = 0.0f;
+	float y = 0.0f;
+	float width = 0.0f;
+	float height = 0.0f;
+	std::string::size_type sz;
+
+	float scalingRatio = 10.0f;
+
+	x = std::stof(jsonWorldData["player"]["x"].asString(), &sz) / scalingRatio;
+	y = std::stof(jsonWorldData["player"]["y"].asString(), &sz) / scalingRatio;
+	width = std::stof(jsonWorldData["player"]["width"].asString(), &sz) / (scalingRatio * 2.0f);
+	height = std::stof(jsonWorldData["player"]["height"].asString(), &sz) / (scalingRatio * 2.0f);
+
+	x += width;
+	y += height;
+
+	PlayerOne = new SmashCharacter(0, render_window, sf::Vector2f(x, y), sf::Vector2f(0.3f, 1.0f));
+	PlayerOne->SetName(jsonWorldData["player"]["name"].asString());
+	player_one_input = new InputHandler(PlayerOne);
+
+	sf::Vector2f camera_position = camera->viewport_position;
+	camera_position.x += (PlayerOne->GetBody()->GetPosition().x - camera->viewport_dimensions.x / 2.0f / 40.0f - camera_position.x);
+	camera_position.y += (PlayerOne->GetBody()->GetPosition().y - camera->viewport_dimensions.y / 2.0f / 40.0f - camera_position.y);
+	camera->viewport_position = camera_position;
+
+	for (int i = 0; i < (int)jsonWorldData["rectangles"].size(); i++) {
+		x = std::stof(jsonWorldData["rectangles"][i]["x"].asString(), &sz) / scalingRatio;
+		y = std::stof(jsonWorldData["rectangles"][i]["y"].asString(), &sz) / scalingRatio;
+		width = std::stof(jsonWorldData["rectangles"][i]["width"].asString(), &sz) / (scalingRatio * 2.0f);
+		height = std::stof(jsonWorldData["rectangles"][i]["height"].asString(), &sz) / (scalingRatio * 2.0f);
+
+		x += width;
+		y += height;
+
+		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+	}
+
+	for (int i = 0; i < (int)jsonWorldData["triangles"].size(); i++) {
+		std::vector<string> vects;
+		vects.push_back(jsonWorldData["triangles"][i]["points"][0].asString());
+		vects.push_back(jsonWorldData["triangles"][i]["points"][1].asString());
+		vects.push_back(jsonWorldData["triangles"][i]["points"][2].asString());
+
+		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, vects));
+	}
+
+	for (int i = 0; i < (int)jsonWorldData["doors"].size(); i++) {
+		x = std::stof(jsonWorldData["doors"][i]["x"].asString(), &sz) / scalingRatio;
+		y = std::stof(jsonWorldData["doors"][i]["y"].asString(), &sz) / scalingRatio;
+		width = std::stof(jsonWorldData["doors"][i]["width"].asString(), &sz) / (scalingRatio * 2.0f);
+		height = std::stof(jsonWorldData["doors"][i]["height"].asString(), &sz) / (scalingRatio * 2.0f);
+
+		x += width;
+		y += height;
+
+		doors.push_back(new Door(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+		doors[i]->AddActivator(jsonWorldData["doors"][i]["activator"].asString());
+	}
 }
 
 void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
@@ -70,16 +122,24 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 	world->Step(timeStep, velocityIterations, positionIterations);
 
+	float lerp = 0.01f;
+	sf::Vector2f camera_position = camera->viewport_position;
+
+	camera_position.x += (PlayerOne->GetBody()->GetPosition().x - camera->viewport_dimensions.x / 2.0f / 40.0f - camera_position.x) * lerp * frame_delta;
+	camera_position.y += (PlayerOne->GetBody()->GetPosition().y - camera->viewport_dimensions.y / 2.0f / 40.0f - camera_position.y) * lerp * frame_delta;
+
+	camera->viewport_position = camera_position;
+
 	world->DrawDebugData();
 
 	player_one_input->Update();
-	player_two_input->Update();
 
 	PlayerOne->Update(current_frame, frame_delta);
-	PlayerTwo->Update(current_frame, frame_delta);
-
 	PlayerOne->Draw(camera->viewport_position);
-	PlayerTwo->Draw(camera->viewport_position);
+
+	for (int i = 0; i < (int)doors.size(); i++) {
+		doors[i]->Update(current_frame, frame_delta);
+	}
 
 	render_window->display();
 }

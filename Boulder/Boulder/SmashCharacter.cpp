@@ -13,7 +13,7 @@ SmashCharacter::SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vec
 	SetEntityType(Constants::ENTITY_TYPE_PLAYER_CHARACTER);
 	player_index = player_idx;
 
-	hit_points = max_hit_points = 10;
+	hit_points = max_hit_points = 100;
 	can_take_input = true;
 
 	speed = 5.0f;
@@ -28,16 +28,6 @@ SmashCharacter::SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vec
 	bodyDef.type = b2_dynamicBody;
 	bodyDef.position.Set(position.x, position.y);
 	playerBody = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
-
-	//b2CircleShape topCircleShape;
-	//b2CircleShape botCircleShape;
-	//b2PolygonShape centerBoxShape;
-	//b2FixtureDef topCircleFixtureDef;
-	//b2FixtureDef botCircleFixtureDef;
-	//b2FixtureDef centerBoxFixtureDef;
-	//b2Fixture* topCircleFixture;
-	//b2Fixture* botCircleFixture;
-	//b2Fixture* centerBoxFixture;
 
 	centerBoxShape.SetAsBox(dimensions.x / 4.0f - 0.01f, 0.5f);
 	topCircleShape.m_p.Set(0, -0.5f); //position, relative to body position
@@ -78,11 +68,6 @@ SmashCharacter::SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vec
 	groundCheckFixtureDef.isSensor = true;
 	groundCheckFixtureDef.m_color = new b2Color(1.0f, 0.0f, 1.0f, 1.0f);
 
-	//if (player_index == 0) {
-	//	groundCheckFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->GROUND_CHECK_ONE;
-	//} else {
-	//	groundCheckFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->GROUND_CHECK_TWO;
-	//}
 	groundCheckFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->GROUND_CHECK;
 	groundCheckFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM;
 
@@ -104,8 +89,14 @@ SmashCharacter::SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vec
 	attacks[Attack::URIENS_SUPER] = new Attack(playerBody, player_index, Attack::URIENS_SUPER);
 
 	hit_stun_timer = new StatusTimer(1);
+	jump_input_buffer = new StatusTimer(6);
+	advanced_input = new AdvancedInput(30);
 
-	weapon = new Weapon(window, position, sf::Vector2f(0.25f, 0.25f), true, player_index, playerBody);
+	weapon = new Weapon(window, position, sf::Vector2f(0.25f, 0.25f), true, player_index, playerBody); 
+	
+	healthBarRect = new sf::RectangleShape(sf::Vector2f(5, 800));
+	healthBarRect->setPosition(10.0f, 10.0f);
+	healthBarRect->setFillColor(sf::Color::Green);
 }
 
 void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
@@ -140,6 +131,7 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 }
 
 void SmashCharacter::Draw(sf::Vector2f camera_position) {
+	render_window->draw(*healthBarRect);
 }
 
 void SmashCharacter::Move(float horizontal, float vertical) {
@@ -175,6 +167,12 @@ void SmashCharacter::Jump() {
 void SmashCharacter::Land() {
 	SetInTheAir(false);
 	has_double_jump = true;
+	if (IsAnAttackActive()) {
+		GetActiveAttack()->StopAttack();
+	}
+	if (jump_input_buffer->IsActive()) {
+		Jump();
+	}
 }
 
 void SmashCharacter::DashPunch() {

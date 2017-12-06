@@ -34,6 +34,9 @@
     <Filter Include="Shadhorimn2">
       <UniqueIdentifier>{5fb732f0-6b61-4fd9-bc8f-540fb1e99860}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GameLib\Json">
+      <UniqueIdentifier>{115aee1c-7b96-4646-ae5e-c19edf5419b1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -254,6 +257,48 @@
     <ClInclude Include="Weapon.h">
       <Filter>Shadhorimn2</Filter>
     </ClInclude>
+    <ClInclude Include="AdvancedInput.h">
+      <Filter>PlatformerLib</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\json.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\json_tool.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\reader.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\value.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\version.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\writer.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\allocator.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\assertions.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\autolink.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\config.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\features.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLibrary\Json\forwards.h">
+      <Filter>GameLib\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="Door.h">
+      <Filter>PlatformerLib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameLibrary\AssetManager.cpp">
@@ -458,6 +503,21 @@
     </ClCompile>
     <ClCompile Include="Weapon.cpp">
       <Filter>Shadhorimn2</Filter>
+    </ClCompile>
+    <ClCompile Include="AdvancedInput.cpp">
+      <Filter>PlatformerLib</Filter>
+    </ClCompile>
+    <ClCompile Include="GameLibrary\Json\json_reader.cpp">
+      <Filter>GameLib\Json</Filter>
+    </ClCompile>
+    <ClCompile Include="GameLibrary\Json\json_value.cpp">
+      <Filter>GameLib\Json</Filter>
+    </ClCompile>
+    <ClCompile Include="GameLibrary\Json\json_writer.cpp">
+      <Filter>GameLib\Json</Filter>
+    </ClCompile>
+    <ClCompile Include="Door.cpp">
+      <Filter>PlatformerLib</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

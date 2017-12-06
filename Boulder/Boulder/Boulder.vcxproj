@@ -151,13 +151,27 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AdvancedInput.h" />
     <ClInclude Include="Attack.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="ControllableCharacter.h" />
     <ClInclude Include="Creature.h" />
+    <ClInclude Include="Door.h" />
     <ClInclude Include="GameLibrary\AssetManager.h" />
     <ClInclude Include="GameLibrary\Camera.h" />
     <ClInclude Include="GameLibrary\InputHandler.h" />
+    <ClInclude Include="GameLibrary\Json\allocator.h" />
+    <ClInclude Include="GameLibrary\Json\assertions.h" />
+    <ClInclude Include="GameLibrary\Json\autolink.h" />
+    <ClInclude Include="GameLibrary\Json\config.h" />
+    <ClInclude Include="GameLibrary\Json\features.h" />
+    <ClInclude Include="GameLibrary\Json\forwards.h" />
+    <ClInclude Include="GameLibrary\Json\json.h" />
+    <ClInclude Include="GameLibrary\Json\json_tool.h" />
+    <ClInclude Include="GameLibrary\Json\reader.h" />
+    <ClInclude Include="GameLibrary\Json\value.h" />
+    <ClInclude Include="GameLibrary\Json\version.h" />
+    <ClInclude Include="GameLibrary\Json\writer.h" />
     <ClInclude Include="GameLibrary\Settings.h" />
     <ClInclude Include="GameLibrary\Singleton.h" />
     <ClInclude Include="GameLibrary\SpriteAnimation.h" />
@@ -226,11 +240,16 @@
     <ClInclude Include="World.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AdvancedInput.cpp" />
     <ClCompile Include="Attack.cpp" />
     <ClCompile Include="Creature.cpp" />
+    <ClCompile Include="Door.cpp" />
     <ClCompile Include="GameLibrary\AssetManager.cpp" />
     <ClCompile Include="GameLibrary\Camera.cpp" />
     <ClCompile Include="GameLibrary\InputHandler.cpp" />
+    <ClCompile Include="GameLibrary\Json\json_reader.cpp" />
+    <ClCompile Include="GameLibrary\Json\json_value.cpp" />
+    <ClCompile Include="GameLibrary\Json\json_writer.cpp" />
     <ClCompile Include="GameLibrary\Settings.cpp" />
     <ClCompile Include="GameLibrary\SpriteAnimation.cpp" />
     <ClCompile Include="main.cpp" />

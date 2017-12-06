@@ -6,7 +6,7 @@ using namespace std;
 #include "Weapon.h"  
 #include "SmashWorld.h"
 
-Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, int player_idx, b2Body* owners_body) : Box2DRigidBody(window, position, dimensions, subject_to_gravity) {
+Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, int player_idx, b2Body* owners_body) : Box2DRigidBody(window, subject_to_gravity) {
 	player_index = player_idx;
 
 	weaponBodyDef.type = b2_dynamicBody;
@@ -21,9 +21,9 @@ Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dim
 	weaponFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->WEAPON;
 
 	if (player_index == 0) {
-		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->PLAYER_TWO;
+		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->DOOR | Singleton<SmashWorld>::Get()->PLAYER_TWO;
 	} else {
-		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->PLAYER_ONE;
+		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->DOOR | Singleton<SmashWorld>::Get()->PLAYER_ONE;
 	}
 
 	weaponFixture = weaponBody->CreateFixture(&weaponFixtureDef);
@@ -34,34 +34,40 @@ Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dim
 
 	stuck = false;
 	recalling = false;
+	held_by_owner = true;
+
+	weaponBody->SetGravityScale(0.0f);
 }
 
 void Weapon::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Box2DRigidBody::Update(curr_frame, delta_time);
 
-	if (stuck) {
+	if (held_by_owner) {
+		weaponBody->SetTransform(b2Vec2(ownersBody->GetPosition().x, ownersBody->GetPosition().y), 0.0f);
+	} else if (stuck) {
 		weaponBody->SetTransform(b2Vec2(stuck_fixture->GetBody()->GetPosition().x - stuck_position_offset.x, stuck_fixture->GetBody()->GetPosition().y - stuck_position_offset.y), stuck_angle);
 	} else if (recalling) {
 		b2Vec2 recall_velocity = b2Vec2(ownersBody->GetPosition().x - weaponBody->GetPosition().x, ownersBody->GetPosition().y - weaponBody->GetPosition().y);
 
 		if (recall_velocity.Length() < 0.25f) {
 			recalling = false;
-			weaponBody->SetGravityScale(gravityScale);
+			held_by_owner = true;
+			stuck_to_door = false;
+			weaponBody->SetGravityScale(0.0f);
 			weaponBody->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
 		} else {
 			recall_velocity.Normalize();
 			float32 speed = 15.0f;
 			weaponBody->SetLinearVelocity(b2Vec2(recall_velocity.x * speed, recall_velocity.y * speed));
 		}
-		
-		cout << "" << weaponBody->GetLinearVelocity().x << ", " << weaponBody->GetLinearVelocity().y << "\n";
 	}
 }
 
 void Weapon::Throw(b2Vec2 vector, b2Vec2 starting_position) {
 	stuck = false;
+	held_by_owner = false;
 	weaponBody->SetGravityScale(gravityScale);
-	weaponBody->SetTransform(starting_position, rand() % 360);
+	weaponBody->SetTransform(starting_position, (float)(rand() % 360));
 	weaponBody->SetAngularVelocity(20.0f);
 	weaponBody->SetLinearVelocity(vector);
 	weaponBody->SetAwake(true);
@@ -75,6 +81,27 @@ void Weapon::Stick(b2Fixture* stuck_fix, float angle) {
 	weaponBody->SetAwake(false);
 }
 
+void Weapon::Collision(b2Fixture* collider_fixture, float angle) {
+	if (!held_by_owner) {
+		if (collider_fixture->GetFilterData().categoryBits == Singleton<SmashWorld>::Get()->DOOR && !stuck_to_door) {
+			Door* entity = static_cast<Door*>(collider_fixture->GetBody()->GetUserData());
+			SmashCharacter* owner = static_cast<SmashCharacter*>(ownersBody->GetUserData());
+			entity->TryToActivate(owner->GetName());
+			Stick(collider_fixture, angle);
+			stuck_to_door = true;
+		} else if (recalling) {
+			if ((player_index == 0 && collider_fixture->GetFilterData().categoryBits == 0x0002) ||
+				(player_index == 1 && collider_fixture->GetFilterData().categoryBits == 0x0001)) {
+				SmashCharacter* entity = static_cast<SmashCharacter*>(collider_fixture->GetBody()->GetUserData());
+				entity->TakeDamage(2, sf::Vector2f(-weaponBody->GetLinearVelocity().y / 2.0f, abs(weaponBody->GetLinearVelocity().x) / -2.0f), 10);
+			}
+		}
+		else {
+			Stick(collider_fixture, angle);
+		}
+	}
+}
+
 void Weapon::Recall() {
 	stuck = false;
 	recalling = true;
@@ -84,6 +111,11 @@ void Weapon::Recall() {
 void Weapon::TeleportedTo() {
 	stuck = false;
 	recalling = false;
+	held_by_owner = true;
 	weaponBody->SetGravityScale(0.0f);
 	weaponBody->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+}
+
+bool Weapon::Throwable() {
+	return held_by_owner;
 }

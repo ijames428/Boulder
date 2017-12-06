@@ -19,3 +19,7 @@ bool StatusTimer::IsActive() {
 void StatusTimer::Start() {
 	starting_frame = Singleton<SmashWorld>::Get()->GetCurrentFrame();
 }
+
+void StatusTimer::Stop() {
+	starting_frame = 0;
+}

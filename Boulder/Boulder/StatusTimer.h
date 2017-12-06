@@ -12,6 +12,7 @@ public:
 	StatusTimer(sf::Int32 dur_in_frames);
 	bool IsActive();
 	void Start();
+	void Stop();
 };
 
 #endif

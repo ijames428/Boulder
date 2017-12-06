@@ -5,7 +5,7 @@
 
 using namespace std;
 #include <SFML/Audio.hpp>
-//#include <SFML/Graphics.hpp>
+#include <SFML/Graphics.hpp>
 //#include "..\PlatformerLibrary\RigidBody.h"
 #include "GameLibrary\SpriteAnimation.h"
 #include "GameLibrary\Settings.h"
@@ -18,24 +18,11 @@ using namespace std;
 #include "Attack.h"
 #include "Weapon.h"
 #include "StatusTimer.h"
+#include "AdvancedInput.h"
 
 class SmashCharacter : public Creature, public ControllableCharacter {
 private:
 	Attack* attacks[Attack::Moves::MOVES_COUNT];
-	//Attack* jab;
-	//Attack* up_smash;
-	//Attack* down_smash;
-	//Attack* forward_smash;
-	//Attack* up_air;
-	//Attack* down_air;
-	//Attack* forward_air;
-	//Attack* back_air;
-	//Attack* neutral_air;
-	//Attack* dash_attack;
-	//Attack* dash_punch;
-	//Attack* throw_weapon;
-	//Attack* teleport_to_weapon;
-	//Attack* uriens_super;
 	int player_index;
 	bool can_take_input;
 	int max_hit_points;
@@ -52,16 +39,21 @@ private:
 	b2Fixture* botCircleFixture;
 	b2Fixture* centerBoxFixture;
 	StatusTimer* hit_stun_timer;
+	StatusTimer* jump_input_buffer;
 	b2PolygonShape groundCheckShape;
 	b2FixtureDef groundCheckFixtureDef;
 	Weapon* weapon;
 	bool has_double_jump;
+	AdvancedInput* advanced_input;
 	void Move(float horizontal, float vertical);
 	void Jump();
 	void UseAttack(int move_type);
 	void DashPunch();
 	void ThrowWeapon();
 	void TeleportToWeapon();
+	sf::RectangleShape* healthBarRect;
+	float healthBarStartingScaleY;
+	string name = "";
 public:
 	SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
@@ -71,6 +63,12 @@ public:
 	bool IsAnAttackActive();
 	void Land();
 
+	string GetName() {
+		return name;
+	};
+	void SetName(string new_name) {
+		name = new_name;
+	};
 	b2Body* GetBody() {
 		return playerBody;
 	}
@@ -88,6 +86,8 @@ public:
 	};
 	
 	void SmashCharacter::HandleLeftStickInput(float horizontal, float vertical) {
+		advanced_input->AddStickInput(horizontal, vertical);
+
 		Move(horizontal, vertical);
 	}
 
@@ -99,54 +99,58 @@ public:
 		if (IsInTheAir()) {
 			if (vertical < -90.0f) {
 				UseAttack(Attack::UP_AIR);
-				cout << "UP_AIR\n";
+				//cout << "UP_AIR\n";
 			} else if (vertical > 90.0f) {
 				UseAttack(Attack::DOWN_AIR);
-				cout << "DOWN_AIR\n";
+				//cout << "DOWN_AIR\n";
 			} else if (horizontal < -90.0f) {
 				if (IsFacingRight()) {
 					UseAttack(Attack::BACK_AIR);
-					cout << "BACK_AIR\n";
+					//cout << "BACK_AIR\n";
 				} else {
 					UseAttack(Attack::FORWARD_AIR);
-					cout << "FORWARD_AIR\n";
+					//cout << "FORWARD_AIR\n";
 				}
 			} else if (horizontal > 90.0f) {
 				if (IsFacingRight()) {
 					UseAttack(Attack::FORWARD_AIR);
-					cout << "FORWARD_AIR\n";
+					//cout << "FORWARD_AIR\n";
 				} else {
 					UseAttack(Attack::BACK_AIR);
-					cout << "BACK_AIR\n";
+					//cout << "BACK_AIR\n";
 				}
 			}
 		} else {
 			if (vertical < -90.0f) {
 				UseAttack(Attack::UP_SMASH);
-				cout << "UP_SMASH\n";
+				//cout << "UP_SMASH\n";
 			} else if (vertical > 90.0f) {
 				UseAttack(Attack::DOWN_SMASH);
-				cout << "DOWN_SMASH\n";
+				//cout << "DOWN_SMASH\n";
 			}else if (horizontal < -90.0f) {
 				if (IsFacingRight()) {
 					SetFacingRight(false);
 				}
 				attacks[Attack::FORWARD_SMASH]->Update(current_frame, IsFacingRight());
 				UseAttack(Attack::FORWARD_SMASH);
-				cout << "FORWARD_SMASH\n";
+				//cout << "FORWARD_SMASH\n";
 			} else if (horizontal > 90.0f) {
 				if (!IsFacingRight()) {
 					SetFacingRight(true);
 				}
 				attacks[Attack::FORWARD_SMASH]->Update(current_frame, IsFacingRight());
 				UseAttack(Attack::FORWARD_SMASH);
-				cout << "FORWARD_SMASH\n";
+				//cout << "FORWARD_SMASH\n";
 			}
 		}
 	}
 
 	void SmashCharacter::HandleButtonAPress() {
-		Jump();
+		if (IsInTheAir() && !has_double_jump) {
+			jump_input_buffer->Start();
+		} else {
+			Jump();
+		}
 	}
 
 	void SmashCharacter::HandleButtonARelease() {
@@ -160,22 +164,32 @@ public:
 	}
 
 	void SmashCharacter::HandleButtonXPress() {
-		UseAttack(Attack::JAB);
-		cout << "JAB\n";
+		//if (IsInTheAir()) {
+		//	UseAttack(Attack::NEUTRAL_AIR);
+		//} else {
+		//	UseAttack(Attack::JAB);
+		//}
+		if (weapon->Throwable()) {
+			ThrowWeapon();
+		}
+		//cout << "JAB\n";
 	}
 
 	void SmashCharacter::HandleButtonXRelease() {
 	}
 
 	void SmashCharacter::HandleButtonYPress() {
-		ThrowWeapon();
+		//if (advanced_input->DidPlayerDoQuarterCircleForward(IsFacingRight())) {
+		if (!weapon->Throwable()) {
+			TeleportToWeapon();
+		}
 	}
 
 	void SmashCharacter::HandleButtonYRelease() {
 	}
 
 	void SmashCharacter::HandleButtonRightBumperPress() {
-		TeleportToWeapon();
+		//TeleportToWeapon();
 	}
 
 	void SmashCharacter::HandleButtonRightBumperRelease() {

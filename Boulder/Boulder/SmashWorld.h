@@ -9,9 +9,19 @@ using namespace std;
 #include "SmashCharacter.h"
 #include "Weapon.h"
 #include "Attack.h"
+#include "Door.h"
+#include "GameLibrary\Json\json.h"
+#include "PlatformerLibrary\Drawable.h"
 
 class MyContactListener : public b2ContactListener
 {
+	// PLAYER_ONE = 0x0001,
+	// PLAYER_TWO = 0x0002,
+	// GROUND_CHECK = 0x0004,
+	// PLATFORM = 0x0008,
+	// HIT_BOX = 0x0010,
+	// WEAPON = 0x0020,
+	// DOOR = 0x0040
 	int contact_count = 0;
 
 	void BeginContact(b2Contact* contact) {
@@ -27,15 +37,15 @@ class MyContactListener : public b2ContactListener
 			entityB->Land();
 		}
 
-		if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
-			if (fixtureA->GetFilterData().categoryBits == 0x0020) {
-				Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
-				weapon->Stick(fixtureB, weapon->GetBody()->GetAngle());
-			} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
-				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
-				weapon->Stick(fixtureA, weapon->GetBody()->GetAngle());
-			}
-		}
+		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
+		//	if (fixtureA->GetFilterData().categoryBits == 0x0020) {
+		//		Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
+		//		weapon->Collision(fixtureB, weapon->GetBody()->GetAngle());
+		//	} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
+		//		Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+		//		weapon->Collision(fixtureA, weapon->GetBody()->GetAngle());
+		//	}
+		//}
 	}
 
 	void EndContact(b2Contact* contact) {
@@ -76,34 +86,50 @@ class MyContactListener : public b2ContactListener
 
 			return;
 		}
+
+		if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
+			if (fixtureA->GetFilterData().categoryBits == 0x0020) {
+				Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
+				weapon->Collision(fixtureB, weapon->GetBody()->GetAngle());
+			}
+			else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
+				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+				weapon->Collision(fixtureA, weapon->GetBody()->GetAngle());
+			}
+		}
 	}
 };
 
 class SmashWorld {
 private:
+	struct DeserializedRectangle {
+		string name;
+		float x;
+		float y;
+		float width;
+		float height;
+	};
+
 	sf::Int64 current_frame;
 	sf::RenderWindow* render_window;
 	Camera* camera;
-	Box2DRigidBody* test_drawable_rb;
+	Drawable* test_drawable;
 	b2Vec2* gravity;
 	b2World* world;
-	b2BodyDef groundBodyDef;
-	b2Body* groundBody;
-	b2PolygonShape groundBox;
-	b2BodyDef bodyDef;
-	b2Body* body;
-	b2PolygonShape dynamicBox;
-	b2FixtureDef fixtureDef;
 	float32 timeStep;
 	int32 velocityIterations;
 	int32 positionIterations;
 	SmashCharacter* PlayerOne;
 	InputHandler* player_one_input;
-	SmashCharacter* PlayerTwo;
-	InputHandler* player_two_input;
 	bool exit_multiplayer;
 	void ExitMultiplayer();
 	MyContactListener myContactListenerInstance;
+	void ParseWorld(string file_path);
+	void BuildWorld();
+	Json::Value jsonWorldData;
+	string rawWorldData;
+	std::vector<Box2DRigidBody*> box2dRigidBodies;
+	std::vector<Door*> doors;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam);
@@ -118,7 +144,7 @@ public:
 		GROUND_CHECK = 0x0004,
 		PLATFORM = 0x0008,
 		HIT_BOX = 0x0010,
-		WEAPON = 0x0020
-		//RADAR_SENSOR = 0x0040,
+		WEAPON = 0x0020,
+		DOOR = 0x0040
 	};
 }; 

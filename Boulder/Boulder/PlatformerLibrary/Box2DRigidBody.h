@@ -8,10 +8,17 @@ using namespace std;
 #include <SFML/Graphics.hpp>
 #include "Box2D\Common\b2Draw.h"
 #include "Drawable.h"
+#include "Box2D\Box2D.h"
 
-class Box2DRigidBody : public Drawable {
+class Box2DRigidBody {
 protected:
 	sf::Int64 current_frame;
+	b2BodyDef bodyDef;
+	b2PolygonShape polygon;
+	b2FixtureDef fixtureDef;
+	b2Vec2 points[3];
+	b2Body* body;
+	b2Fixture *fixture;
 private:
 	int entity_type;
 	sf::Vector2f current_position;
@@ -33,6 +40,8 @@ public:
 	void LockFacingDirection();
 	void UnlockFacingDirection();
 	bool IsFacingDirectionLocked();
+	Box2DRigidBody(sf::RenderWindow *window, bool subject_to_gravity = false, bool subject_to_collision = true);
+	Box2DRigidBody(sf::RenderWindow *window, vector<string> json_points, bool subject_to_gravity = false, bool subject_to_collision = true);
 	Box2DRigidBody(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity = false, bool subject_to_collision = true);
 	virtual void Update(sf::Int64 curr_time, sf::Int64 delta_time);
 	static float GetDistanceBetweenTwoPoints(sf::Vector2f point_a, sf::Vector2f point_b);

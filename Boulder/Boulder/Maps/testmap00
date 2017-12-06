@@ -1,0 +1,1 @@
+{"player":{"x":800.0,"y":500.0,"width":10.0,"height":10.0,"type":"Player","name":"Player 0"},"rectangles":[{"x":644.0,"y":524.0,"width":345.0,"height":9.0,"type":"Rectangle","name":"Rectangle 1"}],"triangles":[],"doors":[{"activator":"Player 0","x":774.0,"y":504.0,"width":4.0,"height":20.0,"type":"Door","name":"Door 2"}]}

@@ -6,7 +6,7 @@ using namespace std;
 #include "Creature.h"
 #include "Constants.h"
 
-Creature::Creature(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) : Box2DRigidBody(window, position, dimensions, subject_to_gravity) {
+Creature::Creature(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) : Box2DRigidBody(window, subject_to_gravity) {
 	SetEntityType(Constants::ENTITY_TYPE_CREATURE);
 	hit_points = 1;
 	SetFacingRightWhenHit(false);

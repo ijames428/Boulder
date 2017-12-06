@@ -105,8 +105,7 @@ void World::Init(sf::RenderWindow* window, Camera* cam, PlayerCharacter* charact
 
 	if (!door_opening_buffer.loadFromFile("Sound/door_opening.wav")) {
 		throw exception("Sound file not found");
-	}
-	else {
+	} else {
 		door_opening_volume = 0.0f;
 		door_opening_sound.setBuffer(door_opening_buffer);
 		door_opening_sound.setVolume(door_opening_volume * (Singleton<Settings>().Get()->effects_volume / 100.0f));

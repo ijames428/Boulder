@@ -51,9 +51,6 @@ float window_height;
 sf::RenderWindow* window;
 Camera* camera;
 
-//InputHandler* input_handler;
-//PlayerCharacter* main_character;
-
 sf::Music background_music;
 sf::Music combat_music;
 
@@ -127,7 +124,7 @@ int main()
 #endif
 	combat_music.setLoop(true);
 
-	camera = new Camera(sf::Vector2f(viewport_width, viewport_height), sf::Vector2f(viewport_width, viewport_height));
+	camera = new Camera(sf::Vector2f(0, 0), sf::Vector2f(viewport_width, viewport_height));
 	window = new sf::RenderWindow(sf::VideoMode::VideoMode((int)window_width, (int)window_height), "Shadhorimn");// , sf::Style::Fullscreen);
 	//sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode::getDesktopMode(), "Shadhorimn");// , sf::Style::Fullscreen);
 	//main_character = new PlayerCharacter(window, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(40.0f, 80.0f), true);
@@ -147,10 +144,10 @@ int main()
 	if (!ringbearer_font.loadFromFile("Images/RingbearerFont.ttf"))
 		return -1;
 
-	title_text = sf::Text("Shadhorimn", ringbearer_font, 90);
+	title_text = sf::Text("Shadhorimn 2", ringbearer_font, 90);
 	title_text.setPosition(viewport_width / 2.0f - 260.0f, viewport_height / 2.0f - 200.0f);
 
-	start_text = sf::Text("Press A to PvE\nPress Start to PvP", ringbearer_font);
+	start_text = sf::Text("Press A/Start to Begin", ringbearer_font);
 	start_text.setPosition(viewport_width / 2.0f - 120.0f, viewport_height / 2.0f - 60.0f);
 
 	credits_text = sf::Text("Made by Ian James\n\n\n\n\nThank you for playing Shadhorimn", ringbearer_font);
@@ -173,84 +170,19 @@ int main()
 				UpdateGameStateLogos();
 			} else if (GameState == GAME_STATE_START_MENU) {
 				UpdateGameStateStartMenu();
-			} else if (GameState == GAME_STATE_NEW_MULTIPLAYER) {
-				GameState = GAME_STATE_INIT_MULTIPLAYER;
-			} else if (GameState == GAME_STATE_INIT_MULTIPLAYER) {
+			} else if (GameState == GAME_STATE_NEW_SINGLE_PLAYER) {
+				GameState = GAME_STATE_INIT_SINGLE_PLAYER;
+			} else if (GameState == GAME_STATE_INIT_SINGLE_PLAYER) {
 				window->clear();
 				UpdateGameStateLoadingScreen();
 				Singleton<SmashWorld>::Get()->Init(window, camera);
-				GameState = GAME_STATE_IN_MULTIPLAYER;
-				//input_handler->EatInputsForNumberOfFrames(1);
-			} else if (GameState == GAME_STATE_IN_MULTIPLAYER) {
+				GameState = GAME_STATE_IN_SINGLE_PLAYER;
+			} else if (GameState == GAME_STATE_IN_SINGLE_PLAYER) {
 				Singleton<SmashWorld>::Get()->Update(current_frame, frame_delta / 1000);
 
 				if (Singleton<SmashWorld>::Get()->ShouldExitMultiplayer()) {
 					GameState = GAME_STATE_START_MENU;
 				}
-
-				HandleClosingEvent();
-				SetPreviousButtonValues();
-			} else if (GameState == GAME_STATE_NEW_SINGLE_PLAYER) {
-				Singleton<World>::Get()->StartNewGame();
-				GameState = GAME_STATE_INIT_SINGLE_PLAYER;
-			} else if (GameState == GAME_STATE_INIT_SINGLE_PLAYER) {
-				window->clear();
-				UpdateGameStateLoadingScreen();
-				//Singleton<World>::Get()->Init(window, camera, main_character);
-				GameState = GAME_STATE_IN_SINGLE_PLAYER;
-				//input_handler->EatInputsForNumberOfFrames(1);
-			} else if (GameState == GAME_STATE_IN_SINGLE_PLAYER) {
-				if (start_button_current && !start_button_previous) {
-					Singleton<World>::Get()->paused = !Singleton<World>::Get()->paused;
-				}
-				if (Singleton<World>::Get()->paused) {
-					//input_handler->EatInputsForNumberOfFrames(1);
-				}
-
-				//input_handler->Update();
-				Singleton<World>::Get()->Update(current_frame, frame_delta / 1000);
-
-				if (Singleton<World>::Get()->IsPlayerInCombat()) {
-					if (combat_music_volume < 100) {
-						combat_music_volume++;
-						background_music_volume--;
-
-						combat_music.setVolume((float)combat_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
-						background_music.setVolume((float)background_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
-					}
-				} else {
-					if (background_music_volume < 100) {
-						background_music_volume++;
-						combat_music_volume--;
-
-						background_music.setVolume((float)background_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
-						combat_music.setVolume((float)combat_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
-					}
-				}
-				
-				if (Singleton<World>::Get()->CanContinue()) {
-					SetFramesPerSecond(60);
-					if ((a_button_current && !a_button_previous) || (start_button_current && !start_button_previous)) {
-						if (Singleton<World>::Get()->current_number_of_lives > 0) {
-							Singleton<World>::Get()->current_number_of_lives--;
-							GameState = GAME_STATE_INIT_SINGLE_PLAYER;
-						} else {
-							Singleton<World>::Get()->current_number_of_lives = 2;
-							GameState = GAME_STATE_START_MENU;
-						}
-					}
-				} else if (Singleton<World>::Get()->main_character->hit_points <= 0) {
-					SetFramesPerSecond(10);
-				} else if (Singleton<World>::Get()->DidThePlayerBeatTheGame()) {
-					SetFramesPerSecond(10);
-					//input_handler->EatInputsForNumberOfFrames(1);
-					
-					if (Singleton<World>::Get()->ShouldGoToCredits()) {
-						SetFramesPerSecond(60);
-						GameState = GAME_STATE_CREDITS;
-						credits_text.setPosition(viewport_width / 2.0f - 120.0f, viewport_height + 50.0f);
-					}
-				} 
 
 				HandleClosingEvent();
 				SetPreviousButtonValues();
@@ -298,11 +230,8 @@ void UpdateGameStateStartMenu() {
 	window->draw(title_text);
 	window->draw(start_text);
 
-	if (WasButtonAPressed()) {
+	if (WasButtonAPressed() || WasButtonStartPressed()) {
 		GameState = GAME_STATE_NEW_SINGLE_PLAYER;
-	}
-	if (WasButtonStartPressed()) {
-		GameState = GAME_STATE_NEW_MULTIPLAYER;
 	}
 
 	HandleClosingEvent();

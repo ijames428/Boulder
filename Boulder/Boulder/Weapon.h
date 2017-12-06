@@ -12,6 +12,7 @@ private:
 	int player_index;
 	bool stuck;
 	bool recalling;
+	bool held_by_owner;
 	float gravityScale;
 	b2BodyDef weaponBodyDef;
 	b2Body* weaponBody;
@@ -21,13 +22,16 @@ private:
 	b2Fixture* stuck_fixture;
 	b2Vec2 stuck_position_offset;
 	b2Body* ownersBody;
+	bool stuck_to_door;
 public:
 	Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, int player_idx, b2Body* owners_body);
 	void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	void Throw(b2Vec2 vector, b2Vec2 starting_position);
 	void Stick(b2Fixture* stuck_fix, float angle);
+	void Collision(b2Fixture* stuck_fix, float angle);
 	void Recall();
 	void TeleportedTo();
+	bool Throwable();
 
 	b2Body* GetBody() {
 		return weaponBody;
