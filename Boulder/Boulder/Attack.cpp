@@ -175,8 +175,7 @@ HitBox::HitBox(b2Body* body, int player_index, int frame_in_attack, sf::Vector2f
 	if (player_index == 0) {
 		myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
 		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
-	}
-	else {
+	} else {
 		myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
 		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
 	}

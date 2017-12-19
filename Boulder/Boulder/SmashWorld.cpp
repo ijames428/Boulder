@@ -113,6 +113,53 @@ void SmashWorld::BuildWorld() {
 		doors.push_back(new Door(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
 		doors[i]->AddActivator(jsonWorldData["doors"][i]["activator"].asString());
 	}
+
+	ParseBestiaries();
+
+	for (int i = 0; i < (int)jsonWorldData["units"].size(); i++) {
+		x = std::stof(jsonWorldData["units"][i]["LevelLocationX"].asString(), &sz) / scalingRatio;
+		y = std::stof(jsonWorldData["units"][i]["LevelLocationY"].asString(), &sz) / scalingRatio;
+		width = std::stof(jsonWorldData["units"][i]["width"].asString(), &sz) / (scalingRatio * 2.0f);
+		height = std::stof(jsonWorldData["units"][i]["height"].asString(), &sz) / (scalingRatio * 2.0f);
+
+		x += width;
+		y += height;
+
+		enemies.push_back(new BoulderCreature(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+	}
+
+}
+
+void SmashWorld::ParseBestiaries() {
+	for (int i = 0; i < (int)jsonWorldData["bestiaryFilePaths"].size(); i++)
+	{
+		ParseBestiary(jsonWorldData["bestiaryFilePaths"][i].asString());
+	}
+}
+
+void SmashWorld::ParseBestiary(string file_path) {
+	string rawData = "";
+	Json::Value jsonData = "";
+	string line;
+	ifstream myfile(file_path);
+
+	if (myfile.is_open()) {
+		while (getline(myfile, line)) {
+			rawData += line;
+		}
+
+		myfile.close();
+	}
+	else {
+		cout << "Unable to open file";
+	}
+
+	Json::Reader reader;
+	reader.parse(rawData, jsonData);
+
+	cout << jsonData["BestiaryName"].asString() << "\n";
+
+	jsonBestiariesData.push_back(jsonData);
 }
 
 void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
@@ -139,6 +186,10 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 	for (int i = 0; i < (int)doors.size(); i++) {
 		doors[i]->Update(current_frame, frame_delta);
+	}
+
+	for (int i = 0; i < (int)enemies.size(); i++) {
+		enemies[i]->Update(current_frame, frame_delta);
 	}
 
 	render_window->display();

@@ -7,6 +7,7 @@ using namespace std;
 #include "PlatformerLibrary\Box2D\Box2D.h"
 #include "PlatformerLibrary\Box2DRigidBody.h"
 #include "SmashCharacter.h"
+#include "BoulderCreature.h"
 #include "Weapon.h"
 #include "Attack.h"
 #include "Door.h"
@@ -29,11 +30,11 @@ class MyContactListener : public b2ContactListener
 		b2Fixture* fixtureB = contact->GetFixtureB();
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0004) {
-			SmashCharacter* entityA = static_cast<SmashCharacter*>(fixtureA->GetBody()->GetUserData());
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			entityA->Land();
 		}
 		if (fixtureB->GetFilterData().categoryBits == 0x0004) {
-			SmashCharacter* entityB = static_cast<SmashCharacter*>(fixtureB->GetBody()->GetUserData());
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			entityB->Land();
 		}
 
@@ -61,9 +62,9 @@ class MyContactListener : public b2ContactListener
 		b2Fixture* fixtureB = contact->GetFixtureB();
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
-			SmashCharacter* entityA = static_cast<SmashCharacter*>(fixtureA->GetBody()->GetUserData());
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			Attack* active_attack = entityA->GetActiveAttack();
-			SmashCharacter* entityB = static_cast<SmashCharacter*>(fixtureB->GetBody()->GetUserData());
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
 			if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
 				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames());
@@ -76,9 +77,9 @@ class MyContactListener : public b2ContactListener
 		fixtureB = contact->GetFixtureA();
 		
 		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
-			SmashCharacter* entityA = static_cast<SmashCharacter*>(fixtureA->GetBody()->GetUserData());
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			Attack* active_attack = entityA->GetActiveAttack();
-			SmashCharacter* entityB = static_cast<SmashCharacter*>(fixtureB->GetBody()->GetUserData());
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
 			if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
 				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames());
@@ -91,8 +92,7 @@ class MyContactListener : public b2ContactListener
 			if (fixtureA->GetFilterData().categoryBits == 0x0020) {
 				Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
 				weapon->Collision(fixtureB, weapon->GetBody()->GetAngle());
-			}
-			else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
+			} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
 				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
 				weapon->Collision(fixtureA, weapon->GetBody()->GetAngle());
 			}
@@ -125,11 +125,16 @@ private:
 	void ExitMultiplayer();
 	MyContactListener myContactListenerInstance;
 	void ParseWorld(string file_path);
+	void ParseBestiaries();
+	void ParseBestiary(string file_path);
 	void BuildWorld();
 	Json::Value jsonWorldData;
 	string rawWorldData;
+	std::vector<Json::Value> jsonBestiariesData;
+	//std::vector<string> rawBestiariesData;
 	std::vector<Box2DRigidBody*> box2dRigidBodies;
 	std::vector<Door*> doors;
+	std::vector<BoulderCreature*> enemies;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam);

@@ -95,8 +95,7 @@ void Weapon::Collision(b2Fixture* collider_fixture, float angle) {
 				SmashCharacter* entity = static_cast<SmashCharacter*>(collider_fixture->GetBody()->GetUserData());
 				entity->TakeDamage(2, sf::Vector2f(-weaponBody->GetLinearVelocity().y / 2.0f, abs(weaponBody->GetLinearVelocity().x) / -2.0f), 10);
 			}
-		}
-		else {
+		} else {
 			Stick(collider_fixture, angle);
 		}
 	}
