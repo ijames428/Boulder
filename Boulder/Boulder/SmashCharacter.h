@@ -30,7 +30,7 @@ private:
 protected:
 public:
 	SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
-	//void Draw(sf::Vector2f camera_position);
+	void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	//void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
 	//Attack* GetActiveAttack();

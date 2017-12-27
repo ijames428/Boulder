@@ -130,9 +130,9 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	}
 }
 
-//void SmashCharacter::Draw(sf::Vector2f camera_position) {
-//	render_window->draw(*healthBarRect);
-//}
+void SmashCharacter::Draw(sf::Vector2f camera_position) {
+	//render_window->draw(*healthBarRect);
+}
 
 //void SmashCharacter::Move(float horizontal, float vertical) {
 //	if (can_take_input && hit_points > 0) {

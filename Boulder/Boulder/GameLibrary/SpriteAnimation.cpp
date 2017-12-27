@@ -40,8 +40,9 @@ void SpriteAnimation::Draw(sf::Vector2f camera_position, sf::Vector2f parent_obj
 	texture_rect.top = frame_row * sprite_frame_height;
 
 	sprite->setTextureRect(texture_rect);
-	sprite->setPosition(sf::Vector2f(parent_object_mid_position.x - (sprite_frame_width * sprite->getScale().x / 2.0f) - camera_position.x,
-		parent_object_mid_position.y - (sprite_frame_height * sprite->getScale().y / 2.0f) - camera_position.y));
+	sprite->setPosition(sf::Vector2f((parent_object_mid_position.x - (sprite_frame_width * sprite->getScale().x / 80.0f) - camera_position.x) * 40.0f,
+		(parent_object_mid_position.y - (sprite_frame_height * sprite->getScale().y / 80.0f) - camera_position.y) * 40.0f));
+		//-25.0f + (parent_object_mid_position.y - (sprite_frame_height * sprite->getScale().y / 2.0f) - camera_position.y) * 2.0f));
 	render_window->draw(*sprite);
 }
 

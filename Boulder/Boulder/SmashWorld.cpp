@@ -125,7 +125,19 @@ void SmashWorld::BuildWorld() {
 		x += width;
 		y += height;
 
-		enemies.push_back(new BoulderCreature(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+		Json::Value thisBestiary;
+		for (int j = 0; j < (int)jsonBestiariesData.size(); j++) {
+			if (jsonBestiariesData[j]["BestiaryName"] == jsonWorldData["units"][i]["BestiaryName"].asString()) {
+				thisBestiary = jsonBestiariesData[j];
+			}
+		}
+
+		//string test0 = jsonBestiariesData[0]["BestiaryName"].asString();
+		//string test1 = thisBestiary["DictOfUnits"]["Gelly"]["IdleAnimations"][0]["FilePath"].asString();
+
+		enemies.push_back(new BoulderCreature(jsonWorldData["units"][i]["InstanceOfUnitName"].asString(), jsonWorldData["units"][i]["UnitType"].asString(), 
+											  jsonWorldData["units"][i]["BestiaryName"].asString(), thisBestiary,
+											  render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
 	}
 
 }
@@ -156,8 +168,6 @@ void SmashWorld::ParseBestiary(string file_path) {
 
 	Json::Reader reader;
 	reader.parse(rawData, jsonData);
-
-	cout << jsonData["BestiaryName"].asString() << "\n";
 
 	jsonBestiariesData.push_back(jsonData);
 }
@@ -190,6 +200,7 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 	for (int i = 0; i < (int)enemies.size(); i++) {
 		enemies[i]->Update(current_frame, frame_delta);
+		enemies[i]->Draw(camera->viewport_position);
 	}
 
 	render_window->display();
