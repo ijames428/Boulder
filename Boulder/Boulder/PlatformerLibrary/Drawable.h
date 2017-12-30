@@ -51,7 +51,12 @@ public:
 
 	/// Draw a solid circle.
 	virtual void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color) {
+		sf::Color vertex_color = sf::Color((sf::Uint8)color.r * (sf::Uint8)255.0f, (sf::Uint8)color.g * (sf::Uint8)255.0f, (sf::Uint8)color.b * (sf::Uint8)255.0f, (sf::Uint8)color.a * (sf::Uint8)255.0f);
+
 		sf::CircleShape circle = sf::CircleShape(radius);
+		circle.setOutlineThickness(0.02f);
+		circle.setFillColor(sf::Color::Transparent);
+		circle.setOutlineColor(vertex_color);
 		circle.setPosition((center.x - camera->viewport_position.x) * PIXEL_SCALE, (center.y - camera->viewport_position.y) * PIXEL_SCALE);
 		circle.setOrigin(radius, radius);
 		circle.setScale(PIXEL_SCALE, PIXEL_SCALE);

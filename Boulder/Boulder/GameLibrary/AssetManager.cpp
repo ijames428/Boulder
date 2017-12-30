@@ -15,15 +15,23 @@ sf::Texture* AssetManager::GetTexture(std::string file_path) {
 		return result->second;
 	}
 	else {
-		sf::Texture* new_texture = new sf::Texture();
+		try
+		{
+			sf::Texture* new_texture = new sf::Texture();
+			bool successfulLoad = new_texture->loadFromFile(file_path);
 
-		if (!new_texture->loadFromFile(file_path)) {
-			std::string str = "File not found: " + file_path;
-			throw exception(str.c_str());
-			return new_texture;
+			if (!successfulLoad) {
+				std::string str = "File not found: " + file_path;
+				throw exception(str.c_str());
+				return new_texture;
+			}
+
+			textures[file_path] = new_texture;
 		}
-
-		textures[file_path] = new_texture;
+		catch (int e)
+		{
+			cout << "An exception occurred. Exception Nr. " << e << '\n';
+		}
 	}
 
 	return textures[file_path];

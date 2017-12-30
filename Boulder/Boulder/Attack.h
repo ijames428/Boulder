@@ -5,6 +5,7 @@ using namespace std;
 #include <SFML/Graphics.hpp>
 #include "PlatformerLibrary\Box2D\Box2D.h"
 #include "StatusTimer.h"
+#include "GameLibrary\Json\json.h"
 
 class HitBox {
 private:
@@ -51,29 +52,30 @@ private:
 	sf::Uint64 current_frame_in_attack;
 	sf::Uint64 current_frame;
 	sf::Uint64 starting_attack_frame;
-	std::vector<AttackFrame*> attack_frames;
+	std::vector<std::vector<AttackFrame*>> attack_frames;
 	StatusTimer* attack_timer;
 	b2Body* player_body;
 	int player_index;
 	std::vector<string> enemies_hit;
-	std::vector<AttackFrame*> MakeMoveJab();
-	std::vector<AttackFrame*> MakeMoveUpSmash();
-	std::vector<AttackFrame*> MakeMoveForwardSmash();
-	std::vector<AttackFrame*> MakeMoveDownAir();
-	std::vector<AttackFrame*> MakeMoveForwardAir();
-	std::vector<AttackFrame*> MakeMoveBackAir();
-	std::vector<AttackFrame*> MakeMoveUpAir();
-	std::vector<AttackFrame*> MakeMoveDownSmash();
-	std::vector<AttackFrame*> MakeMoveNeutralAir();
+	std::vector<std::vector<AttackFrame*>> MakeMoveJab();
+	std::vector<std::vector<AttackFrame*>> MakeMoveUpSmash();
+	std::vector<std::vector<AttackFrame*>> MakeMoveForwardSmash();
+	std::vector<std::vector<AttackFrame*>> MakeMoveDownAir();
+	std::vector<std::vector<AttackFrame*>> MakeMoveForwardAir();
+	std::vector<std::vector<AttackFrame*>> MakeMoveBackAir();
+	std::vector<std::vector<AttackFrame*>> MakeMoveUpAir();
+	std::vector<std::vector<AttackFrame*>> MakeMoveDownSmash();
+	std::vector<std::vector<AttackFrame*>> MakeMoveNeutralAir();
 public:
 	Attack(b2Body* body, int index, int move_type);
+	Attack(b2Body* body, int index, int move_type, Json::Value jsonData);
 	void Update(sf::Uint64 curr_frame, bool facing_right);
 	void InitiateAttack();
 	int GetDamage();
 	bool IsAttacking();
 	sf::Vector2f GetKnockBack();
 	int GetHitStunFrames();
-	std::vector<AttackFrame*> Attack::GetAttackFrames(int move);
+	std::vector<std::vector<AttackFrame*>> Attack::GetAttackFrames(int move);
 	bool CanHitTarget(string);
 	void StopAttack();
 

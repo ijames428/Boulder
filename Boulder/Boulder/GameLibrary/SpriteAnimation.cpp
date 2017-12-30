@@ -64,3 +64,7 @@ void SpriteAnimation::SetColor(sf::Color new_color) {
 bool SpriteAnimation::IsFacingRight() {
 	return facing_right;
 }
+
+int SpriteAnimation::GetNumberOfFrames() {
+	return number_of_frames;
+}

@@ -20,7 +20,7 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 	gravity = new b2Vec2(0.0f, 30.0f);
 	world = new b2World(*gravity);
 
-	ParseWorld("C:\\Users\\Ian\\Documents\\GitHub\\Boulder\\Boulder\\Boulder\\Maps\\testmap00");
+	ParseWorld("Maps\\testmap00");
 	BuildWorld();
 
 	timeStep = 1.0f / 60.0f;
@@ -47,7 +47,7 @@ void SmashWorld::ParseWorld(string file_path) {
 
 		myfile.close();
 	} else {
-		cout << "Unable to open file";
+		cout << "Unable to open file " << file_path << "\n";
 	}
 
 	Json::Reader reader;
@@ -150,10 +150,13 @@ void SmashWorld::ParseBestiaries() {
 }
 
 void SmashWorld::ParseBestiary(string file_path) {
+	size_t findResult = file_path.find("Units\\");
+	string relativeFilePath = file_path.substr(findResult);
+
 	string rawData = "";
 	Json::Value jsonData = "";
 	string line;
-	ifstream myfile(file_path);
+	ifstream myfile(relativeFilePath);
 
 	if (myfile.is_open()) {
 		while (getline(myfile, line)) {
@@ -163,7 +166,7 @@ void SmashWorld::ParseBestiary(string file_path) {
 		myfile.close();
 	}
 	else {
-		cout << "Unable to open file";
+		cout << "Unable to open file " << relativeFilePath << "\n";
 	}
 
 	Json::Reader reader;
@@ -187,8 +190,6 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 	camera->viewport_position = camera_position;
 
-	world->DrawDebugData();
-
 	player_one_input->Update();
 
 	PlayerOne->Update(current_frame, frame_delta);
@@ -202,6 +203,8 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		enemies[i]->Update(current_frame, frame_delta);
 		enemies[i]->Draw(camera->viewport_position);
 	}
+
+	world->DrawDebugData();
 
 	render_window->display();
 }

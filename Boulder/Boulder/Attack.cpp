@@ -6,6 +6,9 @@ using namespace std;
 #include "Attack.h"
 #include "GameLibrary\Singleton.h"
 #include "SmashWorld.h"
+#include <vector>
+#include <string>
+#include <sstream>
 
 #define DEGTORAD 0.0174532925199432957f
 
@@ -20,6 +23,62 @@ Attack::Attack(b2Body* body, int index, int move_type) {
 	enemies_hit = std::vector<string>();
 }
 
+Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
+	player_body = body;
+	player_index = index;
+	float boxScale = 140.0f;
+
+	if (!jsonData["HitBoxPerFrame"].empty())
+	{
+		for (int i = 0; i < jsonData["NumberOfFrames"].asInt(); i++)
+		{
+			attack_frames.push_back(std::vector<AttackFrame*>());
+
+			if (!jsonData["HitBoxPerFrame"][i].empty())
+			{
+				for (int box = 0; box < (int)jsonData["HitBoxPerFrame"][i].size(); box++)
+				{
+					string name = jsonData["HitBoxPerFrame"][i][box]["Name"].asString();
+					int damage = jsonData["HitBoxPerFrame"][i][box]["Damage"].asInt();
+					int frames_of_hit_stun = damage / 4; // TODO: Have hit stun frames come from frame data once it's in there.
+					float knockback_x = jsonData["HitBoxPerFrame"][i][box]["KnockBackX"].asFloat();
+					float knockback_y = jsonData["HitBoxPerFrame"][i][box]["KnockBackY"].asFloat();
+
+					std::vector<float> vect;
+					string strBoxValues = jsonData["HitBoxPerFrame"][i][box]["Box"].asString();
+					std::stringstream ss(strBoxValues);
+					float character;
+
+					while (ss >> character)
+					{
+						vect.push_back(character);
+
+						if (ss.peek() == ',')
+							ss.ignore();
+					}
+
+					float hit_box_relative_x = (vect[0] + (vect[2] / 2.0f)) / boxScale;
+					float hit_box_relative_y = (vect[1] + (vect[3] / 2.0f)) / boxScale;
+					float hit_box_width = (vect[2]) / boxScale;
+					float hit_box_height = (vect[3]) / boxScale;
+
+					attack_frames[i].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), damage, frames_of_hit_stun,
+															   sf::Vector2f(knockback_x, knockback_y), sf::Vector2f(hit_box_width, hit_box_height), sf::Vector2f(hit_box_relative_x, hit_box_relative_y), 
+															   true));
+				}
+			}
+			else
+			{
+				attack_frames[i].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+			}
+		}
+	}
+
+	attack_timer = new StatusTimer((int)attack_frames.size());
+
+	enemies_hit = std::vector<string>();
+}
+
 void Attack::Update(sf::Uint64 curr_frame, bool facing_right) {
 	current_frame = curr_frame;
 	current_frame_in_attack = current_frame - starting_attack_frame;
@@ -27,18 +86,24 @@ void Attack::Update(sf::Uint64 curr_frame, bool facing_right) {
 	if (IsAttacking()) {
 		for (int i = 0; i < (int)attack_frames.size(); i++) {
 			if (i == current_frame_in_attack) {
-				attack_frames[i]->Activate();
-		
-				if (attack_frames[i]->IsClearingFrame()) {
-					enemies_hit.clear();
+				for (int box = 0; box < (int)attack_frames[i].size(); box++) {
+					attack_frames[i][box]->Activate();
+
+					if (attack_frames[i][box]->IsClearingFrame()) {
+						enemies_hit.clear();
+					}
 				}
 			} else {
-				attack_frames[i]->Deactivate();
+				for (int box = 0; box < (int)attack_frames[i].size(); box++) {
+					attack_frames[i][box]->Deactivate();
+				}
 			}
 		}
 	} else {
 		for (int i = 0; i < (int)attack_frames.size(); i++) {
-			attack_frames[i]->Update(facing_right);
+			for (int box = 0; box < (int)attack_frames[i].size(); box++) {
+				attack_frames[i][box]->Update(facing_right);
+			}
 		}
 	}
 }
@@ -52,7 +117,9 @@ void Attack::InitiateAttack() {
 void Attack::StopAttack() {
 	attack_timer->Stop();
 	for (int i = 0; i < (int)attack_frames.size(); i++) {
-		attack_frames[i]->Deactivate();
+		for (int box = 0; box < (int)attack_frames[i].size(); box++) {
+			attack_frames[i][box]->Deactivate();
+		}
 	}
 	enemies_hit.clear();
 }
@@ -62,7 +129,8 @@ int Attack::GetDamage() {
 		return 0;
 	}
 
-	return attack_frames[(int)current_frame_in_attack]->GetDamage();
+	// TODO: Separate out the boxes so we can get the damage of an individual one.
+	return attack_frames[(int)current_frame_in_attack][0]->GetDamage();
 }
 
 bool Attack::IsAttacking() {
@@ -74,7 +142,8 @@ sf::Vector2f Attack::GetKnockBack() {
 		return sf::Vector2f(0.0f, 0.0f);
 	}
 
-	return attack_frames[(int)current_frame_in_attack]->GetKnockBack();
+	// TODO: Separate out the boxes so we can get the knockback of an individual one.
+	return attack_frames[(int)current_frame_in_attack][0]->GetKnockBack();
 }
 
 int Attack::GetHitStunFrames() {
@@ -82,7 +151,8 @@ int Attack::GetHitStunFrames() {
 		return 0;
 	}
 
-	return attack_frames[(int)current_frame_in_attack]->GetHitStunFrames();
+	// TODO: Separate out the boxes so we can get the hit stun frames of an individual one.
+	return attack_frames[(int)current_frame_in_attack][0]->GetHitStunFrames();
 }
 
 bool Attack::CanHitTarget(string identifier) {
@@ -276,8 +346,8 @@ void HitBox::Deactivate() {
 
 
 
-std::vector<AttackFrame*> Attack::GetAttackFrames(int move) {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::GetAttackFrames(int move) {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	switch (move) {
 	case JAB:
@@ -329,332 +399,332 @@ std::vector<AttackFrame*> Attack::GetAttackFrames(int move) {
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveJab() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveJab() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 3, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.15f), sf::Vector2f(0.3f, -0.25f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.15f), sf::Vector2f(0.3f, -0.25f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 3, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.15f), sf::Vector2f(0.3f, -0.25f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 3, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.15f), sf::Vector2f(0.3f, -0.25f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.15f), sf::Vector2f(0.3f, -0.25f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 3, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.15f), sf::Vector2f(0.3f, -0.25f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveUpAir() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveUpAir() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(1.0f, -10.0f), sf::Vector2f(0.1f, 0.4f), sf::Vector2f(0.3f, -0.5f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveUpSmash() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveUpSmash() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 3, sf::Vector2f(0.0f, -2.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.0f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(0.0f, -2.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.0f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 3, sf::Vector2f(0.0f, -2.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.0f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 3, sf::Vector2f(0.0f, -2.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.0f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(0.0f, -2.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.0f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 3, sf::Vector2f(0.0f, -2.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.0f, -0.5f), true));
 
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 3, sf::Vector2f(0.0f, -8.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.0f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(0.0f, -8.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.0f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 3, sf::Vector2f(0.0f, -8.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.0f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 3, sf::Vector2f(0.0f, -8.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.0f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 6, sf::Vector2f(0.0f, -8.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.0f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 3, sf::Vector2f(0.0f, -8.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.0f, -0.5f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveNeutralAir() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveNeutralAir() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(0.75f, -1.0f), sf::Vector2f(0.1f, 0.2f), sf::Vector2f(0.2f, -0.5f), true));
 
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 3, sf::Vector2f(2.0f, 4.0f), sf::Vector2f(0.1f, 0.3f), sf::Vector2f(0.2f, -0.5f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveDownSmash() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveDownSmash() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 8, 8, sf::Vector2f(2.0f, -8.0f), sf::Vector2f(0.3f, 1.0f), sf::Vector2f(0.1f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 8, 8, sf::Vector2f(2.0f, -8.0f), sf::Vector2f(0.3f, 1.0f), sf::Vector2f(0.1f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 8, 8, sf::Vector2f(2.0f, -8.0f), sf::Vector2f(0.3f, 1.0f), sf::Vector2f(0.1f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 80, 8, sf::Vector2f(2.0f, -8.0f), sf::Vector2f(0.3f, 1.0f), sf::Vector2f(0.1f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 80, 8, sf::Vector2f(2.0f, -8.0f), sf::Vector2f(0.3f, 1.0f), sf::Vector2f(0.1f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 80, 8, sf::Vector2f(2.0f, -8.0f), sf::Vector2f(0.3f, 1.0f), sf::Vector2f(0.1f, 0.0f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveForwardSmash() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveForwardSmash() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 3, sf::Vector2f(4.0f, 4.0f), sf::Vector2f(1.0f, 0.15f), sf::Vector2f(0.6f, -0.25f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 6, sf::Vector2f(4.0f, 4.0f), sf::Vector2f(1.0f, 0.15f), sf::Vector2f(0.6f, -0.25f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 3, 3, sf::Vector2f(4.0f, 4.0f), sf::Vector2f(1.0f, 0.15f), sf::Vector2f(0.6f, -0.25f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 400, 3, sf::Vector2f(4.0f, 4.0f), sf::Vector2f(1.0f, 0.15f), sf::Vector2f(0.6f, -0.25f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 400, 6, sf::Vector2f(4.0f, 4.0f), sf::Vector2f(1.0f, 0.15f), sf::Vector2f(0.6f, -0.25f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 400, 3, sf::Vector2f(4.0f, 4.0f), sf::Vector2f(1.0f, 0.15f), sf::Vector2f(0.6f, -0.25f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveForwardAir() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveForwardAir() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 6, 30, sf::Vector2f(8.0f, -8.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 6, 30, sf::Vector2f(8.0f, -8.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 6, 30, sf::Vector2f(8.0f, -8.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 150, 30, sf::Vector2f(8.0f, -8.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 150, 30, sf::Vector2f(8.0f, -8.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 150, 30, sf::Vector2f(8.0f, -8.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, -5.0f), sf::Vector2f(0.3f, 0.3f), sf::Vector2f(0.2f, 0.0f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveBackAir() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveBackAir() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 1, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 10, 10, sf::Vector2f(2.0f, 5.0f), sf::Vector2f(0.4f, 0.2f), sf::Vector2f(-0.2f, 0.0f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }
 
-std::vector<AttackFrame*> Attack::MakeMoveDownAir() {
-	std::vector<AttackFrame*> attack_frames = std::vector<AttackFrame*>();
+std::vector<std::vector<AttackFrame*>> Attack::MakeMoveDownAir() {
+	std::vector<std::vector<AttackFrame*>> attack_frames = std::vector<std::vector<AttackFrame*>>();
 
 	// startup frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	// active frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 2, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 20, 30, sf::Vector2f(0.0f, -12.0f), sf::Vector2f(0.8f, 0.75f), sf::Vector2f(0.0f, 0.5f), true));
 
 	// recovery frames
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
-	attack_frames.push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false, true));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
+	attack_frames.push_back(std::vector<AttackFrame*>()); attack_frames[(int)attack_frames.size() - 1].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), 0, 0, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), sf::Vector2f(0.0f, 0.0f), false));
 
 	return attack_frames;
 }

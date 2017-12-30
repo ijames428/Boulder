@@ -20,8 +20,26 @@ using namespace std;
 
 class BoulderCreature : public Creature {
 private:
+	int State = 0;
+	const int STATE_IDLE = 0;
+	const int STATE_WALKING = 1;
+	const int STATE_RUNNING = 2;
+	const int STATE_DYING = 3;
+	const int STATE_DEAD = 4;
+	const int STATE_ATTACKING = 5;
+	const int STATE_BLOCKING = 6;
+	const int STATE_HIT_STUN = 7;
+	const int STATE_JUMPING = 8;
+	const int STATE_JUMP_APEX = 9;
+	const int STATE_FALLING = 10;
+	const int STATE_LANDING = 11;
+
+	BoulderCreature* target = nullptr;
+
+	int GetActiveAttackIndex();
 protected:
 	float movement;
+	bool running;
 	BoulderCreature(int player_idx, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	std::vector<Attack*> attacks = std::vector<Attack*>();
 	int player_index;
@@ -30,17 +48,21 @@ protected:
 	sf::Color player_color;
 	b2BodyDef bodyDef;
 	b2Body* body;
+	b2CircleShape aggroCircleShape;
+	b2CircleShape deaggroCircleShape;
 	b2CircleShape topCircleShape;
 	b2CircleShape botCircleShape;
 	b2PolygonShape centerBoxShape;
+	b2FixtureDef aggroCircleFixtureDef;
+	b2FixtureDef deaggroCircleFixtureDef;
 	b2FixtureDef topCircleFixtureDef;
 	b2FixtureDef botCircleFixtureDef;
 	b2FixtureDef centerBoxFixtureDef;
+	b2Fixture* aggroCircleFixture;
+	b2Fixture* deaggroCircleFixture;
 	b2Fixture* topCircleFixture;
 	b2Fixture* botCircleFixture;
 	b2Fixture* centerBoxFixture;
-	StatusTimer* hit_stun_timer;
-	StatusTimer* jump_input_buffer;
 	b2PolygonShape groundCheckShape;
 	b2FixtureDef groundCheckFixtureDef;
 	bool has_double_jump;
@@ -52,7 +74,8 @@ protected:
 	string name = "";
 
 	void LoadAllAnimations(string unit_type, Json::Value jsonBestiariesData);
-	std::vector<SpriteAnimation*> LoadAnimations(string animations_name, string unit_type, Json::Value jsonBestiariesData);
+	std::vector<SpriteAnimation*> LoadAnimations(string animations_name, string unit_type, Json::Value jsonBestiariesData); 
+	void FlipAnimationsIfNecessary(std::vector<SpriteAnimation*> animations);
 
 	float sprite_scale;
 	std::vector<SpriteAnimation*> idle_animations = std::vector<SpriteAnimation*>();
@@ -67,6 +90,10 @@ protected:
 	std::vector<SpriteAnimation*> jump_apex_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> falling_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> landing_animations = std::vector<SpriteAnimation*>();
+
+	StatusTimer* hit_stun_timer;
+	StatusTimer* dying_animation_timer;
+	StatusTimer* jump_input_buffer;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
@@ -75,6 +102,8 @@ public:
 	Attack* GetActiveAttack();
 	bool IsAnAttackActive();
 	void Land();
+	void Aggro(BoulderCreature* new_target);
+	void Deaggro();
 
 	string GetName() {
 		return name;
