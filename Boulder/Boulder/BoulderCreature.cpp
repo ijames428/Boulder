@@ -23,6 +23,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	can_take_input = false;
 
 	speed = jsonBestiariesData["DictOfUnits"][unit_type]["MovementSpeed"].asFloat();
+	running_speed_multiplier = 3.0f;
 	jump_power = 10.0f;
 
 	sf::RectangleShape shape(dimensions);
@@ -117,7 +118,12 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 
 	hit_stun_timer = new StatusTimer(1);
 	jump_input_buffer = new StatusTimer(6);
-	dying_animation_timer = new StatusTimer(dying_animations[0]->GetNumberOfFrames());
+
+	int numberOfDyingAnimationFrames = dying_animations.size() > 0 ? dying_animations[0]->GetNumberOfFrames() : 1;
+	dying_animation_timer = new StatusTimer(numberOfDyingAnimationFrames);
+
+	int numberOfLandingAnimationFrames = landing_animations.size() > 0 ? landing_animations[0]->GetNumberOfFrames() : 1;
+	landing_animation_timer = new StatusTimer(numberOfLandingAnimationFrames);
 }
 
 void BoulderCreature::LoadAllAnimations(string unit_type, Json::Value jsonBestiariesData) {
@@ -151,7 +157,7 @@ std::vector<SpriteAnimation*> BoulderCreature::LoadAnimations(string animations_
 			jsonBestiariesData["DictOfUnits"][unit_type][animations_name][i]["NumberOfFrames"].asInt(),
 			jsonBestiariesData["DictOfUnits"][unit_type][animations_name][i]["FramesPerColumn"].asInt(),
 			jsonBestiariesData["DictOfUnits"][unit_type][animations_name][i]["FramesPerRow"].asInt(),
-			sprite_scale, sf::Color::White));
+			sprite_scale, sf::Color::White, animations_name != "JumpingAnimations" && animations_name != "JumpApexAnimations"));
 	}
 
 	return animations;
@@ -274,11 +280,20 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 	} else  if (State == STATE_RUNNING) {
 		running_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
 	} else if (State == STATE_DYING) {
-		dying_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		if ((int)dying_animations.size() > 0) {
+			dying_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		}
 	} else if (State == STATE_DEAD) {
-		dead_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		if ((int)dead_animations.size() > 0) {
+			dead_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		}
 	} else if (State == STATE_ATTACKING) {
-		attacking_animations[GetActiveAttackIndex()]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		int currentAttackIndex = GetActiveAttackIndex();
+		if (currentAttackIndex < (int)attacking_animations.size()) {
+			attacking_animations[currentAttackIndex]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		} else {
+			attacking_animations[1]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		}
 	} else if (State == STATE_BLOCKING) {
 		blocking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
 	} else if (State == STATE_HIT_STUN) {
@@ -290,7 +305,9 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 	} else if (State == STATE_FALLING) {
 		falling_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
 	} else if (State == STATE_LANDING) {
-		landing_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		if ((int)landing_animations.size() > 0) {
+			landing_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		}
 	}
 }
 
@@ -305,7 +322,7 @@ void BoulderCreature::FlipAnimationsIfNecessary(std::vector<SpriteAnimation*> an
 
 void BoulderCreature::Move(float horizontal, float vertical) {
 	if (can_take_input && hit_points > 0) {
-		body->SetLinearVelocity(b2Vec2((horizontal / 100.0f) * speed * (running ? 3.0f : 1.0f), body->GetLinearVelocity().y));
+		body->SetLinearVelocity(b2Vec2((horizontal / 100.0f) * speed * (running ? running_speed_multiplier : 1.0f), body->GetLinearVelocity().y));
 
 		if (horizontal > 0) {
 			SetFacingRight(true);
@@ -336,6 +353,7 @@ void BoulderCreature::Jump() {
 }
 
 void BoulderCreature::Land() {
+	landing_animation_timer->Start();
 	SetInTheAir(false);
 	has_double_jump = true;
 	if (IsAnAttackActive()) {

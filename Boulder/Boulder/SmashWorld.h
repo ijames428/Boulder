@@ -145,10 +145,12 @@ private:
 	void ExitMultiplayer();
 	MyContactListener myContactListenerInstance;
 	void ParseWorld(string file_path);
+	void ParsePlayerBestiary(string file_path);
 	void ParseBestiaries();
 	void ParseBestiary(string file_path);
 	void BuildWorld();
 	Json::Value jsonWorldData;
+	Json::Value jsonPlayerData;
 	string rawWorldData;
 	std::vector<Json::Value> jsonBestiariesData;
 	//std::vector<string> rawBestiariesData;

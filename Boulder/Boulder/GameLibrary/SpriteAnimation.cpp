@@ -5,7 +5,7 @@ using namespace std;
 #include <iostream>
 #include "SpriteAnimation.h" 
 
-SpriteAnimation::SpriteAnimation(sf::RenderWindow* window, std::string file_path_and_name, int frame_width, int frame_height, int total_frames, int columns_count, int rows_count, float scale, sf::Color color) {
+SpriteAnimation::SpriteAnimation(sf::RenderWindow* window, std::string file_path_and_name, int frame_width, int frame_height, int total_frames, int columns_count, int rows_count, float scale, sf::Color color, bool loop) {
 	render_window = window;
 
 	current_frame = 0;
@@ -16,6 +16,7 @@ SpriteAnimation::SpriteAnimation(sf::RenderWindow* window, std::string file_path
 	number_of_rows = rows_count;
 	sprite_scale = scale;
 	facing_right = true;
+	looping = loop;
 
 	texture_rect = sf::IntRect(0, 0, sprite_frame_width, sprite_frame_height);
 
@@ -31,7 +32,15 @@ void SpriteAnimation::Draw(sf::Vector2f camera_position, sf::Vector2f parent_obj
 	int frame_row = 0;
 	int frame_column = 0;
 
-	current_frame = (current_frame + 1) % number_of_frames;
+	int next_frame = (current_frame + 1);
+
+	if (next_frame < number_of_frames) {
+		current_frame = next_frame;
+	} else if (looping) {
+		current_frame = next_frame % number_of_frames;
+	} else {
+		current_frame = number_of_frames - 1;
+	}
 
 	frame_row = current_frame / number_of_rows;
 	frame_column = current_frame % number_of_rows;
@@ -41,7 +50,7 @@ void SpriteAnimation::Draw(sf::Vector2f camera_position, sf::Vector2f parent_obj
 
 	sprite->setTextureRect(texture_rect);
 	sprite->setPosition(sf::Vector2f((parent_object_mid_position.x - (sprite_frame_width * sprite->getScale().x / 80.0f) - camera_position.x) * 40.0f,
-		(parent_object_mid_position.y - (sprite_frame_height * sprite->getScale().y / 80.0f) - camera_position.y) * 40.0f));
+		(parent_object_mid_position.y + 0.5f - (sprite_frame_height / 40.0f * sprite->getScale().y) - camera_position.y) * 40.0f));
 		//-25.0f + (parent_object_mid_position.y - (sprite_frame_height * sprite->getScale().y / 2.0f) - camera_position.y) * 2.0f));
 	render_window->draw(*sprite);
 }

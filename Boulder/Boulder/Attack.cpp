@@ -26,7 +26,7 @@ Attack::Attack(b2Body* body, int index, int move_type) {
 Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 	player_body = body;
 	player_index = index;
-	float boxScale = 140.0f;
+	float boxScale = 160.0f;
 
 	if (!jsonData["HitBoxPerFrame"].empty())
 	{
@@ -40,9 +40,11 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 				{
 					string name = jsonData["HitBoxPerFrame"][i][box]["Name"].asString();
 					int damage = jsonData["HitBoxPerFrame"][i][box]["Damage"].asInt();
-					int frames_of_hit_stun = damage / 4; // TODO: Have hit stun frames come from frame data once it's in there.
 					float knockback_x = jsonData["HitBoxPerFrame"][i][box]["KnockBackX"].asFloat();
 					float knockback_y = jsonData["HitBoxPerFrame"][i][box]["KnockBackY"].asFloat();
+					int frames_of_hit_stun = knockback_x * knockback_y; // TODO: Have hit stun frames come from frame data once it's in there.
+
+					frames_of_hit_stun = frames_of_hit_stun > 0 ? frames_of_hit_stun : -frames_of_hit_stun;
 
 					std::vector<float> vect;
 					string strBoxValues = jsonData["HitBoxPerFrame"][i][box]["Box"].asString();
@@ -57,8 +59,9 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 							ss.ignore();
 					}
 
-					float hit_box_relative_x = (vect[0] + (vect[2] / 2.0f)) / boxScale;
-					float hit_box_relative_y = (vect[1] + (vect[3] / 2.0f)) / boxScale;
+					float radius = player_body->GetFixtureList()[0].GetShape()->m_radius;
+					float hit_box_relative_x = ((vect[0] + (vect[2] / 2.0f)) / boxScale);
+					float hit_box_relative_y = ((vect[1] + (vect[3] / 2.0f)) / boxScale) - (radius * 30.0f);
 					float hit_box_width = (vect[2]) / boxScale;
 					float hit_box_height = (vect[3]) / boxScale;
 

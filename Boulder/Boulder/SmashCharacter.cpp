@@ -8,15 +8,16 @@ using namespace std;
 #include "GameLibrary\InputHandler.h"
 #include "SmashWorld.h"
 
-SmashCharacter::SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
+SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
 	BoulderCreature::BoulderCreature(player_idx, window, position, dimensions, subject_to_gravity) {
 	SetEntityType(Constants::ENTITY_TYPE_PLAYER_CHARACTER);
 	player_index = player_idx;
 
-	hit_points = max_hit_points = 100;
+	hit_points = max_hit_points = playerBestiaryData["DictOfUnits"]["Player"]["HitPoints"].asInt();
 	can_take_input = true;
 
 	speed = 5.0f;
+	running_speed_multiplier = 2.0f;
 	jump_power = 10.0f;
 
 	sf::RectangleShape shape(dimensions);
@@ -73,10 +74,11 @@ SmashCharacter::SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vec
 
 	body->CreateFixture(&groundCheckFixtureDef);
 
-	attacks.push_back(new Attack(body, player_index, Attack::JAB));
+	numberOfAttacks = (int)Attack::MOVES_COUNT;// (int)playerBestiaryData["AttackingAnimations"].size();
+	attacks.push_back(new Attack(body, player_index, Attack::JAB, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][0]));
 	attacks.push_back(new Attack(body, player_index, Attack::UP_SMASH));
-	attacks.push_back(new Attack(body, player_index, Attack::DOWN_SMASH));
-	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_SMASH));
+	attacks.push_back(new Attack(body, player_index, Attack::DOWN_SMASH, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][2]));
+	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_SMASH, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][1]));
 	attacks.push_back(new Attack(body, player_index, Attack::UP_AIR));
 	attacks.push_back(new Attack(body, player_index, Attack::DOWN_AIR));
 	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_AIR));
@@ -90,13 +92,19 @@ SmashCharacter::SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vec
 
 	hit_stun_timer = new StatusTimer(1);
 	jump_input_buffer = new StatusTimer(6);
-	//advanced_input = new AdvancedInput(30);
 
 	weapon = new Weapon(window, position, sf::Vector2f(0.25f, 0.25f), true, player_index, body); 
 	
 	healthBarRect = new sf::RectangleShape(sf::Vector2f(5, 800));
 	healthBarRect->setPosition(10.0f, 10.0f);
 	healthBarRect->setFillColor(sf::Color::Green);
+
+	sprite_scale = 0.25f;
+
+	LoadAllAnimations("Player", playerBestiaryData);
+
+	int numberOfLandingAnimationFrames = landing_animations.size() > 0 ? landing_animations[0]->GetNumberOfFrames() : 1;
+	landing_animation_timer = new StatusTimer(numberOfLandingAnimationFrames);
 }
 
 void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
@@ -113,7 +121,7 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		SetFacingRight(false);
 	}
 
-	for (int i = 0; i < Attack::Moves::MOVES_COUNT; i++) {
+	for (int i = 0; i < numberOfAttacks; i++) {
 		attacks[i]->Update(curr_frame, IsFacingRight());
 	}
 
@@ -128,9 +136,48 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		botCircleFixture->SetColor(0.0f, 1.0f, 0.0f, 1.0f);
 		centerBoxFixture->SetColor(0.0f, 1.0f, 0.0f, 1.0f);
 	}
+
+	if (hit_points <= 0) {
+		if (dying_animation_timer->IsActive()) {
+			State = STATE_DYING;
+		}
+		else {
+			State = STATE_DEAD;
+		}
+	}
+	else if (hit_stun_timer->IsActive()) {
+		State = STATE_HIT_STUN;
+	}
+	else if (IsAnAttackActive()) {
+		State = STATE_ATTACKING;
+	}
+	else if (IsInTheAir()) {
+		if (body->GetLinearVelocity().y < -1.0f) {
+			State = STATE_JUMPING;
+		} else if (body->GetLinearVelocity().y > 1.0f) {
+			State = STATE_FALLING;
+		} else {
+			State = STATE_JUMP_APEX;
+		}
+	}
+	else if (landing_animation_timer->IsActive()) {
+		State = STATE_LANDING;
+	}
+	else if (body->GetLinearVelocity().x != 0) {
+		if (running) {
+			State = STATE_RUNNING;
+		}
+		else {
+			State = STATE_WALKING;
+		}
+	}
+	else {
+		State = STATE_IDLE;
+	}
 }
 
 void SmashCharacter::Draw(sf::Vector2f camera_position) {
+	BoulderCreature::Draw(camera_position);
 	//render_window->draw(*healthBarRect);
 }
 

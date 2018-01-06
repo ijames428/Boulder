@@ -12,8 +12,8 @@ private:
 	int b_button = 1;
 	int x_button = 2;
 	int y_button = 3;
-	int right_bumper_button = 4;
-	int left_bumper_button = 5;
+	int left_bumper_button = 4;
+	int right_bumper_button = 5;
 	int select_button = 6;
 	int start_button = 7;
 	bool a_button_previous = false;

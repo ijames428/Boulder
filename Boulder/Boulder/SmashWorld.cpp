@@ -21,6 +21,9 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 	world = new b2World(*gravity);
 
 	ParseWorld("Maps\\testmap00");
+	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
+	ParseBestiaries();
+
 	BuildWorld();
 
 	timeStep = 1.0f / 60.0f;
@@ -54,6 +57,25 @@ void SmashWorld::ParseWorld(string file_path) {
 	reader.parse(rawWorldData, jsonWorldData);
 }
 
+void SmashWorld::ParsePlayerBestiary(string file_path) {
+	string rawData = "";
+	string line;
+	ifstream myfile(file_path);
+
+	if (myfile.is_open()) {
+		while (getline(myfile, line)) {
+			rawData += line;
+		}
+
+		myfile.close();
+	} else {
+		cout << "Unable to open file " << file_path << "\n";
+	}
+
+	Json::Reader reader;
+	reader.parse(rawData, jsonPlayerData);
+}
+
 void SmashWorld::BuildWorld() {
 	float x = 0.0f;
 	float y = 0.0f;
@@ -71,7 +93,7 @@ void SmashWorld::BuildWorld() {
 	x += width;
 	y += height;
 
-	PlayerOne = new SmashCharacter(0, render_window, sf::Vector2f(x, y), sf::Vector2f(0.3f, 1.0f));
+	PlayerOne = new SmashCharacter(0, jsonPlayerData, render_window, sf::Vector2f(x, y), sf::Vector2f(0.3f, 1.0f));
 	PlayerOne->SetName(jsonWorldData["player"]["name"].asString());
 	player_one_input = new InputHandler(PlayerOne);
 
@@ -113,8 +135,6 @@ void SmashWorld::BuildWorld() {
 		doors.push_back(new Door(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
 		doors[i]->AddActivator(jsonWorldData["doors"][i]["activator"].asString());
 	}
-
-	ParseBestiaries();
 
 	for (int i = 0; i < (int)jsonWorldData["units"].size(); i++) {
 		x = std::stof(jsonWorldData["units"][i]["LevelLocationX"].asString(), &sz) / scalingRatio;
@@ -192,6 +212,8 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 	player_one_input->Update();
 
+	world->DrawDebugData();
+
 	PlayerOne->Update(current_frame, frame_delta);
 	PlayerOne->Draw(camera->viewport_position);
 
@@ -203,8 +225,6 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		enemies[i]->Update(current_frame, frame_delta);
 		enemies[i]->Draw(camera->viewport_position);
 	}
-
-	world->DrawDebugData();
 
 	render_window->display();
 }

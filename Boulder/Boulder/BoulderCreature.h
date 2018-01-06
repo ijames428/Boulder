@@ -20,6 +20,8 @@ using namespace std;
 
 class BoulderCreature : public Creature {
 private:
+	BoulderCreature* target = nullptr;
+protected:
 	int State = 0;
 	const int STATE_IDLE = 0;
 	const int STATE_WALKING = 1;
@@ -34,12 +36,10 @@ private:
 	const int STATE_FALLING = 10;
 	const int STATE_LANDING = 11;
 
-	BoulderCreature* target = nullptr;
-
 	int GetActiveAttackIndex();
-protected:
 	float movement;
 	bool running;
+	float running_speed_multiplier;
 	BoulderCreature(int player_idx, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	std::vector<Attack*> attacks = std::vector<Attack*>();
 	int player_index;
@@ -93,6 +93,7 @@ protected:
 
 	StatusTimer* hit_stun_timer;
 	StatusTimer* dying_animation_timer;
+	StatusTimer* landing_animation_timer;
 	StatusTimer* jump_input_buffer;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);

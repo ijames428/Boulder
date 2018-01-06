@@ -19,17 +19,18 @@ using namespace std;
 #include "Weapon.h"
 #include "StatusTimer.h"
 #include "AdvancedInput.h"
+#include "GameLibrary\Json\json.h"
 
 class SmashCharacter : public BoulderCreature, public ControllableCharacter {
 private:
-	//bool can_take_input;
+	int numberOfAttacks;
 	Weapon* weapon;
 	void DashPunch();
 	void ThrowWeapon();
 	void TeleportToWeapon();
 protected:
 public:
-	SmashCharacter(int player_idx, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
+	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	//void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
@@ -101,7 +102,7 @@ public:
 			} else if (vertical > 90.0f) {
 				UseAttack(Attack::DOWN_SMASH);
 				//cout << "DOWN_SMASH\n";
-			}else if (horizontal < -90.0f) {
+			} else if (horizontal < -90.0f) {
 				if (IsFacingRight()) {
 					SetFacingRight(false);
 				}
@@ -138,14 +139,14 @@ public:
 	}
 
 	void SmashCharacter::HandleButtonXPress() {
-		//if (IsInTheAir()) {
-		//	UseAttack(Attack::NEUTRAL_AIR);
-		//} else {
-		//	UseAttack(Attack::JAB);
-		//}
-		if (weapon->Throwable()) {
-			ThrowWeapon();
+		if (IsInTheAir()) {
+			UseAttack(Attack::NEUTRAL_AIR);
+		} else {
+			UseAttack(Attack::JAB);
 		}
+		//if (weapon->Throwable()) {
+		//	ThrowWeapon();
+		//}
 		//cout << "JAB\n";
 	}
 
@@ -154,8 +155,8 @@ public:
 
 	void SmashCharacter::HandleButtonYPress() {
 		//if (advanced_input->DidPlayerDoQuarterCircleForward(IsFacingRight())) {
-		if (!weapon->Throwable()) {
-			TeleportToWeapon();
+		if (weapon->Throwable()) {
+			ThrowWeapon();
 		}
 	}
 
@@ -163,6 +164,9 @@ public:
 	}
 
 	void SmashCharacter::HandleButtonRightBumperPress() {
+		if (!weapon->Throwable()) {
+			TeleportToWeapon();
+		}
 		//TeleportToWeapon();
 	}
 
@@ -170,9 +174,11 @@ public:
 	}
 
 	void SmashCharacter::HandleButtonLeftBumperPress() {
+		running = true;
 	}
 
 	void SmashCharacter::HandleButtonLeftBumperRelease() {
+		running = false;
 	}
 
 	void SmashCharacter::HandleButtonSelectPress() {
