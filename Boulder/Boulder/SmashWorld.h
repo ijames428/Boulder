@@ -13,6 +13,10 @@ using namespace std;
 #include "Door.h"
 #include "GameLibrary\Json\json.h"
 #include "PlatformerLibrary\Drawable.h"
+#include "DialogueLine.h"
+#include "MenuController.h"
+#include "Trigger.h"
+#include "sfeMovie\Movie.hpp"
 
 class MyContactListener : public b2ContactListener
 {
@@ -49,6 +53,26 @@ class MyContactListener : public b2ContactListener
 			entityB->Aggro(entityA);
 		}
 
+		if (fixtureA->GetFilterData().categoryBits == 0x0200) {
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			entityB->SetInteractable(entityA);
+		}
+		if (fixtureB->GetFilterData().categoryBits == 0x0200) {
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+			entityA->SetInteractable(entityB);
+		}
+
+		if (fixtureA->GetFilterData().categoryBits == 0x0400) {
+			Trigger* entityA = static_cast<Trigger*>(fixtureA->GetBody()->GetUserData());
+			entityA->Triggered();
+		}
+		if (fixtureB->GetFilterData().categoryBits == 0x0400) {
+			Trigger* entityB = static_cast<Trigger*>(fixtureB->GetBody()->GetUserData());
+			entityB->Triggered();
+		}
+
 		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
 		//	if (fixtureA->GetFilterData().categoryBits == 0x0020) {
 		//		Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
@@ -74,6 +98,17 @@ class MyContactListener : public b2ContactListener
 		if (fixtureB->GetFilterData().categoryBits == 0x0100) {
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			entityB->Deaggro();
+		}
+
+		if (fixtureA->GetFilterData().categoryBits == 0x0200) {
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			entityB->SetInteractable(nullptr);
+		}
+		if (fixtureB->GetFilterData().categoryBits == 0x0200) {
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+			entityA->SetInteractable(nullptr);
 		}
 	}
 
@@ -130,6 +165,11 @@ private:
 		float height;
 	};
 
+	string STAGE_OF_GAME_INTRO = "Intro";
+	string STAGE_OF_GAME_OPENED_UP = "Opened Up";
+	string STAGE_OF_GAME_AFTER_FIRST_BOSS = "After First Boss";
+
+	string StageOfTheGame;
 	sf::Int64 current_frame;
 	sf::RenderWindow* render_window;
 	Camera* camera;
@@ -140,7 +180,8 @@ private:
 	int32 velocityIterations;
 	int32 positionIterations;
 	SmashCharacter* PlayerOne;
-	InputHandler* player_one_input;
+	InputHandler* player_one_character_input;
+	InputHandler* player_one_menu_input;
 	bool exit_multiplayer;
 	void ExitMultiplayer();
 	MyContactListener myContactListenerInstance;
@@ -148,15 +189,25 @@ private:
 	void ParsePlayerBestiary(string file_path);
 	void ParseBestiaries();
 	void ParseBestiary(string file_path);
+	void ParseDialogue(string file_path);
 	void BuildWorld();
 	Json::Value jsonWorldData;
 	Json::Value jsonPlayerData;
-	string rawWorldData;
 	std::vector<Json::Value> jsonBestiariesData;
-	//std::vector<string> rawBestiariesData;
+	Json::Value jsonDialogueData;
 	std::vector<Box2DRigidBody*> box2dRigidBodies;
 	std::vector<Door*> doors;
+	std::vector<Trigger*> triggers;
 	std::vector<BoulderCreature*> enemies;
+	sf::Font ringbearer_font;
+	sf::Text dialogue_text;
+	string unit_type_player_is_talking_to;
+	DialogueLine* RootDialogueLine;
+	DialogueLine* CurrentDialogueLine;
+	sfe::Movie intro_cutscene;
+	void ExportSaveData();
+	void ImportSaveData();
+	bool past_setup = false;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam);
@@ -165,6 +216,24 @@ public:
 	Camera* GetCamera() { return camera; };
 	b2World* GetB2World() { return world; };
 	sf::Int64 GetCurrentFrame() { return current_frame; };
+	void SetDialogueText(string new_text);
+	void StartDialogue(string unit_type);
+	void ProgressDialogueText();
+	string GetCurrentPointInGame();
+	void UpdateVideo();
+	void Setup();
+	void TriggerAction(string action_call);
+	void HandleButtonBPress();
+	void HandleButtonBRelease();
+	void HandleButtonXPress();
+	void HandleButtonXRelease();
+	void HandleButtonAPress();
+	void HandleButtonARelease();
+	void HandleButtonStartPress();
+	void HandleButtonStartRelease();
+	void HandleButtonSelectPress();
+	void HandleButtonSelectRelease();
+
 	enum EntityCategory {
 		PLAYER_ONE = 0x0001,
 		PLAYER_TWO = 0x0002,
@@ -174,6 +243,8 @@ public:
 		WEAPON = 0x0020,
 		DOOR = 0x0040,
 		AGGRO_CIRCLE = 0x0080,
-		DEAGGRO_CIRCLE = 0x0100
+		DEAGGRO_CIRCLE = 0x0100,
+		INTERACTION_CIRCLE = 0x0200,
+		TRIGGER = 0x0400
 	};
 }; 

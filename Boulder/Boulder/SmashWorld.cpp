@@ -7,6 +7,7 @@ using namespace std;
 #include <sstream>
 #include "SmashWorld.h"
 #include "Constants.h"
+#include <thread>
 
 SmashWorld::SmashWorld() {
 }
@@ -15,7 +16,98 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 	render_window = window;
 	camera = cam;
 
+	StageOfTheGame = STAGE_OF_GAME_INTRO;
+
+	player_one_menu_input = new InputHandler(new MenuController(0));
+
+	string intro_cut_scene_file_relative_path = "Cutscenes/ShadowsDieTwice.avi";
+	if (!intro_cutscene.openFromFile(intro_cut_scene_file_relative_path))
+	{
+		cout << "Unable to open file " << intro_cut_scene_file_relative_path << "\n";
+	}
+
+	intro_cutscene.fit(0, 0, camera->viewport_dimensions.x, camera->viewport_dimensions.y);
+	intro_cutscene.play();
+#ifdef _DEBUG
+	intro_cutscene.setVolume(0);
+#else
+	intro_cutscene.setVolume(100);
+#endif
+
+	player_one_menu_input->EatInputsForNumberOfFrames(1);
+
+	render_window->setActive(false);
+
+	std::thread thread(&SmashWorld::UpdateVideo, this);
+
+	//ExportSaveData();
+	//ImportSaveData();
+
+	Setup();
+
+	thread.join();
+
+	render_window->setActive(true);
+}
+
+void SmashWorld::ImportSaveData() {
+	string file_path = "save_data.txt";
+
+	Json::Value save_data;
+	string rawData = "";
+	string line;
+	ifstream myfile(file_path, ios::binary);
+	
+	if (myfile.is_open()) {
+		while (getline(myfile, line)) {
+			rawData += line;
+		}
+	
+		myfile.close();
+	} else {
+		cout << "Unable to open file " << file_path << "\n";
+	}
+
+	Json::Reader reader;
+	reader.parse(rawData, save_data);
+
+	StageOfTheGame = save_data["WorldData"]["StageOfTheGame"].asString();
+
+	PlayerOne->ApplySaveDataToObjectData(save_data);
+
+	for (int i = 0; i < (int)enemies.size(); i++) {
+		enemies[i]->ApplySaveDataToObjectData(save_data[enemies[i]->GetName()]);
+	}
+
+	myfile.close();
+}
+
+void SmashWorld::ExportSaveData() {
+	ofstream ofs("save_data.txt", ios::binary);
+
+	Json::Value save_data;
+
+	save_data["WorldData"]["StageOfTheGame"] = StageOfTheGame;
+
+	PlayerOne->ApplyObjectDataToSaveData(save_data);
+
+	for (int i = 0; i < (int)enemies.size(); i++) {
+		enemies[i]->ApplyObjectDataToSaveData(save_data[enemies[i]->GetName()]);
+	}
+
+	Json::StreamWriterBuilder wbuilder;
+	std::string document = Json::writeString(wbuilder, save_data);
+
+	ofs << document;
+
+	ofs.close();
+
+	cout << "########## Saved ##########\n";
+}
+
+void SmashWorld::Setup() {
 	exit_multiplayer = false;
+	unit_type_player_is_talking_to = "";
 
 	gravity = new b2Vec2(0.0f, 30.0f);
 	world = new b2World(*gravity);
@@ -23,6 +115,7 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 	ParseWorld("Maps\\testmap00");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
+	ParseDialogue("BoulderDialogue.txt");
 
 	BuildWorld();
 
@@ -30,22 +123,98 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 	velocityIterations = 6;
 	positionIterations = 2;
 
-	test_drawable = new Drawable(window, camera);
+	test_drawable = new Drawable(render_window, camera);
 	test_drawable->SetFlags(b2Draw::e_shapeBit);
 	
 	world->SetDebugDraw(test_drawable);
 
 	world->SetContactListener(&myContactListenerInstance);
+
+	ringbearer_font.loadFromFile("Images/RingbearerFont.ttf");
+
+	dialogue_text = sf::Text("", ringbearer_font, 45);
+	dialogue_text.setPosition(100.0f, camera->viewport_dimensions.y - 200.0f);
+
+	CurrentDialogueLine = nullptr;
+	RootDialogueLine = new DialogueLine("1", nullptr, jsonDialogueData);
+
+	past_setup = true; 
+	
+	//ExportSaveData();
+}
+
+void SmashWorld::UpdateVideo() {
+	render_window->setActive(true);
+
+	while (intro_cutscene.getStatus() == sfe::Playing) {
+		render_window->clear();
+
+		player_one_menu_input->Update();
+
+		intro_cutscene.update();
+		render_window->draw(intro_cutscene);
+
+		render_window->display();
+	}
+
+	render_window->setActive(false);
+}
+
+void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
+	render_window->clear();
+
+	if (intro_cutscene.getStatus() == sfe::Playing) {
+		player_one_menu_input->Update();
+		
+		intro_cutscene.update();
+		render_window->draw(intro_cutscene);
+	} else {
+		current_frame = curr_frame;
+
+		world->Step(timeStep, velocityIterations, positionIterations);
+
+		float lerp = 0.01f;
+		sf::Vector2f camera_position = camera->viewport_position;
+
+		camera_position.x += (PlayerOne->GetBody()->GetPosition().x - camera->viewport_dimensions.x / 2.0f / 40.0f - camera_position.x) * lerp * frame_delta;
+		camera_position.y += (PlayerOne->GetBody()->GetPosition().y - camera->viewport_dimensions.y / 2.0f / 40.0f - camera_position.y) * lerp * frame_delta;
+
+		camera->viewport_position = camera_position;
+
+		if (unit_type_player_is_talking_to != "") {
+			player_one_menu_input->Update();
+		} else {
+			player_one_character_input->Update();
+		}
+
+		world->DrawDebugData();
+
+		PlayerOne->Update(current_frame, frame_delta);
+		PlayerOne->Draw(camera->viewport_position);
+
+		for (int i = 0; i < (int)doors.size(); i++) {
+			doors[i]->Update(current_frame, frame_delta);
+		}
+
+		for (int i = 0; i < (int)enemies.size(); i++) {
+			enemies[i]->Update(current_frame, frame_delta);
+			enemies[i]->Draw(camera->viewport_position);
+		}
+
+		render_window->draw(dialogue_text);
+	}
+
+	render_window->display();
 }
 
 void SmashWorld::ParseWorld(string file_path) {
-	rawWorldData = "";
+	string rawData = "";
 	string line;
 	ifstream myfile(file_path);
 
 	if (myfile.is_open()) {
 		while (getline(myfile, line)) {
-			rawWorldData += line;
+			rawData += line;
 		}
 
 		myfile.close();
@@ -54,7 +223,7 @@ void SmashWorld::ParseWorld(string file_path) {
 	}
 
 	Json::Reader reader;
-	reader.parse(rawWorldData, jsonWorldData);
+	reader.parse(rawData, jsonWorldData);
 }
 
 void SmashWorld::ParsePlayerBestiary(string file_path) {
@@ -76,6 +245,26 @@ void SmashWorld::ParsePlayerBestiary(string file_path) {
 	reader.parse(rawData, jsonPlayerData);
 }
 
+void SmashWorld::ParseDialogue(string file_path) {
+	string rawData = "";
+	string line;
+	ifstream myfile(file_path);
+
+	if (myfile.is_open()) {
+		while (getline(myfile, line)) {
+			rawData += line;
+		}
+
+		myfile.close();
+	}
+	else {
+		cout << "Unable to open file " << file_path << "\n";
+	}
+
+	Json::Reader reader;
+	reader.parse(rawData, jsonDialogueData);
+}
+
 void SmashWorld::BuildWorld() {
 	float x = 0.0f;
 	float y = 0.0f;
@@ -95,7 +284,7 @@ void SmashWorld::BuildWorld() {
 
 	PlayerOne = new SmashCharacter(0, jsonPlayerData, render_window, sf::Vector2f(x, y), sf::Vector2f(0.3f, 1.0f));
 	PlayerOne->SetName(jsonWorldData["player"]["name"].asString());
-	player_one_input = new InputHandler(PlayerOne);
+	player_one_character_input = new InputHandler(PlayerOne);
 
 	sf::Vector2f camera_position = camera->viewport_position;
 	camera_position.x += (PlayerOne->GetBody()->GetPosition().x - camera->viewport_dimensions.x / 2.0f / 40.0f - camera_position.x);
@@ -136,6 +325,19 @@ void SmashWorld::BuildWorld() {
 		doors[i]->AddActivator(jsonWorldData["doors"][i]["activator"].asString());
 	}
 
+	for (int i = 0; i < (int)jsonWorldData["triggers"].size(); i++) {
+		x = std::stof(jsonWorldData["triggers"][i]["x"].asString(), &sz) / scalingRatio;
+		y = std::stof(jsonWorldData["triggers"][i]["y"].asString(), &sz) / scalingRatio;
+		width = std::stof(jsonWorldData["triggers"][i]["width"].asString(), &sz) / (scalingRatio * 2.0f);
+		height = std::stof(jsonWorldData["triggers"][i]["height"].asString(), &sz) / (scalingRatio * 2.0f);
+
+		x += width;
+		y += height;
+
+		triggers.push_back(new Trigger(jsonWorldData["triggers"][i]["name"].asString(), render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+		triggers[i]->AddActivaty(jsonWorldData["triggers"][i]["activity"].asString());
+	}
+
 	for (int i = 0; i < (int)jsonWorldData["units"].size(); i++) {
 		x = std::stof(jsonWorldData["units"][i]["LevelLocationX"].asString(), &sz) / scalingRatio;
 		y = std::stof(jsonWorldData["units"][i]["LevelLocationY"].asString(), &sz) / scalingRatio;
@@ -156,7 +358,7 @@ void SmashWorld::BuildWorld() {
 		//string test1 = thisBestiary["DictOfUnits"]["Gelly"]["IdleAnimations"][0]["FilePath"].asString();
 
 		enemies.push_back(new BoulderCreature(jsonWorldData["units"][i]["InstanceOfUnitName"].asString(), jsonWorldData["units"][i]["UnitType"].asString(), 
-											  jsonWorldData["units"][i]["BestiaryName"].asString(), thisBestiary,
+											  jsonWorldData["units"][i]["BestiaryName"].asString(), jsonWorldData["units"][i]["IsInteractable"].asBool(), thisBestiary,
 											  render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
 	}
 
@@ -184,8 +386,7 @@ void SmashWorld::ParseBestiary(string file_path) {
 		}
 
 		myfile.close();
-	}
-	else {
+	} else {
 		cout << "Unable to open file " << relativeFilePath << "\n";
 	}
 
@@ -195,38 +396,53 @@ void SmashWorld::ParseBestiary(string file_path) {
 	jsonBestiariesData.push_back(jsonData);
 }
 
-void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
-	render_window->clear();
+void SmashWorld::SetDialogueText(string new_text) {
+	dialogue_text.setString(new_text);
+}
 
-	current_frame = curr_frame;
+void SmashWorld::StartDialogue(string unit_type) {
+	unit_type_player_is_talking_to = unit_type;
+	ProgressDialogueText();
+}
 
-	world->Step(timeStep, velocityIterations, positionIterations);
-
-	float lerp = 0.01f;
-	sf::Vector2f camera_position = camera->viewport_position;
-
-	camera_position.x += (PlayerOne->GetBody()->GetPosition().x - camera->viewport_dimensions.x / 2.0f / 40.0f - camera_position.x) * lerp * frame_delta;
-	camera_position.y += (PlayerOne->GetBody()->GetPosition().y - camera->viewport_dimensions.y / 2.0f / 40.0f - camera_position.y) * lerp * frame_delta;
-
-	camera->viewport_position = camera_position;
-
-	player_one_input->Update();
-
-	world->DrawDebugData();
-
-	PlayerOne->Update(current_frame, frame_delta);
-	PlayerOne->Draw(camera->viewport_position);
-
-	for (int i = 0; i < (int)doors.size(); i++) {
-		doors[i]->Update(current_frame, frame_delta);
+void SmashWorld::ProgressDialogueText() {
+	if (CurrentDialogueLine == nullptr) {
+		CurrentDialogueLine = RootDialogueLine;
+	} else if (CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame) != nullptr) {
+		CurrentDialogueLine = CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame);
 	}
 
-	for (int i = 0; i < (int)enemies.size(); i++) {
-		enemies[i]->Update(current_frame, frame_delta);
-		enemies[i]->Draw(camera->viewport_position);
-	}
+	player_one_menu_input->EatInputsForNumberOfFrames(1);
 
-	render_window->display();
+	dialogue_text.setString(CurrentDialogueLine->Line);
+}
+
+template<typename Out>
+void split(const std::string &s, char delim, Out result) {
+	std::stringstream ss(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		*(result++) = item;
+	}
+}
+
+std::vector<std::string> split(const std::string &s, char delim) {
+	std::vector<std::string> elems;
+	split(s, delim, std::back_inserter(elems));
+	return elems;
+}
+
+void SmashWorld::TriggerAction(string action_call) {
+	std::vector<string> vstrings = split(action_call, '(');
+
+	string call = vstrings[0];
+	string argument = vstrings[1].substr(0, vstrings[1].size() - 1);
+
+	if (call == "OpenDoor") {
+		for (int i = 0; i < (int)doors.size(); i++) {
+			doors[i]->TryToActivate(vstrings[1].substr(0, vstrings[1].size() - 1));
+		}
+	}
 }
 
 void SmashWorld::ExitMultiplayer() {
@@ -235,4 +451,57 @@ void SmashWorld::ExitMultiplayer() {
 
 bool SmashWorld::ShouldExitMultiplayer() {
 	return exit_multiplayer;
+}
+
+string SmashWorld::GetCurrentPointInGame() {
+	return "Intro";
+}
+
+void SmashWorld::HandleButtonBPress() {
+	if (unit_type_player_is_talking_to != "") {
+		unit_type_player_is_talking_to = "";
+		CurrentDialogueLine = nullptr;
+		dialogue_text.setString("");
+	}
+}
+
+void SmashWorld::HandleButtonBRelease() {
+}
+
+void SmashWorld::HandleButtonXPress() {
+	if (unit_type_player_is_talking_to != "") {
+		ProgressDialogueText();
+	}
+}
+
+void SmashWorld::HandleButtonXRelease() {
+}
+
+void SmashWorld::HandleButtonAPress() {
+	if (intro_cutscene.getStatus() == sfe::Playing) {
+		intro_cutscene.stop();
+	}
+}
+
+void SmashWorld::HandleButtonARelease() {
+}
+
+void SmashWorld::HandleButtonStartPress() {
+	if (intro_cutscene.getStatus() == sfe::Playing) {
+		intro_cutscene.stop();
+	} else if (past_setup) {
+		ImportSaveData();
+	}
+}
+
+void SmashWorld::HandleButtonStartRelease() {
+}
+
+void SmashWorld::HandleButtonSelectPress() {
+	if (past_setup) {
+		ExportSaveData();
+	}
+}
+
+void SmashWorld::HandleButtonSelectRelease() {
 }

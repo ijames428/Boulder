@@ -33,20 +33,9 @@ public:
 	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
-	//void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
-	//Attack* GetActiveAttack();
-	//bool IsAnAttackActive();
-	//void Land();
+	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
+	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 
-	//string GetName() {
-	//	return name;
-	//};
-	//void SetName(string new_name) {
-	//	name = new_name;
-	//};
-	//b2Body* GetBody() {
-	//	return body;
-	//}
 	virtual int GetPlayerIndex() {
 		return player_index;
 	};
@@ -61,8 +50,6 @@ public:
 	};
 	
 	void SmashCharacter::HandleLeftStickInput(float horizontal, float vertical) {
-		//advanced_input->AddStickInput(horizontal, vertical);
-
 		Move(horizontal, vertical);
 	}
 
@@ -138,17 +125,7 @@ public:
 	void SmashCharacter::HandleButtonBRelease() {
 	}
 
-	void SmashCharacter::HandleButtonXPress() {
-		if (IsInTheAir()) {
-			UseAttack(Attack::NEUTRAL_AIR);
-		} else {
-			UseAttack(Attack::JAB);
-		}
-		//if (weapon->Throwable()) {
-		//	ThrowWeapon();
-		//}
-		//cout << "JAB\n";
-	}
+	void SmashCharacter::HandleButtonXPress();
 
 	void SmashCharacter::HandleButtonXRelease() {
 	}
@@ -181,17 +158,13 @@ public:
 		running = false;
 	}
 
-	void SmashCharacter::HandleButtonSelectPress() {
-	}
+	void SmashCharacter::HandleButtonSelectPress();
 
-	void SmashCharacter::HandleButtonSelectRelease() {
-	}
+	void SmashCharacter::HandleButtonSelectRelease();
 
-	void SmashCharacter::HandleButtonStartPress() {
-	}
+	void SmashCharacter::HandleButtonStartPress();
 
-	void SmashCharacter::HandleButtonStartRelease() {
-	}
+	void SmashCharacter::HandleButtonStartRelease();
 };
 
 #endif

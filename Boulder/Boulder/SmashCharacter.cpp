@@ -12,6 +12,7 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	BoulderCreature::BoulderCreature(player_idx, window, position, dimensions, subject_to_gravity) {
 	SetEntityType(Constants::ENTITY_TYPE_PLAYER_CHARACTER);
 	player_index = player_idx;
+	is_interactable = false;
 
 	hit_points = max_hit_points = playerBestiaryData["DictOfUnits"]["Player"]["HitPoints"].asInt();
 	can_take_input = true;
@@ -107,6 +108,14 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	landing_animation_timer = new StatusTimer(numberOfLandingAnimationFrames);
 }
 
+void SmashCharacter::ApplyObjectDataToSaveData(Json::Value& save_data) {
+	BoulderCreature::ApplyObjectDataToSaveData(save_data["Player"]);
+}
+
+void SmashCharacter::ApplySaveDataToObjectData(Json::Value& save_data) {
+	BoulderCreature::ApplySaveDataToObjectData(save_data["Player"]);
+}
+
 void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
@@ -181,46 +190,18 @@ void SmashCharacter::Draw(sf::Vector2f camera_position) {
 	//render_window->draw(*healthBarRect);
 }
 
-//void SmashCharacter::Move(float horizontal, float vertical) {
-//	if (can_take_input && hit_points > 0) {
-//		body->SetLinearVelocity(b2Vec2((horizontal / 100.0f) * speed, body->GetLinearVelocity().y));
-//
-//		if (horizontal > 0) {
-//			SetFacingRight(true);
-//		} else if (horizontal < 0) {
-//			SetFacingRight(false);
-//		}
-//	}
-//}
-
-//void SmashCharacter::Jump() {
-//	if (can_take_input && hit_points > 0) {
-//		bool jumping = false;
-//
-//		if (!IsInTheAir()) {
-//			jumping = true;
-//		} else if (has_double_jump) {
-//			jumping = true;
-//			has_double_jump = false;
-//		}
-//
-//		if (jumping) {
-//			body->SetLinearVelocity(b2Vec2(body->GetLinearVelocity().x, -jump_power));
-//			SetInTheAir(true);
-//		}
-//	}
-//}
-
-//void SmashCharacter::Land() {
-//	SetInTheAir(false);
-//	has_double_jump = true;
-//	if (IsAnAttackActive()) {
-//		GetActiveAttack()->StopAttack();
-//	}
-//	if (jump_input_buffer->IsActive()) {
-//		Jump();
-//	}
-//}
+void SmashCharacter::HandleButtonXPress() {
+	if (interactable != nullptr) {
+		interactable->StartTalking();
+		Singleton<SmashWorld>::Get()->StartDialogue(interactable->GetType());
+	} else {
+		if (IsInTheAir()) {
+			UseAttack(Attack::NEUTRAL_AIR);
+		} else {
+			UseAttack(Attack::JAB);
+		}
+	}
+}
 
 void SmashCharacter::DashPunch() {
 }
@@ -245,40 +226,20 @@ void SmashCharacter::TeleportToWeapon() {
 	body->SetLinearVelocity(b2Vec2(travel_vector.x * speed, travel_vector.y * speed));
 
 	weapon->TeleportedTo();
-
 }
 
-//void SmashCharacter::UseAttack(int move_type) {
-//	if (can_take_input && hit_points > 0) {
-//		attacks[move_type]->InitiateAttack();
-//	}
-//}
+void SmashCharacter::HandleButtonSelectPress() {
+	Singleton<SmashWorld>::Get()->HandleButtonSelectPress();
+}
 
-//void SmashCharacter::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames) {
-//	cout << "got hit for " << damage << " damage!\n";
-//	hit_stun_timer = new StatusTimer(hit_stun_frames);
-//	hit_stun_timer->Start();
-//	body->SetLinearVelocity(b2Vec2(knock_back.x, knock_back.y));
-//}
+void SmashCharacter::HandleButtonSelectRelease() {
+	Singleton<SmashWorld>::Get()->HandleButtonSelectRelease();
+}
 
-//Attack* SmashCharacter::GetActiveAttack() {
-//	Attack* active_attack = attacks[Attack::JAB];
-//
-//	for (int i = 0; i < Attack::Moves::MOVES_COUNT; i++) {
-//		if (attacks[i]->IsAttacking()) {
-//			active_attack = attacks[i];
-//		}
-//	}
-//
-//	return active_attack;
-//}
+void SmashCharacter::HandleButtonStartPress() {
+	Singleton<SmashWorld>::Get()->HandleButtonStartPress();
+}
 
-//bool SmashCharacter::IsAnAttackActive() {
-//	for (int i = 0; i < Attack::Moves::MOVES_COUNT; i++) {
-//		if (attacks[i]->IsAttacking()) {
-//			return true;
-//		}
-//	}
-//
-//	return false;
-//}
+void SmashCharacter::HandleButtonStartRelease() {
+	Singleton<SmashWorld>::Get()->HandleButtonStartRelease();
+}

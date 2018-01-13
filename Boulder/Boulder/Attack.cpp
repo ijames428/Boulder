@@ -42,7 +42,7 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 					int damage = jsonData["HitBoxPerFrame"][i][box]["Damage"].asInt();
 					float knockback_x = jsonData["HitBoxPerFrame"][i][box]["KnockBackX"].asFloat();
 					float knockback_y = jsonData["HitBoxPerFrame"][i][box]["KnockBackY"].asFloat();
-					int frames_of_hit_stun = knockback_x * knockback_y; // TODO: Have hit stun frames come from frame data once it's in there.
+					int frames_of_hit_stun = (int)(knockback_x * knockback_y); // TODO: Have hit stun frames come from frame data once it's in there.
 
 					frames_of_hit_stun = frames_of_hit_stun > 0 ? frames_of_hit_stun : -frames_of_hit_stun;
 

@@ -143,3 +143,9 @@ void Box2DRigidBody::SetInTheAir(bool in_the_air_now) {
 bool Box2DRigidBody::IsInTheAir() {
 	return in_the_air;
 }
+
+void Box2DRigidBody::ApplyObjectDataToSaveData(Json::Value& save_data) {
+}
+
+void Box2DRigidBody::ApplySaveDataToObjectData(Json::Value& save_data) {
+}

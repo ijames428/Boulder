@@ -28,6 +28,10 @@ SpriteAnimation::SpriteAnimation(sf::RenderWindow* window, std::string file_path
 	sprite->setColor(color);
 }
 
+void SpriteAnimation::Play() {
+	current_frame = 0;
+}
+
 void SpriteAnimation::Draw(sf::Vector2f camera_position, sf::Vector2f parent_object_mid_position) {
 	int frame_row = 0;
 	int frame_column = 0;

@@ -24,6 +24,7 @@ public:
 	sf::RenderWindow *render_window;
 	SpriteAnimation(sf::RenderWindow* window, std::string file_path_and_name, int frame_width, int frame_height, int total_frames, int columns_count, int rows_count, float scale, sf::Color color, bool loop = true);
 	void Draw(sf::Vector2f camera_position, sf::Vector2f parent_object_mid_position);
+	void Play();
 	void Flip();
 	bool IsFacingRight();
 	void SetColor(sf::Color new_color);

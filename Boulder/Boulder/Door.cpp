@@ -20,17 +20,6 @@ Door::Door(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensi
 	body->SetUserData(this);
 
 	original_y = body->GetPosition().y;
-	//bodyDef.type = b2_dynamicBody;
-	//bodyDef.position.Set(position.x, position.y);
-	//body = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
-	//
-	//boxShape.SetAsBox(0.4f, 1.2f);
-	//boxFixtureDef.shape = &boxShape;
-	//boxFixtureDef.density = 1.0f;
-	//boxFixtureDef.friction = 0.3f;
-	//boxFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
-	//boxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->DOOR;
-	//boxFixture = body->CreateFixture(&boxFixtureDef);
 }
 
 void Door::TryToActivate(string activating_objects_name) {

@@ -9,6 +9,7 @@ using namespace std;
 #include "Box2D\Common\b2Draw.h"
 #include "Drawable.h"
 #include "Box2D\Box2D.h"
+#include "..\GameLibrary\Json\json.h"
 
 class Box2DRigidBody {
 protected:
@@ -48,6 +49,9 @@ public:
 	void SetFacingRight(bool new_facing_right);
 	void SetInTheAir(bool in_the_air_now);
 	bool IsInTheAir();
+
+	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
+	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 };
 
 #endif

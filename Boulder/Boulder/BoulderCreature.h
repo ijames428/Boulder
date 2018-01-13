@@ -35,6 +35,14 @@ protected:
 	const int STATE_JUMP_APEX = 9;
 	const int STATE_FALLING = 10;
 	const int STATE_LANDING = 11;
+	const int STATE_TALKING = 12;
+
+	bool is_hostile = false;
+	bool is_interactable = false;
+	bool is_hittable = false;
+	float interaction_radius = 0.0f;
+
+	BoulderCreature* interactable = nullptr;
 
 	int GetActiveAttackIndex();
 	float movement;
@@ -50,16 +58,19 @@ protected:
 	b2Body* body;
 	b2CircleShape aggroCircleShape;
 	b2CircleShape deaggroCircleShape;
+	b2CircleShape interactionCircleShape;
 	b2CircleShape topCircleShape;
 	b2CircleShape botCircleShape;
 	b2PolygonShape centerBoxShape;
 	b2FixtureDef aggroCircleFixtureDef;
 	b2FixtureDef deaggroCircleFixtureDef;
+	b2FixtureDef interactionCircleFixtureDef;
 	b2FixtureDef topCircleFixtureDef;
 	b2FixtureDef botCircleFixtureDef;
 	b2FixtureDef centerBoxFixtureDef;
 	b2Fixture* aggroCircleFixture;
 	b2Fixture* deaggroCircleFixture;
+	b2Fixture* interactionCircleFixture;
 	b2Fixture* topCircleFixture;
 	b2Fixture* botCircleFixture;
 	b2Fixture* centerBoxFixture;
@@ -72,6 +83,7 @@ protected:
 	sf::RectangleShape* healthBarRect;
 	float healthBarStartingScaleY;
 	string name = "";
+	string type = "";
 
 	void LoadAllAnimations(string unit_type, Json::Value jsonBestiariesData);
 	std::vector<SpriteAnimation*> LoadAnimations(string animations_name, string unit_type, Json::Value jsonBestiariesData); 
@@ -90,13 +102,15 @@ protected:
 	std::vector<SpriteAnimation*> jump_apex_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> falling_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> landing_animations = std::vector<SpriteAnimation*>();
+	std::vector<SpriteAnimation*> talking_animations = std::vector<SpriteAnimation*>();
 
 	StatusTimer* hit_stun_timer;
 	StatusTimer* dying_animation_timer;
 	StatusTimer* landing_animation_timer;
+	StatusTimer* talking_animation_timer;
 	StatusTimer* jump_input_buffer;
 public:
-	BoulderCreature(string unit_name, string unit_type, string bestiary_name, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
+	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
@@ -105,12 +119,19 @@ public:
 	void Land();
 	void Aggro(BoulderCreature* new_target);
 	void Deaggro();
+	void SetInteractable(BoulderCreature* new_interactable);
+	void StartTalking();
+	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
+	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 
 	string GetName() {
 		return name;
 	};
 	void SetName(string new_name) {
 		name = new_name;
+	};
+	string GetType() {
+		return type;
 	};
 	b2Body* GetBody() {
 		return body;
