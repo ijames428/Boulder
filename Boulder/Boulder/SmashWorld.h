@@ -17,6 +17,7 @@ using namespace std;
 #include "MenuController.h"
 #include "Trigger.h"
 #include "sfeMovie\Movie.hpp"
+#include "Menu.h"
 
 class MyContactListener : public b2ContactListener
 {
@@ -182,8 +183,7 @@ private:
 	SmashCharacter* PlayerOne;
 	InputHandler* player_one_character_input;
 	InputHandler* player_one_menu_input;
-	bool exit_multiplayer;
-	void ExitMultiplayer();
+	bool exit_to_main_menu;
 	MyContactListener myContactListenerInstance;
 	void ParseWorld(string file_path);
 	void ParsePlayerBestiary(string file_path);
@@ -205,14 +205,19 @@ private:
 	DialogueLine* RootDialogueLine;
 	DialogueLine* CurrentDialogueLine;
 	sfe::Movie intro_cutscene;
-	void ExportSaveData();
-	void ImportSaveData();
 	bool past_setup = false;
+	sf::Vector2f parallax_background_viewport_position;
+	sf::Texture parallax_background_texture;
+	sf::Sprite parallax_background_sprite;
+
+	Menu* MainMenu;
+	Menu* PauseMenu;
+	bool can_take_another_left_stick_input_from_menu_controller = true;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam);
 	void Update(sf::Int64 curr_frame, sf::Int64 frame_delta);
-	bool ShouldExitMultiplayer();
+	bool ShouldExitToMainMenu();
 	Camera* GetCamera() { return camera; };
 	b2World* GetB2World() { return world; };
 	sf::Int64 GetCurrentFrame() { return current_frame; };
@@ -222,7 +227,13 @@ public:
 	string GetCurrentPointInGame();
 	void UpdateVideo();
 	void Setup();
-	void TriggerAction(string action_call);
+	void ExportSaveData();
+	void ImportSaveData();
+	void ExitGame();
+	void ExitToMainMenu();
+	void ExecuteAction(string action_call);
+	void HandleLeftStickInput(float horizontal, float vertical);
+	void HandleRightStickInput(float horizontal, float vertical);
 	void HandleButtonBPress();
 	void HandleButtonBRelease();
 	void HandleButtonXPress();

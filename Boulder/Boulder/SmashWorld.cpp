@@ -9,6 +9,8 @@ using namespace std;
 #include "Constants.h"
 #include <thread>
 
+typedef void(*callback_function)(void); // type for conciseness
+
 SmashWorld::SmashWorld() {
 }
 
@@ -82,6 +84,26 @@ void SmashWorld::ImportSaveData() {
 	myfile.close();
 }
 
+void ExternalExportSaveData() {
+	Singleton<SmashWorld>::Get()->ExportSaveData();
+}
+
+void ExternalImportSaveData() {
+	Singleton<SmashWorld>::Get()->ImportSaveData();
+}
+
+void ExternalExitGame() {
+	Singleton<SmashWorld>::Get()->ExitGame();
+}
+
+void ExternalExitToMainMenu() {
+	Singleton<SmashWorld>::Get()->ExitToMainMenu();
+}
+
+void SmashWorld::ExitGame() {
+	render_window->close();
+}
+
 void SmashWorld::ExportSaveData() {
 	ofstream ofs("save_data.txt", ios::binary);
 
@@ -106,7 +128,7 @@ void SmashWorld::ExportSaveData() {
 }
 
 void SmashWorld::Setup() {
-	exit_multiplayer = false;
+	exit_to_main_menu = false;
 	unit_type_player_is_talking_to = "";
 
 	gravity = new b2Vec2(0.0f, 30.0f);
@@ -138,9 +160,19 @@ void SmashWorld::Setup() {
 	CurrentDialogueLine = nullptr;
 	RootDialogueLine = new DialogueLine("1", nullptr, jsonDialogueData);
 
-	past_setup = true; 
-	
-	//ExportSaveData();
+	past_setup = true;
+
+	PauseMenu = new Menu(render_window, camera->viewport_dimensions);
+	//PauseMenu->AddItem("Resume Game", "Resume()");
+	PauseMenu->AddItem("Save Game", &ExternalExportSaveData);
+	PauseMenu->AddItem("Load Game", &ExternalImportSaveData);
+	PauseMenu->AddItem("Go To Main Menu", &ExternalExitToMainMenu);
+	PauseMenu->AddItem("Exit Game", &ExternalExitGame);
+
+	parallax_background_texture.loadFromFile("Images/parallax_background.jpg");
+	parallax_background_sprite = sf::Sprite(parallax_background_texture);
+	parallax_background_sprite.setPosition(0.0f, 0.0f);
+	//parallax_background_sprite.setScale(0.4f, 0.4f);
 }
 
 void SmashWorld::UpdateVideo() {
@@ -165,9 +197,12 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 	if (intro_cutscene.getStatus() == sfe::Playing) {
 		player_one_menu_input->Update();
-		
+
 		intro_cutscene.update();
 		render_window->draw(intro_cutscene);
+	} else if (PauseMenu->IsOpen) {
+		player_one_menu_input->Update();
+		PauseMenu->Draw(curr_frame);
 	} else {
 		current_frame = curr_frame;
 
@@ -186,6 +221,10 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		} else {
 			player_one_character_input->Update();
 		}
+
+		parallax_background_viewport_position = sf::Vector2f(-(camera->viewport_position.x * 5.0f), -(camera->viewport_position.y * 5.0f));
+		parallax_background_sprite.setPosition(parallax_background_viewport_position);
+		render_window->draw(parallax_background_sprite);
 
 		world->DrawDebugData();
 
@@ -432,7 +471,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
 	return elems;
 }
 
-void SmashWorld::TriggerAction(string action_call) {
+void SmashWorld::ExecuteAction(string action_call) {
 	std::vector<string> vstrings = split(action_call, '(');
 
 	string call = vstrings[0];
@@ -443,22 +482,52 @@ void SmashWorld::TriggerAction(string action_call) {
 			doors[i]->TryToActivate(vstrings[1].substr(0, vstrings[1].size() - 1));
 		}
 	}
+	//else if (call == "Resume") {
+	//	PauseMenu->Close();
+	//} else if (call == "SaveGame") {
+	//	ExportSaveData();
+	//	PauseMenu->Close();
+	//} else if (call == "LoadGame") {
+	//	ImportSaveData();
+	//	PauseMenu->Close();
+	//} else if (call == "ExitGame") {
+	//	render_window->close();
+	//}
 }
 
-void SmashWorld::ExitMultiplayer() {
-	exit_multiplayer = true;
+void SmashWorld::ExitToMainMenu() {
+	exit_to_main_menu = true;
 }
 
-bool SmashWorld::ShouldExitMultiplayer() {
-	return exit_multiplayer;
+bool SmashWorld::ShouldExitToMainMenu() {
+	return exit_to_main_menu;
 }
 
 string SmashWorld::GetCurrentPointInGame() {
 	return "Intro";
 }
 
+void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
+	if (PauseMenu->IsOpen) {
+		if (vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			PauseMenu->MoveCursorDown();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			PauseMenu->MoveCursorUp();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (vertical >= -90.0f && vertical <= 90.0f) {
+			can_take_another_left_stick_input_from_menu_controller = true;
+		}
+	}
+}
+
+void SmashWorld::HandleRightStickInput(float horizontal, float vertical) {
+}
+
 void SmashWorld::HandleButtonBPress() {
-	if (unit_type_player_is_talking_to != "") {
+	if (PauseMenu->IsOpen) {
+		PauseMenu->Close();
+	} else if (unit_type_player_is_talking_to != "") {
 		unit_type_player_is_talking_to = "";
 		CurrentDialogueLine = nullptr;
 		dialogue_text.setString("");
@@ -480,6 +549,8 @@ void SmashWorld::HandleButtonXRelease() {
 void SmashWorld::HandleButtonAPress() {
 	if (intro_cutscene.getStatus() == sfe::Playing) {
 		intro_cutscene.stop();
+	} else if (PauseMenu->IsOpen) {
+		PauseMenu->ExecuteCurrentSelection();
 	}
 }
 
@@ -490,7 +561,7 @@ void SmashWorld::HandleButtonStartPress() {
 	if (intro_cutscene.getStatus() == sfe::Playing) {
 		intro_cutscene.stop();
 	} else if (past_setup) {
-		ImportSaveData();
+		PauseMenu->Open();
 	}
 }
 
@@ -498,9 +569,6 @@ void SmashWorld::HandleButtonStartRelease() {
 }
 
 void SmashWorld::HandleButtonSelectPress() {
-	if (past_setup) {
-		ExportSaveData();
-	}
 }
 
 void SmashWorld::HandleButtonSelectRelease() {

@@ -32,7 +32,7 @@ public:
 		}
 		drawable_vertices.push_back(sf::Vertex(sf::Vector2f((vertices[0].x - camera->viewport_position.x) * PIXEL_SCALE, (vertices[0].y - camera->viewport_position.y) * PIXEL_SCALE), vertex_color, sf::Vector2f(vertices[0].x, vertices[0].y)));
 
-		render_window->draw(&drawable_vertices[0], drawable_vertices.size(), sf::LinesStrip);
+		render_window->draw(&drawable_vertices[0], drawable_vertices.size(), sf::Quads);
 	}
 
 	/// Draw a circle.

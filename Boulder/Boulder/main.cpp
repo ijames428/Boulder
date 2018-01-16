@@ -8,6 +8,7 @@
 #include "World.h"
 #include "SmashWorld.h"
 #include "GameLibrary\InputHandler.h"
+#include "Menu.h"
 //#include "PlayerCharacter.h"
 //#include "Drone.h"
 //#include "..\GameLibrary\Camera.h"
@@ -72,6 +73,7 @@ int start_button = 7;
 bool a_button_current;
 bool b_button_current;
 bool start_button_current;
+float left_stick_vertical = 0.0f;
 
 bool a_button_previous = false;
 bool b_button_previous = false;
@@ -82,6 +84,27 @@ sf::Event event;
 int frames_per_second = 60;
 sf::Int64 microseconds_in_a_second = 1000000;
 sf::Int64 microseconds_per_frame = microseconds_in_a_second / frames_per_second;
+sf::Int64 current_frame = 0;
+
+Menu* MainMenu;
+bool can_take_another_left_stick_input_from_menu_controller = true;
+bool load_game = false;
+
+void NewGame() {
+	MainMenu->Close();
+	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+	load_game = false;
+}
+
+void LoadGame() {
+	MainMenu->Close();
+	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+	load_game = true;
+}
+
+void Exit() {
+	window->close();
+}
 
 int main()
 {
@@ -98,7 +121,6 @@ int main()
 	sf::Int64 time_previous = time.asMicroseconds();
 	sf::Int64 frame_delta;
 	sf::Int64 start_time = time.asMicroseconds();
-	sf::Int64 current_frame = 0;
 	
 	float background_music_volume = 100.0f;
 	float combat_music_volume = 0.0f;
@@ -153,6 +175,11 @@ int main()
 	credits_text = sf::Text("Made by Ian James\n\n\n\n\nThank you for playing Shadhorimn", ringbearer_font);
 	credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 
+	MainMenu = new Menu(window, camera->viewport_dimensions);
+	MainMenu->AddItem("New Game", &NewGame);
+	MainMenu->AddItem("Load Game", &LoadGame);
+	MainMenu->AddItem("Exit", &Exit);
+
 	while (window->isOpen())
 	{
 		time = clock.getElapsedTime();
@@ -161,6 +188,16 @@ int main()
 		a_button_current = sf::Joystick::isButtonPressed(0, a_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
 		b_button_current = sf::Joystick::isButtonPressed(0, b_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::W);
 		start_button_current = sf::Joystick::isButtonPressed(0, start_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
+
+		left_stick_vertical = 0.0f;
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+			left_stick_vertical = 100.0f;
+		} else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+			left_stick_vertical = -100.0f;
+		} else {
+			left_stick_vertical = sf::Joystick::getAxisPosition(0, sf::Joystick::Y);
+		}
 
 		if (time_previous + microseconds_per_frame < time_current) {
 			frame_delta = time_current - time_previous;
@@ -176,11 +213,15 @@ int main()
 				window->clear();
 				UpdateGameStateLoadingScreen();
 				Singleton<SmashWorld>::Get()->Init(window, camera);
+				if (load_game) {
+					Singleton<SmashWorld>::Get()->ImportSaveData();
+				}
 				GameState = GAME_STATE_IN_SINGLE_PLAYER;
 			} else if (GameState == GAME_STATE_IN_SINGLE_PLAYER) {
 				Singleton<SmashWorld>::Get()->Update(current_frame, frame_delta / 1000);
 
-				if (Singleton<SmashWorld>::Get()->ShouldExitMultiplayer()) {
+				if (Singleton<SmashWorld>::Get()->ShouldExitToMainMenu()) {
+					MainMenu->Open();
 					GameState = GAME_STATE_START_MENU;
 				}
 
@@ -215,8 +256,10 @@ void UpdateGameStateLogos() {
 		proceed = true;
 	}
 
-	if (proceed)
+	if (proceed) {
+		MainMenu->Open();
 		GameState = GAME_STATE_START_MENU;
+	}
 
 	HandleClosingEvent();
 	SetPreviousButtonValues();
@@ -227,11 +270,26 @@ void UpdateGameStateLogos() {
 void UpdateGameStateStartMenu() {
 	window->clear();
 
+	if (MainMenu->IsOpen) {
+		if (left_stick_vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			MainMenu->MoveCursorDown();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		}
+		else if (left_stick_vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			MainMenu->MoveCursorUp();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		}
+		else if (left_stick_vertical >= -90.0f && left_stick_vertical <= 90.0f) {
+			can_take_another_left_stick_input_from_menu_controller = true;
+		}
+	}
+
 	window->draw(title_text);
-	window->draw(start_text);
+	//window->draw(start_text);
+	MainMenu->Draw(current_frame);
 
 	if (WasButtonAPressed() || WasButtonStartPressed()) {
-		GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+		MainMenu->ExecuteCurrentSelection();
 	}
 
 	HandleClosingEvent();
@@ -256,6 +314,7 @@ void UpdateGameStateCredits() {
 	window->draw(credits_text);
 
 	if (credits_text.getPosition().y < - 350.0f) {
+		MainMenu->Open();
 		GameState = GAME_STATE_START_MENU;
 	}
 

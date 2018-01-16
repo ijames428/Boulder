@@ -27,7 +27,7 @@ Trigger::Trigger(string name, sf::RenderWindow *window, sf::Vector2f position, s
 }
 
 void Trigger::Triggered() {
-	Singleton<SmashWorld>::Get()->TriggerAction(activities[0]);
+	Singleton<SmashWorld>::Get()->ExecuteAction(activities[0]);
 }
 
 void Trigger::AddActivaty(string activity) {
