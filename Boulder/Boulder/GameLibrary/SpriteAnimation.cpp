@@ -32,6 +32,10 @@ void SpriteAnimation::Play() {
 	current_frame = 0;
 }
 
+int SpriteAnimation::GetCurrentFrame() {
+	return current_frame;
+}
+
 void SpriteAnimation::Draw(sf::Vector2f camera_position, sf::Vector2f parent_object_mid_position) {
 	int frame_row = 0;
 	int frame_column = 0;

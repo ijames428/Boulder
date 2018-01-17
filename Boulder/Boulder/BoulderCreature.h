@@ -20,6 +20,10 @@ using namespace std;
 
 class BoulderCreature : public Creature {
 private:
+	sf::Int16 cashinable_hit_point_value;
+	sf::Int16 cashinable_hit_point_drain_rate;
+	sf::RectangleShape* cashInHealthBarRect;
+
 	BoulderCreature* target = nullptr;
 protected:
 	int State = 0;
@@ -52,7 +56,6 @@ protected:
 	std::vector<Attack*> attacks = std::vector<Attack*>();
 	int player_index;
 	bool can_take_input;
-	int max_hit_points;
 	sf::Color player_color;
 	b2BodyDef bodyDef;
 	b2Body* body;
@@ -81,7 +84,7 @@ protected:
 	void Jump();
 	void UseAttack(int move_type);
 	sf::RectangleShape* healthBarRect;
-	float healthBarStartingScaleY;
+	float starting_health_bar_width;
 	string name = "";
 	string type = "";
 
@@ -109,11 +112,30 @@ protected:
 	StatusTimer* landing_animation_timer;
 	StatusTimer* talking_animation_timer;
 	StatusTimer* jump_input_buffer;
+	StatusTimer* health_cash_in_timer;
+
+	std::vector<int> AttackAnimationSoundFrames = std::vector<int>();
+	std::vector<sf::SoundBuffer*> AttackAnimationSoundBuffers = std::vector<sf::SoundBuffer*>();
+	std::vector<sf::Sound*> AttackAnimationSounds = std::vector<sf::Sound*>();
+
+	std::vector<sf::SoundBuffer*> GettingHitSoundBuffers = std::vector<sf::SoundBuffer*>();
+	std::vector<sf::Sound*> GettingHitSounds = std::vector<sf::Sound*>();
+
+	sf::SoundBuffer RightFootStepSoundBuffer;
+	sf::SoundBuffer LeftFootStepSoundBuffer;
+	sf::Sound RightFootStepSound;
+	sf::Sound LeftFootStepSound;
+	int RightFootStepSoundFrameRun;
+	int LeftFootStepSoundFrameRun;
+	int RightFootStepSoundFrameWalk;
+	int LeftFootStepSoundFrameWalk;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
-	void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
+	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
+	virtual void ReceiveHeal(int heal);
+	int TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back, int hit_stun_frames);
 	Attack* GetActiveAttack();
 	bool IsAnAttackActive();
 	void Land();

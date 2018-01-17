@@ -11,6 +11,7 @@ using namespace std;
 SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
 	BoulderCreature::BoulderCreature(player_idx, window, position, dimensions, subject_to_gravity) {
 	SetEntityType(Constants::ENTITY_TYPE_PLAYER_CHARACTER);
+	name = "Player";
 	player_index = player_idx;
 	is_interactable = false;
 
@@ -94,11 +95,16 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	hit_stun_timer = new StatusTimer(1);
 	jump_input_buffer = new StatusTimer(6);
 
-	weapon = new Weapon(window, position, sf::Vector2f(0.25f, 0.25f), true, player_index, body); 
+	weapon = new Weapon(window, position, sf::Vector2f(0.25f, 0.25f), true, player_index, body);// , this);
 	
-	healthBarRect = new sf::RectangleShape(sf::Vector2f(5, 800));
+	starting_health_bar_width = 240.0f;
+	healthBarRect = new sf::RectangleShape(sf::Vector2f(starting_health_bar_width, 15.0f));
 	healthBarRect->setPosition(10.0f, 10.0f);
 	healthBarRect->setFillColor(sf::Color::Green);
+
+	healthBarBackgroundRect = new sf::RectangleShape(sf::Vector2f(250.0f, 25.0f));
+	healthBarBackgroundRect->setPosition(5.0f, 5.0f);
+	healthBarBackgroundRect->setFillColor(sf::Color::Black);
 
 	sprite_scale = 0.25f;
 
@@ -106,6 +112,26 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 
 	int numberOfLandingAnimationFrames = landing_animations.size() > 0 ? landing_animations[0]->GetNumberOfFrames() : 1;
 	landing_animation_timer = new StatusTimer(numberOfLandingAnimationFrames);
+
+	is_hittable = true;
+}
+
+void SmashCharacter::ReceiveHeal(int heal) {
+	BoulderCreature::ReceiveHeal(heal);
+	UpdateHealthBar();
+}
+
+void SmashCharacter::UpdateHealthBar() {
+	float percent_health = ((float)hit_points / (float)max_hit_points);
+
+	healthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_health, 15.0f));
+	healthBarRect->setPosition(10.0f, 10.0f);
+	healthBarRect->setFillColor(sf::Color((int)(0.0f + (255.0f - (float)hit_points / (float)max_hit_points) * 255.0f), (int)((float)hit_points / (float)max_hit_points * 255.0f), 0, 255));
+}
+
+void SmashCharacter::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames) {
+	BoulderCreature::TakeDamage(damage, knock_back, hit_stun_frames);
+	UpdateHealthBar();
 }
 
 void SmashCharacter::ApplyObjectDataToSaveData(Json::Value& save_data) {
@@ -124,11 +150,11 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		can_take_input = !IsAnAttackActive();
 	}
 
-	if (body->GetLinearVelocity().x > 0.1f && !IsFacingRight()) {
-		SetFacingRight(true);
-	} else if (body->GetLinearVelocity().x < -0.1f && IsFacingRight()) {
-		SetFacingRight(false);
-	}
+	//if (body->GetLinearVelocity().x > 0.1f && !IsFacingRight()) {
+	//	SetFacingRight(true);
+	//} else if (body->GetLinearVelocity().x < -0.1f && IsFacingRight()) {
+	//	SetFacingRight(false);
+	//}
 
 	for (int i = 0; i < numberOfAttacks; i++) {
 		attacks[i]->Update(curr_frame, IsFacingRight());
@@ -147,20 +173,16 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	}
 
 	if (hit_points <= 0) {
-		if (dying_animation_timer->IsActive()) {
+		if (dying_animation_timer != nullptr && dying_animation_timer->IsActive()) {
 			State = STATE_DYING;
-		}
-		else {
+		} else {
 			State = STATE_DEAD;
 		}
-	}
-	else if (hit_stun_timer->IsActive()) {
+	} else if (hit_stun_timer->IsActive()) {
 		State = STATE_HIT_STUN;
-	}
-	else if (IsAnAttackActive()) {
+	} else if (IsAnAttackActive()) {
 		State = STATE_ATTACKING;
-	}
-	else if (IsInTheAir()) {
+	} else if (IsInTheAir()) {
 		if (body->GetLinearVelocity().y < -1.0f) {
 			State = STATE_JUMPING;
 		} else if (body->GetLinearVelocity().y > 1.0f) {
@@ -168,26 +190,52 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		} else {
 			State = STATE_JUMP_APEX;
 		}
-	}
-	else if (landing_animation_timer->IsActive()) {
+	} else if (landing_animation_timer->IsActive()) {
 		State = STATE_LANDING;
-	}
-	else if (body->GetLinearVelocity().x != 0) {
+	} else if (body->GetLinearVelocity().x != 0) {
 		if (running) {
 			State = STATE_RUNNING;
-		}
-		else {
+		} else {
 			State = STATE_WALKING;
 		}
-	}
-	else {
+	} else {
 		State = STATE_IDLE;
+	}
+
+	if (State == STATE_WALKING) {
+		if (walking_animations[0]->GetCurrentFrame() == RightFootStepSoundFrameWalk) {
+			RightFootStepSound.setVolume(25);
+			RightFootStepSound.play();
+		} else if (walking_animations[0]->GetCurrentFrame() == LeftFootStepSoundFrameWalk) {
+			LeftFootStepSound.setVolume(25);
+			LeftFootStepSound.play();
+		}
+	} else if (State == STATE_RUNNING) {
+		if (running_animations[0]->GetCurrentFrame() == RightFootStepSoundFrameRun) {
+			RightFootStepSound.setVolume(60);
+			RightFootStepSound.play();
+		} else if (running_animations[0]->GetCurrentFrame() == LeftFootStepSoundFrameRun) {
+			LeftFootStepSound.setVolume(60);
+			LeftFootStepSound.play();
+		}
+	} else if (State == STATE_ATTACKING) {
+		int currentAttackIndex = GetActiveAttackIndex();
+		if (currentAttackIndex < (int)AttackAnimationSounds.size()) {
+			if (attacking_animations[currentAttackIndex]->GetCurrentFrame() == AttackAnimationSoundFrames[currentAttackIndex]) {
+				AttackAnimationSounds[currentAttackIndex]->play();
+			}
+		} else {
+			if (attacking_animations[1]->GetCurrentFrame() == AttackAnimationSoundFrames[1]) {
+				AttackAnimationSounds[1]->play();
+			}
+		}
 	}
 }
 
 void SmashCharacter::Draw(sf::Vector2f camera_position) {
+	render_window->draw(*healthBarBackgroundRect);
+
 	BoulderCreature::Draw(camera_position);
-	//render_window->draw(*healthBarRect);
 }
 
 void SmashCharacter::HandleButtonXPress() {

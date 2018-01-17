@@ -29,6 +29,7 @@ public:
 	bool IsFacingRight();
 	void SetColor(sf::Color new_color);
 	int GetNumberOfFrames();
+	int GetCurrentFrame();
 };
 
 #endif

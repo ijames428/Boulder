@@ -28,6 +28,7 @@ private:
 	void DashPunch();
 	void ThrowWeapon();
 	void TeleportToWeapon();
+	sf::RectangleShape* healthBarBackgroundRect;
 protected:
 public:
 	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
@@ -35,6 +36,9 @@ public:
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
+	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
+	virtual void ReceiveHeal(int heal);
+	void UpdateHealthBar();
 
 	virtual int GetPlayerIndex() {
 		return player_index;

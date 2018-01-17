@@ -5,9 +5,13 @@ using namespace std;
 #include <iostream>
 #include "Weapon.h"  
 #include "SmashWorld.h"
+//#include "SmashCharacter.h"
 
-Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, int player_idx, b2Body* owners_body) : Box2DRigidBody(window, subject_to_gravity) {
+Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, int player_idx, b2Body* owners_body/*, SmashCharacter* player*/) : Box2DRigidBody(window, subject_to_gravity) {
 	player_index = player_idx;
+	life_stolen = 0;
+
+	//Player = player;
 
 	weaponBodyDef.type = b2_dynamicBody;
 	weaponBodyDef.position.Set(position.x, position.y);
@@ -55,6 +59,11 @@ void Weapon::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			stuck_to_door = false;
 			weaponBody->SetGravityScale(0.0f);
 			weaponBody->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+
+			SmashCharacter* entity = static_cast<SmashCharacter*>(ownersBody->GetUserData());
+			entity->ReceiveHeal(life_stolen);
+
+			life_stolen = 0;
 		} else {
 			recall_velocity.Normalize();
 			float32 speed = 15.0f;
@@ -90,10 +99,14 @@ void Weapon::Collision(b2Fixture* collider_fixture, float angle) {
 			Stick(collider_fixture, angle);
 			stuck_to_door = true;
 		} else if (recalling) {
-			if ((player_index == 0 && collider_fixture->GetFilterData().categoryBits == 0x0002) ||
-				(player_index == 1 && collider_fixture->GetFilterData().categoryBits == 0x0001)) {
-				SmashCharacter* entity = static_cast<SmashCharacter*>(collider_fixture->GetBody()->GetUserData());
-				entity->TakeDamage(2, sf::Vector2f(-weaponBody->GetLinearVelocity().y / 2.0f, abs(weaponBody->GetLinearVelocity().x) / -2.0f), 10);
+			//if ((player_index == 0 && collider_fixture->GetFilterData().categoryBits == 0x0002) ||
+			//	(player_index == 1 && collider_fixture->GetFilterData().categoryBits == 0x0001)) {
+			//	SmashCharacter* entity = static_cast<SmashCharacter*>(collider_fixture->GetBody()->GetUserData());
+			//	entity->TakeDamage(2, sf::Vector2f(-weaponBody->GetLinearVelocity().y / 2.0f, abs(weaponBody->GetLinearVelocity().x) / -2.0f), 10);
+			//}
+			if (collider_fixture->GetFilterData().categoryBits == 0x0002) {
+				BoulderCreature* entity = static_cast<BoulderCreature*>(collider_fixture->GetBody()->GetUserData());
+				life_stolen += entity->TakeDamageWithLifeSteal(2, sf::Vector2f(-weaponBody->GetLinearVelocity().y / 2.0f, abs(weaponBody->GetLinearVelocity().x) / -2.0f), 10);
 			}
 		} else {
 			Stick(collider_fixture, angle);

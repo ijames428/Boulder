@@ -28,6 +28,7 @@ class Creature : public Box2DRigidBody {
 		float dodge_velocity_x;
 	public:
 		sf::Int16 hit_points;
+		sf::Int16 max_hit_points;
 		Creature(sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 		sf::RectangleShape rectangle_shape;
 		sf::RenderWindow *render_window;
