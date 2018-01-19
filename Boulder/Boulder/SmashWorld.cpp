@@ -20,7 +20,7 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 
 	StageOfTheGame = STAGE_OF_GAME_INTRO;
 
-	player_one_menu_input = new InputHandler(new MenuController(0));
+	player_menu_input = new InputHandler(new MenuController(0));
 
 	string intro_cut_scene_file_relative_path = "Cutscenes/ShadowsDieTwice.avi";
 	if (!intro_cutscene.openFromFile(intro_cut_scene_file_relative_path))
@@ -36,7 +36,7 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 	intro_cutscene.setVolume(100);
 #endif
 
-	player_one_menu_input->EatInputsForNumberOfFrames(1);
+	player_menu_input->EatInputsForNumberOfFrames(1);
 
 	render_window->setActive(false);
 
@@ -181,7 +181,7 @@ void SmashWorld::UpdateVideo() {
 	while (intro_cutscene.getStatus() == sfe::Playing) {
 		render_window->clear();
 
-		player_one_menu_input->Update();
+		player_menu_input->Update();
 
 		intro_cutscene.update();
 		render_window->draw(intro_cutscene);
@@ -196,12 +196,12 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	render_window->clear();
 
 	if (intro_cutscene.getStatus() == sfe::Playing) {
-		player_one_menu_input->Update();
+		player_menu_input->Update();
 
 		intro_cutscene.update();
 		render_window->draw(intro_cutscene);
 	} else if (PauseMenu->IsOpen) {
-		player_one_menu_input->Update();
+		player_menu_input->Update();
 		PauseMenu->Draw(curr_frame);
 	} else {
 		current_frame = curr_frame;
@@ -217,9 +217,9 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		camera->viewport_position = camera_position;
 
 		if (unit_type_player_is_talking_to != "") {
-			player_one_menu_input->Update();
+			player_menu_input->Update();
 		} else {
-			player_one_character_input->Update();
+			player_character_input->Update();
 		}
 
 		parallax_background_viewport_position = sf::Vector2f(-(camera->viewport_position.x * 5.0f), -(camera->viewport_position.y * 5.0f));
@@ -323,7 +323,7 @@ void SmashWorld::BuildWorld() {
 
 	PlayerOne = new SmashCharacter(0, jsonPlayerData, render_window, sf::Vector2f(x, y), sf::Vector2f(0.3f, 1.0f));
 	PlayerOne->SetName(jsonWorldData["player"]["name"].asString());
-	player_one_character_input = new InputHandler(PlayerOne);
+	player_character_input = new InputHandler(PlayerOne);
 
 	sf::Vector2f camera_position = camera->viewport_position;
 	camera_position.x += (PlayerOne->GetBody()->GetPosition().x - camera->viewport_dimensions.x / 2.0f / 40.0f - camera_position.x);
@@ -451,7 +451,7 @@ void SmashWorld::ProgressDialogueText() {
 		CurrentDialogueLine = CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame);
 	}
 
-	player_one_menu_input->EatInputsForNumberOfFrames(1);
+	player_menu_input->EatInputsForNumberOfFrames(1);
 
 	dialogue_text.setString(CurrentDialogueLine->Line);
 }

@@ -21,8 +21,8 @@ using namespace std;
 
 class MyContactListener : public b2ContactListener
 {
-	// PLAYER_ONE = 0x0001,
-	// PLAYER_TWO = 0x0002,
+	// PLAYER_CHARACTER = 0x0001,
+	// ENEMY = 0x0002,
 	// GROUND_CHECK = 0x0004,
 	// PLATFORM = 0x0008,
 	// HIT_BOX = 0x0010,
@@ -181,8 +181,8 @@ private:
 	int32 velocityIterations;
 	int32 positionIterations;
 	SmashCharacter* PlayerOne;
-	InputHandler* player_one_character_input;
-	InputHandler* player_one_menu_input;
+	InputHandler* player_character_input;
+	InputHandler* player_menu_input;
 	bool exit_to_main_menu;
 	MyContactListener myContactListenerInstance;
 	void ParseWorld(string file_path);
@@ -246,8 +246,8 @@ public:
 	void HandleButtonSelectRelease();
 
 	enum EntityCategory {
-		PLAYER_ONE = 0x0001,
-		PLAYER_TWO = 0x0002,
+		PLAYER_CHARACTER = 0x0001,
+		ENEMY = 0x0002,
 		GROUND_CHECK = 0x0004,
 		PLATFORM = 0x0008,
 		HIT_BOX = 0x0010,

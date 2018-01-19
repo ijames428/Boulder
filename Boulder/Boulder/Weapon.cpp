@@ -25,9 +25,9 @@ Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dim
 	weaponFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->WEAPON;
 
 	if (player_index == 0) {
-		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->DOOR | Singleton<SmashWorld>::Get()->PLAYER_TWO;
+		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->DOOR | Singleton<SmashWorld>::Get()->ENEMY;
 	} else {
-		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->DOOR | Singleton<SmashWorld>::Get()->PLAYER_ONE;
+		weaponFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM | Singleton<SmashWorld>::Get()->DOOR | Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 	}
 
 	weaponFixture = weaponBody->CreateFixture(&weaponFixtureDef);

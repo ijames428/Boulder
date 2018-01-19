@@ -26,7 +26,7 @@ Attack::Attack(b2Body* body, int index, int move_type) {
 Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 	player_body = body;
 	player_index = index;
-	float boxScale = 160.0f;
+	float boxScale = 40.0f;
 
 	if (!jsonData["HitBoxPerFrame"].empty())
 	{
@@ -42,28 +42,50 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 					int damage = jsonData["HitBoxPerFrame"][i][box]["Damage"].asInt();
 					float knockback_x = jsonData["HitBoxPerFrame"][i][box]["KnockBackX"].asFloat();
 					float knockback_y = jsonData["HitBoxPerFrame"][i][box]["KnockBackY"].asFloat();
+
+					std::vector<float> vect_hurt_box;
+					string strHurtBoxValues = jsonData["HurtBoxPerFrame"][0][box]["Box"].asString();
+
+					if (strHurtBoxValues != "") {
+						std::stringstream ss_hurt_box(strHurtBoxValues);
+						float hurt_box_character;
+
+						while (ss_hurt_box >> hurt_box_character)
+						{
+							vect_hurt_box.push_back(hurt_box_character);
+
+							if (ss_hurt_box.peek() == ',')
+								ss_hurt_box.ignore();
+						}
+					} else {
+						vect_hurt_box.push_back(0.0f);
+						vect_hurt_box.push_back(0.0f);
+						vect_hurt_box.push_back(0.0f);
+						vect_hurt_box.push_back(0.0f);
+					}
+
 					int frames_of_hit_stun = (int)(knockback_x * knockback_y); // TODO: Have hit stun frames come from frame data once it's in there.
 
 					frames_of_hit_stun = frames_of_hit_stun > 0 ? frames_of_hit_stun : -frames_of_hit_stun;
 
-					std::vector<float> vect;
-					string strBoxValues = jsonData["HitBoxPerFrame"][i][box]["Box"].asString();
-					std::stringstream ss(strBoxValues);
-					float character;
+					std::vector<float> vect_hit_box;
+					string strHitBoxValues = jsonData["HitBoxPerFrame"][i][box]["Box"].asString();
+					std::stringstream ss_hit_box(strHitBoxValues);
+					float hit_box_character;
 
-					while (ss >> character)
+					while (ss_hit_box >> hit_box_character)
 					{
-						vect.push_back(character);
+						vect_hit_box.push_back(hit_box_character);
 
-						if (ss.peek() == ',')
-							ss.ignore();
+						if (ss_hit_box.peek() == ',')
+							ss_hit_box.ignore();
 					}
 
 					float radius = player_body->GetFixtureList()[0].GetShape()->m_radius;
-					float hit_box_relative_x = ((vect[0] + (vect[2] / 2.0f)) / boxScale);
-					float hit_box_relative_y = ((vect[1] + (vect[3] / 2.0f)) / boxScale) - (radius * 30.0f);
-					float hit_box_width = (vect[2]) / boxScale;
-					float hit_box_height = (vect[3]) / boxScale;
+					float hit_box_relative_x = ((vect_hit_box[0] + (vect_hit_box[2] / 2.0f)) / boxScale);
+					float hit_box_relative_y = ((vect_hit_box[1] + (vect_hit_box[3] / 2.0f) - (vect_hurt_box[1] + (vect_hurt_box[3] / 2.0f))) / boxScale);// -(radius * 30.0f);
+					float hit_box_width = (vect_hit_box[2]) / boxScale;
+					float hit_box_height = (vect_hit_box[3]) / boxScale;
 
 					attack_frames[i].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), damage, frames_of_hit_stun,
 															   sf::Vector2f(knockback_x, knockback_y), sf::Vector2f(hit_box_width, hit_box_height), sf::Vector2f(hit_box_relative_x, hit_box_relative_y), 
@@ -77,7 +99,7 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 		}
 	}
 
-	attack_timer = new StatusTimer((int)attack_frames.size());
+	attack_timer = new StatusTimer(jsonData["NumberOfFrames"].asInt());
 
 	enemies_hit = std::vector<string>();
 }
@@ -247,10 +269,10 @@ HitBox::HitBox(b2Body* body, int player_index, int frame_in_attack, sf::Vector2f
 
 	if (player_index == 0) {
 		myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
+		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY;
 	} else {
 		myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
+		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 	}
 
 	myFixtureLeft = body->CreateFixture(&myFixtureDefLeft);
@@ -264,10 +286,10 @@ HitBox::HitBox(b2Body* body, int player_index, int frame_in_attack, sf::Vector2f
 
 	if (player_index == 0) {
 		myFixtureDefRight.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-		myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
+		myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY;
 	} else {
 		myFixtureDefRight.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-		myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
+		myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 	}
 
 	myFixtureRight = body->CreateFixture(&myFixtureDefRight);
@@ -287,10 +309,10 @@ HitBox::HitBox(b2Body* body, int player_index, int frame_in_attack, sf::Vector2f
 	//
 	//if (player_index == 0) {
 	//	myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-	//	myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
+	//	myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY;
 	//} else {
 	//	myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-	//	myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
+	//	myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 	//}
 	//
 	//myFixtureDefLeft.m_color = new b2Color(1.0f, 0.0f, 1.0f, 1.0f);
@@ -311,11 +333,11 @@ HitBox::HitBox(b2Body* body, int player_index, int frame_in_attack, sf::Vector2f
 	//
 	//if (player_index == 0) {
 	//	myFixtureDefRight.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-	//	myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
+	//	myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY;
 	//}
 	//else {
 	//	myFixtureDefRight.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-	//	myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
+	//	myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 	//}
 	//
 	//myFixtureDefRight.m_color = new b2Color(1.0f, 0.0f, 1.0f, 1.0f);
@@ -380,19 +402,7 @@ std::vector<std::vector<AttackFrame*>> Attack::GetAttackFrames(int move) {
 	case NEUTRAL_AIR:
 		attack_frames = MakeMoveNeutralAir();
 		break;
-	case DASH_ATTACK:
-		attack_frames = MakeMoveJab();
-		break;
-	//case DASH_PUNCH:
-	//	attack_frames = MakeMoveJab();
-	//	break;
-	//case THROW_WEAPON:
-	//	attack_frames = MakeMoveJab();
-	//	break;
-	//case TELEPORT_TO_WEAPON:
-	//	attack_frames = MakeMoveJab();
-	//	break;
-	//case URIENS_SUPER:
+	//case DASH_ATTACK:
 	//	attack_frames = MakeMoveJab();
 	//	break;
 	default:

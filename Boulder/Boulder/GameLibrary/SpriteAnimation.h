@@ -23,7 +23,7 @@ private:
 public:
 	sf::RenderWindow *render_window;
 	SpriteAnimation(sf::RenderWindow* window, std::string file_path_and_name, int frame_width, int frame_height, int total_frames, int columns_count, int rows_count, float scale, sf::Color color, bool loop = true);
-	void Draw(sf::Vector2f camera_position, sf::Vector2f parent_object_mid_position);
+	void Draw(sf::Vector2f camera_position, sf::Vector2f parent_object_mid_position, float half_height_of_body = 0.0f);
 	void Play();
 	void Flip();
 	bool IsFacingRight();

@@ -3,6 +3,7 @@
 using namespace std;
 #include "stdafx.h"
 #include <iostream>
+#include <sstream>
 #include "BoulderCreature.h"
 #include "Constants.h"
 #include "SmashWorld.h"
@@ -60,7 +61,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	aggroCircleFixtureDef.isSensor = true;
 	aggroCircleFixtureDef.m_color = new b2Color(1.0f, 1.0f, 1.0f, 1.0f);
 	aggroCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->AGGRO_CIRCLE;
-	aggroCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
+	aggroCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
 	deaggroCircleShape.m_p.Set(0, 0); //position, relative to body position
 	deaggroCircleShape.m_radius = 5.0f;
@@ -68,7 +69,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	deaggroCircleFixtureDef.isSensor = true;
 	deaggroCircleFixtureDef.m_color = new b2Color(1.0f, 1.0f, 1.0f, 1.0f);
 	deaggroCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->DEAGGRO_CIRCLE;
-	deaggroCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
+	deaggroCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
 	interactionCircleShape.m_p.Set(0, 0); //position, relative to body position
 	interactionCircleShape.m_radius = interaction_radius / 100.0f;
@@ -76,13 +77,36 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	interactionCircleFixtureDef.isSensor = true;
 	interactionCircleFixtureDef.m_color = new b2Color(1.0f, 1.0f, 0.0f, 1.0f);
 	interactionCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->INTERACTION_CIRCLE;
-	interactionCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
+	interactionCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
-	centerBoxShape.SetAsBox(dimensions.x / 4.0f - 0.01f, 0.5f);
-	topCircleShape.m_p.Set(0, -0.5f); //position, relative to body position
-	botCircleShape.m_p.Set(0, 0.5f); //position, relative to body position
-	topCircleShape.m_radius = dimensions.x / 4.0f;
-	botCircleShape.m_radius = dimensions.x / 4.0f;
+	std::vector<float> vect_hurt_box;
+	string strHurtBoxValues = jsonBestiariesData["DictOfUnits"][unit_type]["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]["Box"].asString();
+	std::stringstream ss_hurt_box;
+
+	if (strHurtBoxValues != "") {
+		std::stringstream ss_hurt_box(strHurtBoxValues);
+		float hurt_box_character;
+
+		while (ss_hurt_box >> hurt_box_character)
+		{
+			vect_hurt_box.push_back(hurt_box_character);
+
+			if (ss_hurt_box.peek() == ',')
+				ss_hurt_box.ignore();
+		}
+	} else {
+		vect_hurt_box.push_back(1.0f);
+		vect_hurt_box.push_back(1.0f);
+		vect_hurt_box.push_back(1.0f);
+		vect_hurt_box.push_back(1.0f);
+	}
+
+	centerBoxShape.SetAsBox(vect_hurt_box[2] / 160.0f, vect_hurt_box[3] / 100.0f);
+	hurtBoxShape.SetAsBox(vect_hurt_box[2] / 40.0f, vect_hurt_box[3] / 40.0f);
+	topCircleShape.m_p.Set(0, -vect_hurt_box[3] / 100.0f); //position, relative to body position
+	botCircleShape.m_p.Set(0, vect_hurt_box[3] / 100.0f); //position, relative to body position
+	topCircleShape.m_radius = vect_hurt_box[2] / 160.0f;
+	botCircleShape.m_radius = vect_hurt_box[2] / 160.0f;
 	centerBoxFixtureDef.shape = &centerBoxShape;
 	centerBoxFixtureDef.density = 1.0f;
 	centerBoxFixtureDef.friction = 0.0f;
@@ -96,9 +120,9 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	botCircleFixtureDef.friction = 0.3f;
 	botCircleFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
 
-	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
-	botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
-	centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
+	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->ENEMY;
+	botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->ENEMY;
+	centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->ENEMY;
 
 	aggroCircleFixture = body->CreateFixture(&aggroCircleFixtureDef);
 	deaggroCircleFixture = body->CreateFixture(&deaggroCircleFixtureDef);
@@ -133,7 +157,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_SMASH, jsonBestiariesData["DictOfUnits"][unit_type]["AttackingAnimations"][0]));
 	attacks.push_back(new Attack(body, player_index, Attack::DOWN_SMASH, jsonBestiariesData["DictOfUnits"][unit_type]["AttackingAnimations"][1]));
 
-	sprite_scale = 0.3f;
+	sprite_scale = 1.0f;
 
 	RightFootStepSoundFrameWalk = 0;
 	LeftFootStepSoundFrameWalk = 0;
@@ -333,7 +357,7 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 
 		if (distance < 2.0f) {
 			if (!IsAnAttackActive()) {
-				UseAttack(1);
+				UseAttack(0);
 			}
 		} else {
 			if (target->GetBody()->GetPosition().x < body->GetPosition().x)
@@ -429,44 +453,51 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 	FlipAnimationsIfNecessary(landing_animations);
 	FlipAnimationsIfNecessary(talking_animations);
 
+	float half_height = ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y + botCircleShape.m_radius;// - ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y;
+
 	if (State == STATE_IDLE) {
-		idle_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		idle_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	}else if (State == STATE_WALKING) {
-		walking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		walking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	} else  if (State == STATE_RUNNING) {
-		running_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		running_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	} else if (State == STATE_DYING) {
 		if ((int)dying_animations.size() > 0) {
-			dying_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+			dying_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 		}
 	} else if (State == STATE_DEAD) {
 		if ((int)dead_animations.size() > 0) {
-			dead_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+			//if (centerBoxFixture->GetShape()->m_type == b2Shape::e_polygon) {
+				float half_height = ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y;// - ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y;
+				dead_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
+			//} else {
+			//	dead_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+			//}
 		}
 	} else if (State == STATE_ATTACKING) {
 		int currentAttackIndex = GetActiveAttackIndex();
 		if (currentAttackIndex < (int)attacking_animations.size()) {
-			attacking_animations[currentAttackIndex]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+			attacking_animations[currentAttackIndex]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 		} else {
-			attacking_animations[1]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+			attacking_animations[1]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 		}
 	} else if (State == STATE_BLOCKING) {
-		blocking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		blocking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	} else if (State == STATE_HIT_STUN) {
-		hit_stun_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		hit_stun_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	} else if (State == STATE_JUMPING) {
-		jumping_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		jumping_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	} else if (State == STATE_JUMP_APEX) {
-		jump_apex_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		jump_apex_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	} else if (State == STATE_FALLING) {
-		falling_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+		falling_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	} else if (State == STATE_LANDING) {
 		if ((int)landing_animations.size() > 0) {
-			landing_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+			landing_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 		}
 	} else if (State == STATE_TALKING) {
 		if ((int)talking_animations.size() > 0) {
-			talking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)));
+			talking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 		}
 	}
 
@@ -593,7 +624,6 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 		cout << "got hit for " << damage << " damage and " << hit_stun_frames << " hit stun frames!\n";
 		hit_stun_timer = new StatusTimer(hit_stun_frames);
 		hit_stun_timer->Start();
-		body->SetLinearVelocity(b2Vec2(knock_back.x, knock_back.y));
 
 		if (GettingHitSounds.size() > 0) {
 			GettingHitSounds[rand() % (int)GettingHitSounds.size()]->play();
@@ -606,6 +636,7 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			cashinable_hit_point_value = 0;
 			dying_animation_timer->Start();
 		} else if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
+			body->SetLinearVelocity(b2Vec2(knock_back.x, knock_back.y));
 			health_cash_in_timer->Start();
 		}
 	}

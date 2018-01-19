@@ -50,15 +50,9 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	botCircleFixtureDef.friction = 0.3f;
 	botCircleFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
 
-	if (player_index == 0) {
-		topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
-		botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
-		centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_ONE;
-	} else {
-		topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
-		botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
-		centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_TWO;
-	}
+	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
+	botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
+	centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
 	topCircleFixture = body->CreateFixture(&topCircleFixtureDef);
 	botCircleFixture = body->CreateFixture(&botCircleFixtureDef);
@@ -77,20 +71,15 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	body->CreateFixture(&groundCheckFixtureDef);
 
 	numberOfAttacks = (int)Attack::MOVES_COUNT;// (int)playerBestiaryData["AttackingAnimations"].size();
-	attacks.push_back(new Attack(body, player_index, Attack::JAB, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][0]));
-	attacks.push_back(new Attack(body, player_index, Attack::UP_SMASH));
-	attacks.push_back(new Attack(body, player_index, Attack::DOWN_SMASH, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][2]));
-	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_SMASH, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][1]));
-	attacks.push_back(new Attack(body, player_index, Attack::UP_AIR));
-	attacks.push_back(new Attack(body, player_index, Attack::DOWN_AIR));
-	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_AIR));
-	attacks.push_back(new Attack(body, player_index, Attack::BACK_AIR));
-	attacks.push_back(new Attack(body, player_index, Attack::NEUTRAL_AIR));
-	attacks.push_back(new Attack(body, player_index, Attack::DASH_ATTACK));
-	attacks.push_back(new Attack(body, player_index, Attack::DASH_PUNCH));
-	attacks.push_back(new Attack(body, player_index, Attack::THROW_WEAPON));
-	attacks.push_back(new Attack(body, player_index, Attack::TELEPORT_TO_WEAPON));
-	attacks.push_back(new Attack(body, player_index, Attack::URIENS_SUPER));
+	attacks.push_back(new Attack(body, player_index, Attack::JAB, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::JAB]));
+	attacks.push_back(new Attack(body, player_index, Attack::UP_SMASH, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::UP_SMASH]));
+	attacks.push_back(new Attack(body, player_index, Attack::DOWN_SMASH, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::DOWN_SMASH]));
+	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_SMASH, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::FORWARD_SMASH]));
+	attacks.push_back(new Attack(body, player_index, Attack::UP_AIR, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::UP_AIR]));
+	attacks.push_back(new Attack(body, player_index, Attack::DOWN_AIR, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::DOWN_AIR]));
+	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_AIR, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::FORWARD_AIR]));
+	attacks.push_back(new Attack(body, player_index, Attack::BACK_AIR, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::BACK_AIR]));
+	attacks.push_back(new Attack(body, player_index, Attack::NEUTRAL_AIR, playerBestiaryData["DictOfUnits"]["Player"]["AttackingAnimations"][Attack::NEUTRAL_AIR]));
 
 	hit_stun_timer = new StatusTimer(1);
 	jump_input_buffer = new StatusTimer(6);
@@ -106,7 +95,7 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	healthBarBackgroundRect->setPosition(5.0f, 5.0f);
 	healthBarBackgroundRect->setFillColor(sf::Color::Black);
 
-	sprite_scale = 0.25f;
+	sprite_scale = 1.0f;
 
 	LoadAllAnimations("Player", playerBestiaryData);
 
@@ -223,10 +212,6 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		if (currentAttackIndex < (int)AttackAnimationSounds.size()) {
 			if (attacking_animations[currentAttackIndex]->GetCurrentFrame() == AttackAnimationSoundFrames[currentAttackIndex]) {
 				AttackAnimationSounds[currentAttackIndex]->play();
-			}
-		} else {
-			if (attacking_animations[1]->GetCurrentFrame() == AttackAnimationSoundFrames[1]) {
-				AttackAnimationSounds[1]->play();
 			}
 		}
 	}
