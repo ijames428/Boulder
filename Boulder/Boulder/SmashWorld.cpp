@@ -42,9 +42,6 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 
 	std::thread thread(&SmashWorld::UpdateVideo, this);
 
-	//ExportSaveData();
-	//ImportSaveData();
-
 	Setup();
 
 	thread.join();
@@ -76,6 +73,7 @@ void SmashWorld::ImportSaveData() {
 	StageOfTheGame = save_data["WorldData"]["StageOfTheGame"].asString();
 
 	PlayerOne->ApplySaveDataToObjectData(save_data);
+	boss_one->ApplySaveDataToObjectData(save_data);
 
 	for (int i = 0; i < (int)enemies.size(); i++) {
 		enemies[i]->ApplySaveDataToObjectData(save_data[enemies[i]->GetName()]);
@@ -84,12 +82,18 @@ void SmashWorld::ImportSaveData() {
 	myfile.close();
 }
 
+void ExternalResumeGame() {
+	Singleton<SmashWorld>::Get()->CloseCurrentMenu();
+}
+
 void ExternalExportSaveData() {
 	Singleton<SmashWorld>::Get()->ExportSaveData();
+	Singleton<SmashWorld>::Get()->CloseCurrentMenu();
 }
 
 void ExternalImportSaveData() {
 	Singleton<SmashWorld>::Get()->ImportSaveData();
+	Singleton<SmashWorld>::Get()->CloseCurrentMenu();
 }
 
 void ExternalExitGame() {
@@ -97,6 +101,7 @@ void ExternalExitGame() {
 }
 
 void ExternalExitToMainMenu() {
+	Singleton<SmashWorld>::Get()->CloseCurrentMenu();
 	Singleton<SmashWorld>::Get()->ExitToMainMenu();
 }
 
@@ -112,6 +117,7 @@ void SmashWorld::ExportSaveData() {
 	save_data["WorldData"]["StageOfTheGame"] = StageOfTheGame;
 
 	PlayerOne->ApplyObjectDataToSaveData(save_data);
+	boss_one->ApplyObjectDataToSaveData(save_data);
 
 	for (int i = 0; i < (int)enemies.size(); i++) {
 		enemies[i]->ApplyObjectDataToSaveData(save_data[enemies[i]->GetName()]);
@@ -127,9 +133,24 @@ void SmashWorld::ExportSaveData() {
 	cout << "########## Saved ##########\n";
 }
 
+void SmashWorld::PlayerDied() {
+	DeadMenu->Open();
+}
+
+void SmashWorld::CloseCurrentMenu() {
+	if (PauseMenu->IsOpen) {
+		PauseMenu->Close();
+		player_character_input->EatInputsForNumberOfFrames(1);
+	} else if (DeadMenu->IsOpen) {
+		DeadMenu->Close();
+		player_character_input->EatInputsForNumberOfFrames(1);
+	}
+}
+
 void SmashWorld::Setup() {
 	exit_to_main_menu = false;
 	unit_type_player_is_talking_to = "";
+	boss_one_fight_started = false;
 
 	gravity = new b2Vec2(0.0f, 30.0f);
 	world = new b2World(*gravity);
@@ -163,11 +184,16 @@ void SmashWorld::Setup() {
 	past_setup = true;
 
 	PauseMenu = new Menu(render_window, camera->viewport_dimensions);
-	//PauseMenu->AddItem("Resume Game", "Resume()");
+	PauseMenu->AddItem("Resume Game", &ExternalResumeGame);
 	PauseMenu->AddItem("Save Game", &ExternalExportSaveData);
 	PauseMenu->AddItem("Load Game", &ExternalImportSaveData);
 	PauseMenu->AddItem("Go To Main Menu", &ExternalExitToMainMenu);
 	PauseMenu->AddItem("Exit Game", &ExternalExitGame);
+
+	DeadMenu = new Menu(render_window, camera->viewport_dimensions);
+	DeadMenu->AddItem("Load Game", &ExternalImportSaveData);
+	DeadMenu->AddItem("Go To Main Menu", &ExternalExitToMainMenu);
+	DeadMenu->AddItem("Exit Game", &ExternalExitGame);
 
 	parallax_background_texture.loadFromFile("Images/parallax_background.jpg");
 	parallax_background_sprite = sf::Sprite(parallax_background_texture);
@@ -203,6 +229,9 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	} else if (PauseMenu->IsOpen) {
 		player_menu_input->Update();
 		PauseMenu->Draw(curr_frame);
+	} else if (DeadMenu->IsOpen) {
+		player_menu_input->Update();
+		DeadMenu->Draw(curr_frame);
 	} else {
 		current_frame = curr_frame;
 
@@ -233,6 +262,11 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 		for (int i = 0; i < (int)doors.size(); i++) {
 			doors[i]->Update(current_frame, frame_delta);
+		}
+
+		if (boss_one_fight_started) {
+			boss_one->Update(current_frame, frame_delta);
+			boss_one->Draw(camera->viewport_position);
 		}
 
 		for (int i = 0; i < (int)enemies.size(); i++) {
@@ -396,9 +430,17 @@ void SmashWorld::BuildWorld() {
 		//string test0 = jsonBestiariesData[0]["BestiaryName"].asString();
 		//string test1 = thisBestiary["DictOfUnits"]["Gelly"]["IdleAnimations"][0]["FilePath"].asString();
 
-		enemies.push_back(new BoulderCreature(jsonWorldData["units"][i]["InstanceOfUnitName"].asString(), jsonWorldData["units"][i]["UnitType"].asString(), 
-											  jsonWorldData["units"][i]["BestiaryName"].asString(), jsonWorldData["units"][i]["IsInteractable"].asBool(), thisBestiary,
-											  render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+		if (Contains(jsonWorldData["units"][i]["UnitType"].asString(), "BossOne")) {
+			boss_one = new BossOne(jsonWorldData["units"][i]["InstanceOfUnitName"].asString(), jsonWorldData["units"][i]["UnitType"].asString(),
+				jsonWorldData["units"][i]["BestiaryName"].asString(), jsonWorldData["units"][i]["IsInteractable"].asBool(), thisBestiary,
+				render_window, sf::Vector2f(x, y), sf::Vector2f(width, height));
+			boss_one->AddActivaty(jsonWorldData["units"][i]["activity"].asString());
+		} else {
+			enemies.push_back(new BoulderCreature(jsonWorldData["units"][i]["InstanceOfUnitName"].asString(), jsonWorldData["units"][i]["UnitType"].asString(),
+				jsonWorldData["units"][i]["BestiaryName"].asString(), jsonWorldData["units"][i]["IsInteractable"].asBool(), thisBestiary,
+				render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+			enemies[i]->AddActivaty(jsonWorldData["units"][i]["activity"].asString());
+		}
 	}
 
 }
@@ -481,18 +523,14 @@ void SmashWorld::ExecuteAction(string action_call) {
 		for (int i = 0; i < (int)doors.size(); i++) {
 			doors[i]->TryToActivate(vstrings[1].substr(0, vstrings[1].size() - 1));
 		}
+	} else if (call == "ChangeStageOnDeath" || call == "ChangeStage") {
+		StageOfTheGame = argument;
+	} else if (call == "Aggro") {
+		if (boss_one->GetName() == argument) {
+			boss_one->Aggro((BoulderCreature*)PlayerOne);
+			boss_one_fight_started = true;
+		}
 	}
-	//else if (call == "Resume") {
-	//	PauseMenu->Close();
-	//} else if (call == "SaveGame") {
-	//	ExportSaveData();
-	//	PauseMenu->Close();
-	//} else if (call == "LoadGame") {
-	//	ImportSaveData();
-	//	PauseMenu->Close();
-	//} else if (call == "ExitGame") {
-	//	render_window->close();
-	//}
 }
 
 void SmashWorld::ExitToMainMenu() {
@@ -508,12 +546,20 @@ string SmashWorld::GetCurrentPointInGame() {
 }
 
 void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
-	if (PauseMenu->IsOpen) {
+	if (PauseMenu->IsOpen || DeadMenu->IsOpen) {
 		if (vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
-			PauseMenu->MoveCursorDown();
+			if (PauseMenu->IsOpen) {
+				PauseMenu->MoveCursorDown();
+			} else if (DeadMenu->IsOpen) {
+				DeadMenu->MoveCursorDown();
+			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
-			PauseMenu->MoveCursorUp();
+			if (PauseMenu->IsOpen) {
+				PauseMenu->MoveCursorUp();
+			} else if (DeadMenu->IsOpen) {
+				DeadMenu->MoveCursorUp();
+			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical >= -90.0f && vertical <= 90.0f) {
 			can_take_another_left_stick_input_from_menu_controller = true;
@@ -527,6 +573,8 @@ void SmashWorld::HandleRightStickInput(float horizontal, float vertical) {
 void SmashWorld::HandleButtonBPress() {
 	if (PauseMenu->IsOpen) {
 		PauseMenu->Close();
+	} else if (DeadMenu->IsOpen) {
+		DeadMenu->Close();
 	} else if (unit_type_player_is_talking_to != "") {
 		unit_type_player_is_talking_to = "";
 		CurrentDialogueLine = nullptr;
@@ -551,6 +599,8 @@ void SmashWorld::HandleButtonAPress() {
 		intro_cutscene.stop();
 	} else if (PauseMenu->IsOpen) {
 		PauseMenu->ExecuteCurrentSelection();
+	} else if (DeadMenu->IsOpen) {
+		DeadMenu->ExecuteCurrentSelection();
 	}
 }
 

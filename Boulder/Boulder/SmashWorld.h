@@ -18,6 +18,7 @@ using namespace std;
 #include "Trigger.h"
 #include "sfeMovie\Movie.hpp"
 #include "Menu.h"
+#include "BossOne.h"
 
 class MyContactListener : public b2ContactListener
 {
@@ -199,6 +200,8 @@ private:
 	std::vector<Door*> doors;
 	std::vector<Trigger*> triggers;
 	std::vector<BoulderCreature*> enemies;
+	BossOne* boss_one;
+	bool boss_one_fight_started;
 	sf::Font ringbearer_font;
 	sf::Text dialogue_text;
 	string unit_type_player_is_talking_to;
@@ -210,7 +213,7 @@ private:
 	sf::Texture parallax_background_texture;
 	sf::Sprite parallax_background_sprite;
 
-	Menu* MainMenu;
+	Menu* DeadMenu;
 	Menu* PauseMenu;
 	bool can_take_another_left_stick_input_from_menu_controller = true;
 public:
@@ -230,7 +233,9 @@ public:
 	void ExportSaveData();
 	void ImportSaveData();
 	void ExitGame();
-	void ExitToMainMenu();
+	void ExitToMainMenu(); 
+	void CloseCurrentMenu();
+	void PlayerDied();
 	void ExecuteAction(string action_call);
 	void HandleLeftStickInput(float horizontal, float vertical);
 	void HandleRightStickInput(float horizontal, float vertical);
@@ -244,6 +249,11 @@ public:
 	void HandleButtonStartRelease();
 	void HandleButtonSelectPress();
 	void HandleButtonSelectRelease();
+
+	bool Contains(string string_being_searched, string string_being_searched_for) {
+		std::size_t found = string_being_searched.find(string_being_searched_for);
+		return found != std::string::npos;
+	}
 
 	enum EntityCategory {
 		PLAYER_CHARACTER = 0x0001,

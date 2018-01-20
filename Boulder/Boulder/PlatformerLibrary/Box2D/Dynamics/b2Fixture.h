@@ -121,6 +121,9 @@ public:
 	b2Shape* GetShape();
 	const b2Shape* GetShape() const;
 
+	void SetShape(b2Shape* new_shape);
+	const void SetShape(b2Shape* new_shape) const;
+
 	/// Set if this fixture is a sensor.
 	void SetSensor(bool sensor);
 
@@ -267,6 +270,11 @@ inline b2Shape* b2Fixture::GetShape()
 inline const b2Shape* b2Fixture::GetShape() const
 {
 	return m_shape;
+}
+
+inline void b2Fixture::SetShape(b2Shape* new_shape)
+{
+	m_shape = new_shape;
 }
 
 inline bool b2Fixture::IsSensor() const

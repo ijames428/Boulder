@@ -17,11 +17,12 @@ private:
 	b2PolygonShape polygonShapeRight;
 	bool facing_right;
 public:
-	HitBox(b2Body* body, int player_index, int frame_in_attack, sf::Vector2f dimensions, sf::Vector2f relative_position);
+	HitBox(b2Body* body, int player_index, int frame_in_attack, sf::Vector2f dimensions, sf::Vector2f relative_position, string box_info);
 	void Update(bool new_facing_right);
 	void Activate();
 	void Deactivate();
 	bool IsFacingRight();
+	string BoxInfo;
 };
 
 class AttackFrame {
@@ -36,7 +37,7 @@ private:
 	int number_of_hit_stun_frames;
 	bool frame_for_clearing_enemies_hit;
 public:
-	AttackFrame(b2Body* body, int player_index, int frame_in_attack, int dmg, sf::Int64 stun_frames, sf::Vector2f kfr, sf::Vector2f hit_box_dimensions, sf::Vector2f hit_box_relative_central_position, bool has_hb, bool clear_hit_enemies = false);
+	AttackFrame(b2Body* body, int player_index, int frame_in_attack, int dmg, sf::Int64 stun_frames, sf::Vector2f kfr, sf::Vector2f hit_box_dimensions, sf::Vector2f hit_box_relative_central_position, bool has_hb, string box_info, bool clear_hit_enemies = false);
 	void Update(bool facing_right);
 	void Activate();
 	void Deactivate();
@@ -45,6 +46,8 @@ public:
 	bool HasHitBox();
 	int GetDamage();
 	bool IsClearingFrame();
+	static HitBox* GetExistingHitBox(string box_info);
+	static std::vector<HitBox*> ExistingHitBoxes;
 };
 
 class Attack {
@@ -57,17 +60,7 @@ private:
 	b2Body* player_body;
 	int player_index;
 	std::vector<string> enemies_hit;
-	std::vector<std::vector<AttackFrame*>> MakeMoveJab();
-	std::vector<std::vector<AttackFrame*>> MakeMoveUpSmash();
-	std::vector<std::vector<AttackFrame*>> MakeMoveForwardSmash();
-	std::vector<std::vector<AttackFrame*>> MakeMoveDownAir();
-	std::vector<std::vector<AttackFrame*>> MakeMoveForwardAir();
-	std::vector<std::vector<AttackFrame*>> MakeMoveBackAir();
-	std::vector<std::vector<AttackFrame*>> MakeMoveUpAir();
-	std::vector<std::vector<AttackFrame*>> MakeMoveDownSmash();
-	std::vector<std::vector<AttackFrame*>> MakeMoveNeutralAir();
 public:
-	Attack(b2Body* body, int index, int move_type);
 	Attack(b2Body* body, int index, int move_type, Json::Value jsonData);
 	void Update(sf::Uint64 curr_frame, bool facing_right);
 	void InitiateAttack();
@@ -75,7 +68,6 @@ public:
 	bool IsAttacking();
 	sf::Vector2f GetKnockBack();
 	int GetHitStunFrames();
-	std::vector<std::vector<AttackFrame*>> Attack::GetAttackFrames(int move);
 	bool CanHitTarget(string);
 	void StopAttack();
 

@@ -57,6 +57,9 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	topCircleFixture = body->CreateFixture(&topCircleFixtureDef);
 	botCircleFixture = body->CreateFixture(&botCircleFixtureDef);
 	centerBoxFixture = body->CreateFixture(&centerBoxFixtureDef);
+
+	hurt_box = new HurtBox(body, player_index, playerBestiaryData["DictOfUnits"]["Player"]["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]);
+
 	body->SetFixedRotation(true);
 	body->SetUserData(this);
 
@@ -103,6 +106,9 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	landing_animation_timer = new StatusTimer(numberOfLandingAnimationFrames);
 
 	is_hittable = true;
+
+	int numberOfDyingAnimationFrames = dying_animations.size() > 0 ? dying_animations[0]->GetNumberOfFrames() : 0;
+	dying_animation_timer = new StatusTimer(numberOfDyingAnimationFrames);
 }
 
 void SmashCharacter::ReceiveHeal(int heal) {
@@ -119,8 +125,14 @@ void SmashCharacter::UpdateHealthBar() {
 }
 
 void SmashCharacter::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames) {
+	bool was_alive = hit_points > 0;
+
 	BoulderCreature::TakeDamage(damage, knock_back, hit_stun_frames);
 	UpdateHealthBar();
+
+	if (was_alive && hit_points <= 0) {
+		Singleton<SmashWorld>::Get()->PlayerDied();
+	}
 }
 
 void SmashCharacter::ApplyObjectDataToSaveData(Json::Value& save_data) {
@@ -129,6 +141,7 @@ void SmashCharacter::ApplyObjectDataToSaveData(Json::Value& save_data) {
 
 void SmashCharacter::ApplySaveDataToObjectData(Json::Value& save_data) {
 	BoulderCreature::ApplySaveDataToObjectData(save_data["Player"]);
+	UpdateHealthBar();
 }
 
 void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
@@ -138,6 +151,8 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	if (can_take_input) {
 		can_take_input = !IsAnAttackActive();
 	}
+
+	hurt_box->Update(IsFacingRight());
 
 	//if (body->GetLinearVelocity().x > 0.1f && !IsFacingRight()) {
 	//	SetFacingRight(true);

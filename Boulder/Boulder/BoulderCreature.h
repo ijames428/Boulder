@@ -17,6 +17,7 @@ using namespace std;
 #include "Attack.h"
 #include "StatusTimer.h"
 #include "GameLibrary\Json\json.h"
+#include "HurtBox.h"
 
 class BoulderCreature : public Creature {
 private:
@@ -24,7 +25,6 @@ private:
 	sf::Int16 cashinable_hit_point_drain_rate;
 	sf::RectangleShape* cashInHealthBarRect;
 
-	BoulderCreature* target = nullptr;
 protected:
 	int State = 0;
 	const int STATE_IDLE = 0;
@@ -40,6 +40,8 @@ protected:
 	const int STATE_FALLING = 10;
 	const int STATE_LANDING = 11;
 	const int STATE_TALKING = 12;
+
+	BoulderCreature* target = nullptr;
 
 	bool is_hostile = false;
 	bool is_interactable = false;
@@ -65,7 +67,6 @@ protected:
 	b2CircleShape topCircleShape;
 	b2CircleShape botCircleShape;
 	b2PolygonShape centerBoxShape;
-	b2PolygonShape hurtBoxShape;
 	b2FixtureDef aggroCircleFixtureDef;
 	b2FixtureDef deaggroCircleFixtureDef;
 	b2FixtureDef interactionCircleFixtureDef;
@@ -132,6 +133,12 @@ protected:
 	int LeftFootStepSoundFrameRun;
 	int RightFootStepSoundFrameWalk;
 	int LeftFootStepSoundFrameWalk;
+	
+	std::vector<string> activities;
+
+	HurtBox* hurt_box;
+
+	uint16 default_masked_bits;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
@@ -141,13 +148,15 @@ public:
 	int TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back, int hit_stun_frames);
 	Attack* GetActiveAttack();
 	bool IsAnAttackActive();
-	void Land();
+	virtual void Land();
 	void Aggro(BoulderCreature* new_target);
-	void Deaggro();
+	virtual void Deaggro();
 	void SetInteractable(BoulderCreature* new_interactable);
 	void StartTalking();
 	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
+	void AddActivaty(string activity);
+	virtual void UpdateBehavior();
 
 	string GetName() {
 		return name;

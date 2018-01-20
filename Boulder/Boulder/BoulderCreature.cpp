@@ -9,6 +9,11 @@ using namespace std;
 #include "SmashWorld.h"
 #include <cmath>
 
+bool Contains(string string_being_searched, string string_being_searched_for) {
+	std::size_t found = string_being_searched.find(string_being_searched_for);
+	return found != std::string::npos;
+}
+
 BoulderCreature::BoulderCreature(int player_idx, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
 	Creature::Creature(window, position, dimensions, subject_to_gravity) {
 }
@@ -102,7 +107,6 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	}
 
 	centerBoxShape.SetAsBox(vect_hurt_box[2] / 160.0f, vect_hurt_box[3] / 100.0f);
-	hurtBoxShape.SetAsBox(vect_hurt_box[2] / 40.0f, vect_hurt_box[3] / 40.0f);
 	topCircleShape.m_p.Set(0, -vect_hurt_box[3] / 100.0f); //position, relative to body position
 	botCircleShape.m_p.Set(0, vect_hurt_box[3] / 100.0f); //position, relative to body position
 	topCircleShape.m_radius = vect_hurt_box[2] / 160.0f;
@@ -119,6 +123,8 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	botCircleFixtureDef.density = 1.0f;
 	botCircleFixtureDef.friction = 0.3f;
 	botCircleFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
+
+	default_masked_bits = centerBoxFixtureDef.filter.maskBits;
 
 	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->ENEMY;
 	botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->ENEMY;
@@ -141,10 +147,12 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 		body->SetGravityScale(0.0f);
 	}
 
+	hurt_box = new HurtBox(body, player_index, jsonBestiariesData["DictOfUnits"][unit_type]["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]);
+
 	body->SetFixedRotation(true);
 	body->SetUserData(this);
 
-	groundCheckShape.SetAsBox(dimensions.x / 2.0f, 0.05f, b2Vec2(0.0f, 0.6f), 0.0f);
+	groundCheckShape.SetAsBox(vect_hurt_box[2] / 100.0f, 0.05f, b2Vec2(0.0f, (vect_hurt_box[3] / 100.0f) + (vect_hurt_box[2] / 160.0f)), 0.0f);
 	groundCheckFixtureDef.shape = &groundCheckShape;
 	groundCheckFixtureDef.isSensor = true;
 	groundCheckFixtureDef.m_color = new b2Color(1.0f, 0.0f, 1.0f, 1.0f);
@@ -184,7 +192,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	jump_input_buffer = new StatusTimer(6);
 	health_cash_in_timer = new StatusTimer(360);
 
-	int numberOfDyingAnimationFrames = dying_animations.size() > 0 ? dying_animations[0]->GetNumberOfFrames() : 1;
+	int numberOfDyingAnimationFrames = dying_animations.size() > 0 ? dying_animations[0]->GetNumberOfFrames() : 0;
 	dying_animation_timer = new StatusTimer(numberOfDyingAnimationFrames);
 
 	int numberOfLandingAnimationFrames = landing_animations.size() > 0 ? landing_animations[0]->GetNumberOfFrames() : 1;
@@ -197,10 +205,12 @@ void BoulderCreature::ApplyObjectDataToSaveData(Json::Value& save_data) {
 	//save_data["Name"] = name;
 	save_data["PositionX"] = body->GetPosition().x;
 	save_data["PositionY"] = body->GetPosition().y;
+	save_data["CurrentHitPoints"] = hit_points;
 }
 
 void BoulderCreature::ApplySaveDataToObjectData(Json::Value& save_data) {
 	body->SetTransform(b2Vec2(save_data["PositionX"].asFloat(), save_data["PositionY"].asFloat()), body->GetAngle());
+	hit_points = save_data["CurrentHitPoints"].asInt();
 }
 
 void BoulderCreature::LoadAllAnimations(string unit_type, Json::Value jsonBestiariesData) {
@@ -316,6 +326,8 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		can_take_input = !IsAnAttackActive();
 	}
 
+	hurt_box->Update(IsFacingRight());
+
 	if (!health_cash_in_timer->IsActive()) {
 		if (cashinable_hit_point_value > hit_points) {
 			cashinable_hit_point_value -= cashinable_hit_point_drain_rate;
@@ -326,12 +338,21 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		}
 	}
 
-	//if (body->GetLinearVelocity().x > 0.1f && !IsFacingRight()) {
-	//	SetFacingRight(true);
-	//}
-	//else if (body->GetLinearVelocity().x < -0.1f && IsFacingRight()) {
-	//	SetFacingRight(false);
-	//}
+	if (hit_points <= 0 && centerBoxFixtureDef.filter.maskBits == default_masked_bits) {
+		centerBoxFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM;
+		topCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM;
+		botCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM;
+		centerBoxFixture->SetFilterData(centerBoxFixtureDef.filter);
+		topCircleFixture->SetFilterData(topCircleFixtureDef.filter);
+		botCircleFixture->SetFilterData(botCircleFixtureDef.filter);
+	} else if (hit_points > 0 && centerBoxFixtureDef.filter.maskBits == Singleton<SmashWorld>::Get()->PLATFORM) {
+		centerBoxFixtureDef.filter.maskBits = default_masked_bits;
+		topCircleFixtureDef.filter.maskBits = default_masked_bits;
+		botCircleFixtureDef.filter.maskBits = default_masked_bits;
+		centerBoxFixture->SetFilterData(centerBoxFixtureDef.filter);
+		topCircleFixture->SetFilterData(topCircleFixtureDef.filter);
+		botCircleFixture->SetFilterData(botCircleFixtureDef.filter);
+	}
 
 	for (int i = 0; i < (int)attacks.size(); i++) {
 		attacks[i]->Update(curr_frame, IsFacingRight());
@@ -348,75 +369,7 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		centerBoxFixture->SetColor(0.0f, 1.0f, 0.0f, 1.0f);
 	}
 
-	if (target != nullptr)
-	{
-		float delta_x = target->GetBody()->GetPosition().x - body->GetPosition().x;
-		float delta_y = target->GetBody()->GetPosition().y - body->GetPosition().y;
-
-		float distance = sqrtf(powf(delta_x, 2) + powf(delta_y, 2));
-
-		if (distance < 2.0f) {
-			if (!IsAnAttackActive()) {
-				UseAttack(0);
-			}
-		} else {
-			if (target->GetBody()->GetPosition().x < body->GetPosition().x)
-			{
-				movement = -100.0f;
-				running = true;
-			}
-			else if (target->GetBody()->GetPosition().x > body->GetPosition().x)
-			{
-				movement = 100.0f;
-				running = true;
-			}
-		}
-	} else if (curr_frame % 60 == 0) {
-		int rng = rand() % 5;
-
-		if (rng == 0) {
-			movement = -100.0f;
-			running = false;
-		} else if (rng == 1) {
-			movement = 0.0f;
-			running = false;
-		} else if (rng == 2) {
-			movement = 100.0f;
-			running = false;
-		}
-	}
-
-	if (is_interactable) {
-		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
-
-		if (talking_animation_timer->IsActive()) {
-			State = STATE_TALKING;
-		} else {
-			State = STATE_IDLE;
-		}
-	} else {
-		Move(movement, 0.0f);
-
-		if (hit_points <= 0) {
-			if (dying_animation_timer->IsActive()) {
-				State = STATE_DYING;
-			} else {
-				State = STATE_DEAD;
-			}
-		} else if (hit_stun_timer->IsActive()) {
-			State = STATE_HIT_STUN;
-		} else if (IsAnAttackActive()) {
-			State = STATE_ATTACKING;
-		} else if (body->GetLinearVelocity().x != 0) {
-			if (running) {
-				State = STATE_RUNNING;
-			} else {
-				State = STATE_WALKING;
-			}
-		} else {
-			State = STATE_IDLE;
-		}
-	}
+	UpdateBehavior();
 	
 	if (State == STATE_WALKING) {
 		if (walking_animations[0]->GetCurrentFrame() == RightFootStepSoundFrameWalk) {
@@ -429,6 +382,90 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			RightFootStepSound.play();
 		} else if (walking_animations[0]->GetCurrentFrame() == LeftFootStepSoundFrameRun) {
 			LeftFootStepSound.play();
+		}
+	}
+}
+
+void BoulderCreature::UpdateBehavior() {
+	if (target != nullptr)
+	{
+		float delta_x = target->GetBody()->GetPosition().x - body->GetPosition().x;
+		float delta_y = target->GetBody()->GetPosition().y - body->GetPosition().y;
+
+		float distance = sqrtf(powf(delta_x, 2) + powf(delta_y, 2));
+
+		if (distance < 2.0f) {
+			if (!IsAnAttackActive()) {
+				UseAttack(0);
+			}
+		}
+		else {
+			if (target->GetBody()->GetPosition().x < body->GetPosition().x)
+			{
+				movement = -100.0f;
+				running = true;
+			}
+			else if (target->GetBody()->GetPosition().x > body->GetPosition().x)
+			{
+				movement = 100.0f;
+				running = true;
+			}
+		}
+	}
+	else if (current_frame % 60 == 0) {
+		int rng = rand() % 5;
+
+		if (rng == 0) {
+			movement = -100.0f;
+			running = false;
+		}
+		else if (rng == 1) {
+			movement = 0.0f;
+			running = false;
+		}
+		else if (rng == 2) {
+			movement = 100.0f;
+			running = false;
+		}
+	}
+
+	if (is_interactable) {
+		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+
+		if (talking_animation_timer->IsActive()) {
+			State = STATE_TALKING;
+		}
+		else {
+			State = STATE_IDLE;
+		}
+	}
+	else {
+		Move(movement, 0.0f);
+
+		if (hit_points <= 0) {
+			if (dying_animation_timer->IsActive()) {
+				State = STATE_DYING;
+			}
+			else {
+				State = STATE_DEAD;
+			}
+		}
+		else if (hit_stun_timer->IsActive()) {
+			State = STATE_HIT_STUN;
+		}
+		else if (IsAnAttackActive()) {
+			State = STATE_ATTACKING;
+		}
+		else if (body->GetLinearVelocity().x != 0) {
+			if (running) {
+				State = STATE_RUNNING;
+			}
+			else {
+				State = STATE_WALKING;
+			}
+		}
+		else {
+			State = STATE_IDLE;
 		}
 	}
 }
@@ -520,6 +557,14 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 	render_window->draw(*healthBarRect);
 }
 
+void BoulderCreature::AddActivaty(string activity) {
+	if (activity != "") {
+		if (std::find(activities.begin(), activities.end(), activity) == activities.end()) {
+			activities.push_back(activity);
+		}
+	}
+}
+
 void BoulderCreature::FlipAnimationsIfNecessary(std::vector<SpriteAnimation*> animations)
 {
 	for (int i = 0; i < (int)animations.size(); i++) {
@@ -569,6 +614,9 @@ void BoulderCreature::Land() {
 	}
 	if (jump_input_buffer->IsActive()) {
 		Jump();
+	}
+	if (hit_points <= 0) {
+		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
 	}
 }
 
@@ -635,6 +683,16 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			hit_points = 0;
 			cashinable_hit_point_value = 0;
 			dying_animation_timer->Start();
+			if ((int)activities.size() > 0) {
+				for (int a = 0; a < (int)activities.size(); a++) {
+					if (Contains(activities[a], "OnDeath")) {
+						Singleton<SmashWorld>::Get()->ExecuteAction(activities[a]);
+					}
+				}
+			}
+			if (!IsInTheAir()) {
+				body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+			}
 		} else if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
 			body->SetLinearVelocity(b2Vec2(knock_back.x, knock_back.y));
 			health_cash_in_timer->Start();
