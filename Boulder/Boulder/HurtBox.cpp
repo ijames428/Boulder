@@ -9,39 +9,45 @@ using namespace std;
 #include <vector>
 #include <string>
 #include <sstream>
+#include "Utilities.h"
 
 #define DEGTORAD 0.0174532925199432957f
 
 HurtBox::HurtBox(b2Body* body, int player_index, Json::Value jsonData) {
-	float boxScale = 40.0f;
-
-	std::vector<float> vect_hurt_box;
-	//jsonData["DictOfUnits"][unit_type][animations_name][i]
-	//string strHurtBoxValues = jsonData["HurtBoxPerFrame"][i][box]["Box"].asString();
-	string strHurtBoxValues = jsonData["Box"].asString();
-
-	if (strHurtBoxValues != "") {
-		std::stringstream ss_hurt_box(strHurtBoxValues);
-		float hurt_box_character;
-
-		while (ss_hurt_box >> hurt_box_character)
-		{
-			vect_hurt_box.push_back(hurt_box_character);
-
-			if (ss_hurt_box.peek() == ',')
-				ss_hurt_box.ignore();
-		}
-	} else {
-		vect_hurt_box.push_back(1.0f);
-		vect_hurt_box.push_back(1.0f);
-		vect_hurt_box.push_back(1.0f);
-		vect_hurt_box.push_back(1.0f);
-	}
-
-	float hurt_box_relative_x = ((vect_hurt_box[0] + (vect_hurt_box[2] / 2.0f)) / boxScale);
-	float hurt_box_relative_y = ((vect_hurt_box[1] + (vect_hurt_box[3] / 2.0f) - (vect_hurt_box[1] + (vect_hurt_box[3] / 2.0f))) / boxScale);// -(radius * 30.0f);
-	float hurt_box_width = (vect_hurt_box[2]) / boxScale;
-	float hurt_box_height = (vect_hurt_box[3]) / boxScale;
+	//float boxScale = 40.0f;
+	//
+	//std::vector<float> vect_hurt_box;
+	////jsonData["DictOfUnits"][unit_type][animations_name][i]
+	////string strHurtBoxValues = jsonData["HurtBoxPerFrame"][i][box]["Box"].asString();
+	//string strHurtBoxValues = jsonData["Box"].asString();
+	//
+	//if (strHurtBoxValues != "") {
+	//	std::stringstream ss_hurt_box(strHurtBoxValues);
+	//	float hurt_box_character;
+	//
+	//	while (ss_hurt_box >> hurt_box_character)
+	//	{
+	//		vect_hurt_box.push_back(hurt_box_character);
+	//
+	//		if (ss_hurt_box.peek() == ',')
+	//			ss_hurt_box.ignore();
+	//	}
+	//} else {
+	//	vect_hurt_box.push_back(1.0f);
+	//	vect_hurt_box.push_back(1.0f);
+	//	vect_hurt_box.push_back(1.0f);
+	//	vect_hurt_box.push_back(1.0f);
+	//}
+	//
+	//float hurt_box_relative_x = ((vect_hurt_box[0] + (vect_hurt_box[2] / 2.0f)) / boxScale);
+	//float hurt_box_relative_y = ((vect_hurt_box[1] + (vect_hurt_box[3] / 2.0f) - (vect_hurt_box[1] + (vect_hurt_box[3] / 2.0f))) / boxScale);// -(radius * 30.0f);
+	//float hurt_box_width = (vect_hurt_box[2]) / boxScale;
+	//float hurt_box_height = (vect_hurt_box[3]) / boxScale;
+	std::vector<float> usable_box_data = Utilities::StringBoxDataToUsableVectorBoxData(jsonData["Box"].asString());
+	float hurt_box_relative_x = usable_box_data[0];
+	float hurt_box_relative_y = usable_box_data[1];
+	float hurt_box_width = usable_box_data[2];
+	float hurt_box_height = usable_box_data[3];
 
 	//attack_frames[i].push_back(new AttackFrame(player_body, player_index, (int)attack_frames.size(), damage, frames_of_hurt_stun,
 	//	sf::Vector2f(knockback_x, knockback_y), sf::Vector2f(hurt_box_width, hurt_box_height), sf::Vector2f(hurt_box_relative_x, hurt_box_relative_y),

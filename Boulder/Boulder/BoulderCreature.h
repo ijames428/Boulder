@@ -18,6 +18,14 @@ using namespace std;
 #include "StatusTimer.h"
 #include "GameLibrary\Json\json.h"
 #include "HurtBox.h"
+#include "BoulderProjectile.h"
+
+struct ProjectileFiringFrame {
+	int attack_animation_index;
+	int firing_frame;
+	float relative_spawning_position_x;
+	float relative_spawning_position_y;
+};
 
 class BoulderCreature : public Creature {
 private:
@@ -110,6 +118,10 @@ protected:
 	std::vector<SpriteAnimation*> falling_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> landing_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> talking_animations = std::vector<SpriteAnimation*>();
+	std::vector<SpriteAnimation*> projectile_active_animations = std::vector<SpriteAnimation*>();
+	std::vector<SpriteAnimation*> projectile_hit_animations = std::vector<SpriteAnimation*>();
+
+	std::vector<ProjectileFiringFrame> projectile_firing_frames = std::vector<ProjectileFiringFrame>();
 
 	StatusTimer* hit_stun_timer;
 	StatusTimer* dying_animation_timer;
@@ -137,8 +149,9 @@ protected:
 	std::vector<string> activities;
 
 	HurtBox* hurt_box;
-
 	uint16 default_masked_bits;
+
+	std::vector<BoulderProjectile*> projectiles = std::vector<BoulderProjectile*>();
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);

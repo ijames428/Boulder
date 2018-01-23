@@ -25,7 +25,7 @@ void BossOne::UpdateBehavior() {
 			if (current_frame % 60 == 0 || (distance_from_target_last_frame >= 12.0f)) {
 				int rng = rand() % 5;
 
-				if (!IsAnAttackActive()) {
+				if (!IsAnAttackActive() && hit_points > 0) {
 					if (target->GetBody()->GetPosition().x < body->GetPosition().x) {
 						SetFacingRight(false);
 					} else if (target->GetBody()->GetPosition().x > body->GetPosition().x) {

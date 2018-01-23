@@ -38,8 +38,7 @@ class MyContactListener : public b2ContactListener
 		if (fixtureA->GetFilterData().categoryBits == 0x0004) {
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			entityA->Land();
-		}
-		if (fixtureB->GetFilterData().categoryBits == 0x0004) {
+		} else if (fixtureB->GetFilterData().categoryBits == 0x0004) {
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			entityB->Land();
 		}
@@ -48,8 +47,7 @@ class MyContactListener : public b2ContactListener
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			entityA->Aggro(entityB);
-		}
-		if (fixtureB->GetFilterData().categoryBits == 0x0080) {
+		} else if (fixtureB->GetFilterData().categoryBits == 0x0080) {
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			entityB->Aggro(entityA);
@@ -59,8 +57,7 @@ class MyContactListener : public b2ContactListener
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			entityB->SetInteractable(entityA);
-		}
-		if (fixtureB->GetFilterData().categoryBits == 0x0200) {
+		} else if (fixtureB->GetFilterData().categoryBits == 0x0200) {
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			entityA->SetInteractable(entityB);
@@ -69,10 +66,33 @@ class MyContactListener : public b2ContactListener
 		if (fixtureA->GetFilterData().categoryBits == 0x0400) {
 			Trigger* entityA = static_cast<Trigger*>(fixtureA->GetBody()->GetUserData());
 			entityA->Triggered();
-		}
-		if (fixtureB->GetFilterData().categoryBits == 0x0400) {
+		} else if (fixtureB->GetFilterData().categoryBits == 0x0400) {
 			Trigger* entityB = static_cast<Trigger*>(fixtureB->GetBody()->GetUserData());
 			entityB->Triggered();
+		}
+
+		if (fixtureA->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
+			BoulderProjectile* entityA = static_cast<BoulderProjectile*>(fixtureA->GetBody()->GetUserData());
+
+			if (entityA->IsActive()) {
+				entityA->Hit();
+
+				if (fixtureB->GetFilterData().categoryBits == 0x0001) { // PROJECTILE
+					BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+					entityB->TakeDamage(entityA->GetDamage(), entityA->GetKnockBack(), entityA->GetHitStunFrames());
+				}
+			}
+		} else if (fixtureB->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
+			BoulderProjectile* entityB = static_cast<BoulderProjectile*>(fixtureB->GetBody()->GetUserData());
+
+			if (entityB->IsActive()) {
+				entityB->Hit();
+
+				if (fixtureA->GetFilterData().categoryBits == 0x0001) { // PROJECTILE
+					BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+					entityA->TakeDamage(entityB->GetDamage(), entityB->GetKnockBack(), entityB->GetHitStunFrames());
+				}
+			}
 		}
 
 		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
@@ -266,6 +286,7 @@ public:
 		AGGRO_CIRCLE = 0x0080,
 		DEAGGRO_CIRCLE = 0x0100,
 		INTERACTION_CIRCLE = 0x0200,
-		TRIGGER = 0x0400
+		TRIGGER = 0x0400,
+		PROJECTILE = 0x0800
 	};
 }; 
