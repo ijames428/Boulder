@@ -204,6 +204,14 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	landing_animation_timer = new StatusTimer(numberOfLandingAnimationFrames);
 
 	talking_animation_timer = new StatusTimer(120);
+
+	if (is_interactable) {
+		float scale = 1.0f;
+
+		interaction_button_texture = Singleton<AssetManager>().Get()->GetTexture("Images/XButton.png");
+		interaction_button_sprite = new sf::Sprite(*interaction_button_texture);
+		interaction_button_sprite->setScale(scale, scale);
+	}
 }
 
 void BoulderCreature::ApplyObjectDataToSaveData(Json::Value& save_data) {
@@ -598,6 +606,13 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 	}
 
 	render_window->draw(*healthBarRect);
+
+	if (is_interactable && draw_interaction_button) {
+		current_y_offset += (int)((current_frame % 60) - 30) / 120.0f;
+
+		interaction_button_sprite->setPosition(sf::Vector2f((body->GetPosition().x - camera_position.x) * 40.0f - 20.0f, (body->GetPosition().y - camera_position.y) * 40.0f + current_y_offset - 10.0f));
+		render_window->draw(*interaction_button_sprite);
+	}
 }
 
 void BoulderCreature::AddActivaty(string activity) {
@@ -682,7 +697,15 @@ void BoulderCreature::Deaggro() {
 }
 
 void BoulderCreature::SetInteractable(BoulderCreature* new_interactable) {
-	if (interactable == nullptr || new_interactable == nullptr) {
+	if (interactable == nullptr) {
+		interactable = new_interactable;
+		if (interactable != nullptr) {
+			interactable->draw_interaction_button = true;
+		}
+	} else if (new_interactable == nullptr) {
+		if (interactable != nullptr) {
+			interactable->draw_interaction_button = false;
+		}
 		interactable = new_interactable;
 	}
 }

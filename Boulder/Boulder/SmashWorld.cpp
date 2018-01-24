@@ -439,7 +439,10 @@ void SmashWorld::BuildWorld() {
 			enemies.push_back(new BoulderCreature(jsonWorldData["units"][i]["InstanceOfUnitName"].asString(), jsonWorldData["units"][i]["UnitType"].asString(),
 				jsonWorldData["units"][i]["BestiaryName"].asString(), jsonWorldData["units"][i]["IsInteractable"].asBool(), thisBestiary,
 				render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
-			enemies[i]->AddActivaty(jsonWorldData["units"][i]["activity"].asString());
+			if (!jsonWorldData["units"][i]["activity"].isNull()) {
+				string test = jsonWorldData["units"][i]["activity"].asString();
+				enemies[(int)enemies.size() - 1]->AddActivaty(test);
+			}
 		}
 	}
 

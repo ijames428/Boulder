@@ -152,6 +152,11 @@ protected:
 	uint16 default_masked_bits;
 
 	std::vector<BoulderProjectile*> projectiles = std::vector<BoulderProjectile*>();
+
+	sf::Texture* interaction_button_texture;
+	sf::Sprite* interaction_button_sprite;
+	bool draw_interaction_button;
+	float current_y_offset = 0.0f;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
