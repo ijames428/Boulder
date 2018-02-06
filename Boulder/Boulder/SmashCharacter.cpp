@@ -39,11 +39,11 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	botCircleShape.m_radius = dimensions.x / 4.0f;
 	centerBoxFixtureDef.shape = &centerBoxShape;
 	centerBoxFixtureDef.density = 1.0f;
-	centerBoxFixtureDef.friction = 0.3f;
+	centerBoxFixtureDef.friction = 0.0f;
 	centerBoxFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
 	topCircleFixtureDef.shape = &topCircleShape;
 	topCircleFixtureDef.density = 1.0f;
-	topCircleFixtureDef.friction = 0.01f;
+	topCircleFixtureDef.friction = 0.0f;
 	topCircleFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
 	botCircleFixtureDef.shape = &botCircleShape;
 	botCircleFixtureDef.density = 1.0f;
@@ -63,7 +63,7 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	body->SetFixedRotation(true);
 	body->SetUserData(this);
 
-	groundCheckShape.SetAsBox(dimensions.x / 2.0f, 0.05f, b2Vec2(0.0f, 0.6f), 0.0f);
+	groundCheckShape.SetAsBox(dimensions.x / 8.0f, 0.05f, b2Vec2(0.0f, 0.6f), 0.0f);
 	groundCheckFixtureDef.shape = &groundCheckShape;
 	groundCheckFixtureDef.isSensor = true;
 	groundCheckFixtureDef.m_color = new b2Color(1.0f, 0.0f, 1.0f, 1.0f);
@@ -102,6 +102,8 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 
 	LoadAllAnimations("Player", playerBestiaryData);
 
+	attacks_size = (int)attacks.size();
+
 	int numberOfLandingAnimationFrames = landing_animations.size() > 0 ? landing_animations[0]->GetNumberOfFrames() : 1;
 	landing_animation_timer = new StatusTimer(numberOfLandingAnimationFrames);
 
@@ -124,10 +126,10 @@ void SmashCharacter::UpdateHealthBar() {
 	healthBarRect->setFillColor(sf::Color((int)(0.0f + (255.0f - (float)hit_points / (float)max_hit_points) * 255.0f), (int)((float)hit_points / (float)max_hit_points * 255.0f), 0, 255));
 }
 
-void SmashCharacter::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames) {
+void SmashCharacter::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies) {
 	bool was_alive = hit_points > 0;
 
-	BoulderCreature::TakeDamage(damage, knock_back, hit_stun_frames);
+	BoulderCreature::TakeDamage(damage, knock_back, hit_stun_frames, pop_up_grounded_enemies);
 	UpdateHealthBar();
 
 	if (was_alive && hit_points <= 0) {
@@ -147,10 +149,16 @@ void SmashCharacter::ApplySaveDataToObjectData(Json::Value& save_data) {
 void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
-	can_take_input = !hit_stun_timer->IsActive();
-	if (can_take_input) {
-		can_take_input = !IsAnAttackActive();
+	if (IsInTheAir() && body->GetLinearVelocity().y > maxVerticalVelocityReached) {
+		maxVerticalVelocityReached = body->GetLinearVelocity().y;
 	}
+
+	//cout << body->GetLinearVelocity().y << "\r";
+
+	can_take_input = !hit_stun_timer->IsActive();
+	//if (can_take_input) {
+	//	can_take_input = !IsAnAttackActive();
+	//}
 
 	hurt_box->Update(IsFacingRight());
 

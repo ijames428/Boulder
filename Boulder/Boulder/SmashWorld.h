@@ -16,7 +16,10 @@ using namespace std;
 #include "DialogueLine.h"
 #include "MenuController.h"
 #include "Trigger.h"
+#ifdef _DEBUG
 #include "sfeMovie\Movie.hpp"
+#else
+#endif
 #include "Menu.h"
 #include "BossOne.h"
 
@@ -36,11 +39,17 @@ class MyContactListener : public b2ContactListener
 		b2Fixture* fixtureB = contact->GetFixtureB();
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0004) {
-			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-			entityA->Land();
+			if (fixtureB->GetFilterData().categoryBits == 0x0008) { // PLATFORM
+				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+				entityA->Land();
+				cout << "A Landed\n";
+			}
 		} else if (fixtureB->GetFilterData().categoryBits == 0x0004) {
-			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
-			entityB->Land();
+			if (fixtureA->GetFilterData().categoryBits == 0x0008) { // PLATFORM
+				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+				entityB->Land();
+				cout << "B Landed\n";
+			}
 		}
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0080) {
@@ -69,30 +78,6 @@ class MyContactListener : public b2ContactListener
 		} else if (fixtureB->GetFilterData().categoryBits == 0x0400) {
 			Trigger* entityB = static_cast<Trigger*>(fixtureB->GetBody()->GetUserData());
 			entityB->Triggered();
-		}
-
-		if (fixtureA->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
-			BoulderProjectile* entityA = static_cast<BoulderProjectile*>(fixtureA->GetBody()->GetUserData());
-
-			if (entityA->IsActive()) {
-				entityA->Hit();
-
-				if (fixtureB->GetFilterData().categoryBits == 0x0001) { // PROJECTILE
-					BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
-					entityB->TakeDamage(entityA->GetDamage(), entityA->GetKnockBack(), entityA->GetHitStunFrames());
-				}
-			}
-		} else if (fixtureB->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
-			BoulderProjectile* entityB = static_cast<BoulderProjectile*>(fixtureB->GetBody()->GetUserData());
-
-			if (entityB->IsActive()) {
-				entityB->Hit();
-
-				if (fixtureA->GetFilterData().categoryBits == 0x0001) { // PROJECTILE
-					BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-					entityA->TakeDamage(entityB->GetDamage(), entityB->GetKnockBack(), entityB->GetHitStunFrames());
-				}
-			}
 		}
 
 		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
@@ -144,7 +129,7 @@ class MyContactListener : public b2ContactListener
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
 			if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
-				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames());
+				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
 			}
 
 			return;
@@ -159,7 +144,7 @@ class MyContactListener : public b2ContactListener
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
 			if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
-				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames());
+				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
 			}
 
 			return;
@@ -172,6 +157,31 @@ class MyContactListener : public b2ContactListener
 			} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
 				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
 				weapon->Collision(fixtureA, weapon->GetBody()->GetAngle());
+			}
+		}
+
+		if (fixtureA->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
+			BoulderProjectile* entityA = static_cast<BoulderProjectile*>(fixtureA->GetBody()->GetUserData());
+
+			if (entityA->IsActive()) {
+				entityA->Hit();
+
+				if (fixtureB->GetFilterData().categoryBits == 0x0001) { // PLAYER_CHARACTER
+					BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+					entityB->TakeDamage(entityA->GetDamage(), entityA->GetKnockBack(), entityA->GetHitStunFrames(), false);
+				}
+			}
+		}
+		else if (fixtureB->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
+			BoulderProjectile* entityB = static_cast<BoulderProjectile*>(fixtureB->GetBody()->GetUserData());
+
+			if (entityB->IsActive()) {
+				entityB->Hit();
+
+				if (fixtureA->GetFilterData().categoryBits == 0x0001) { // PLAYER_CHARACTER
+					BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+					entityA->TakeDamage(entityB->GetDamage(), entityB->GetKnockBack(), entityB->GetHitStunFrames(), false);
+				}
 			}
 		}
 	}
@@ -227,7 +237,10 @@ private:
 	string unit_type_player_is_talking_to;
 	DialogueLine* RootDialogueLine;
 	DialogueLine* CurrentDialogueLine;
+#ifdef _DEBUG
 	sfe::Movie intro_cutscene;
+#else
+#endif
 	bool past_setup = false;
 	sf::Vector2f parallax_background_viewport_position;
 	sf::Texture parallax_background_texture;
@@ -236,6 +249,9 @@ private:
 	Menu* DeadMenu;
 	Menu* PauseMenu;
 	bool can_take_another_left_stick_input_from_menu_controller = true;
+
+	sf::Shader shader;
+	//sf::Shader lighting_shader;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam);
@@ -269,6 +285,7 @@ public:
 	void HandleButtonStartRelease();
 	void HandleButtonSelectPress();
 	void HandleButtonSelectRelease();
+	void ScreenShake(float magnitude);
 
 	bool Contains(string string_being_searched, string string_being_searched_for) {
 		std::size_t found = string_being_searched.find(string_being_searched_for);

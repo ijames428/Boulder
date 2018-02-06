@@ -29,9 +29,6 @@ struct ProjectileFiringFrame {
 
 class BoulderCreature : public Creature {
 private:
-	sf::Int16 cashinable_hit_point_value;
-	sf::Int16 cashinable_hit_point_drain_rate;
-	sf::RectangleShape* cashInHealthBarRect;
 
 protected:
 	int State = 0;
@@ -129,6 +126,9 @@ protected:
 	StatusTimer* talking_animation_timer;
 	StatusTimer* jump_input_buffer;
 	StatusTimer* health_cash_in_timer;
+	sf::Int16 cashinable_hit_point_value;
+	sf::Int16 cashinable_hit_point_drain_rate;
+	sf::RectangleShape* cashInHealthBarRect;
 
 	std::vector<int> AttackAnimationSoundFrames = std::vector<int>();
 	std::vector<sf::SoundBuffer*> AttackAnimationSoundBuffers = std::vector<sf::SoundBuffer*>();
@@ -157,13 +157,18 @@ protected:
 	sf::Sprite* interaction_button_sprite;
 	bool draw_interaction_button;
 	float current_y_offset = 0.0f;
+
+	Json::Value unit_type_json_data;
+	int attacks_size;
+
+	float maxVerticalVelocityReached = 0.0f;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
-	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
+	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies);
 	virtual void ReceiveHeal(int heal);
-	int TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back, int hit_stun_frames);
+	int TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies);
 	Attack* GetActiveAttack();
 	bool IsAnAttackActive();
 	virtual void Land();
@@ -174,7 +179,8 @@ public:
 	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 	void AddActivaty(string activity);
-	virtual void UpdateBehavior();
+	virtual void UpdateBehavior(); 
+	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions);
 
 	string GetName() {
 		return name;
@@ -187,6 +193,9 @@ public:
 	};
 	b2Body* GetBody() {
 		return body;
+	}
+	sf::Vector2f GetScreenPosition() {
+		return sf::Vector2f(body->GetPosition().x * 40.0f, body->GetPosition().y * 40.0f);
 	}
 	virtual int GetHitPoints() {
 		return hit_points;

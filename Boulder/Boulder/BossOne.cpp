@@ -4,6 +4,7 @@ using namespace std;
 #include "stdafx.h"
 #include <iostream>
 #include "BossOne.h"
+#include "SmashWorld.h"
 //#include "..\PlatformerLibrary\Test.h"
 
 BossOne::BossOne(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
@@ -11,6 +12,36 @@ BossOne::BossOne(string unit_name, string unit_type, string bestiary_name, bool 
 	jump_power = 15.0f;
 	distance_from_target_last_frame = 10.0f;
 	hovering = false;
+
+	sf::Vector2f viewport = Singleton<SmashWorld>::Get()->GetCamera()->viewport_dimensions;
+	viewport_width = viewport.x;
+	viewport_height = viewport.y;
+	starting_health_bar_width = viewport_width - 100.0f;
+
+	healthBarBackgroundRect = new sf::RectangleShape(sf::Vector2f(starting_health_bar_width + 10.0f, 30.0f));
+	healthBarBackgroundRect->setPosition(45.0f, viewport_height - 75.0f);
+	healthBarBackgroundRect->setFillColor(sf::Color::Black);
+}
+
+void BossOne::Draw(sf::Vector2f camera_position) {
+	if (target != nullptr && hit_points > 0) {
+		render_window->draw(*healthBarBackgroundRect);
+		float percent_health = ((float)hit_points / (float)max_hit_points);
+
+		healthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_health, 20.0f));
+		healthBarRect->setPosition(sf::Vector2f(50.0f, viewport_height - 70.0f));
+		healthBarRect->setFillColor(sf::Color((int)(0.0f + (255.0f - (float)hit_points / (float)max_hit_points) * 255.0f), (int)((float)hit_points / (float)max_hit_points * 255.0f), 0, 255));
+
+		float percent_cash_in_health = ((float)cashinable_hit_point_value / (float)max_hit_points);
+
+		cashInHealthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_cash_in_health, 20.0f));
+		cashInHealthBarRect->setPosition(sf::Vector2f(50.0f, viewport_height - 70.0f));
+
+		render_window->draw(*cashInHealthBarRect);
+		render_window->draw(*healthBarRect);
+	}
+
+	BoulderCreature::Draw(camera_position);
 }
 
 void BossOne::UpdateBehavior() {

@@ -97,7 +97,7 @@ void BoulderProjectile::Update() {//sf::Int64 curr_frame, sf::Int64 delta_time) 
 }
 
 void BoulderProjectile::Draw(sf::Vector2f camera_position) {
-	if (state != STATE_INACTIVE) {
+	if (IsActive()) {
 		float half_height = ((b2PolygonShape*)fixture->GetShape())->m_vertices[3].y;
 
 		if (state == STATE_TRAVELLING) {
@@ -128,11 +128,13 @@ void BoulderProjectile::Activate(float pos_x, float pos_y, bool facing_right) {
 }
 
 void BoulderProjectile::Hit() {
-	state = STATE_DYING;
-	
-	body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+	if (state != STATE_DYING && IsActive()) {
+		state = STATE_DYING;
 
-	dying_status_timer->Start();
+		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+
+		dying_status_timer->Start();
+	}
 }
 
 int BoulderProjectile::GetDamage() {

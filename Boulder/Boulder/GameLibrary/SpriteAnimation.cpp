@@ -26,6 +26,17 @@ SpriteAnimation::SpriteAnimation(sf::RenderWindow* window, std::string file_path
 	sprite = new sf::Sprite(*texture);
 	sprite->setScale(sprite_scale, sprite_scale);
 	sprite->setColor(color);
+
+	//if (!shader.loadFromFile("Shaders/LightingShader.frag", sf::Shader::Fragment))
+	//{
+	//	cout << "Unable to find LightingShader.frag\n";
+	//}
+	//if (shader.isAvailable()) {
+	//	cout << "----shader loaded!!\n";
+	//}
+	
+	//shader.setUniform("lightLocation", sf::Glsl::Vec2(0.0f, 0.0f));
+	//shader.setUniform("lightColor", sf::Glsl::Vec4(0.5f, 0.5f, 0.5f, 0.5f));
 }
 
 void SpriteAnimation::Play() {
@@ -59,8 +70,10 @@ void SpriteAnimation::Draw(sf::Vector2f camera_position, sf::Vector2f parent_obj
 	sprite->setTextureRect(texture_rect);
 	sprite->setPosition(sf::Vector2f((parent_object_mid_position.x - (sprite_frame_width * sprite->getScale().x / 80.0f) - camera_position.x) * 40.0f,
 									 (parent_object_mid_position.y + half_height_of_body - (sprite_frame_height * sprite->getScale().y / 40.0f) - camera_position.y) * 40.0f));
-		//-25.0f + (parent_object_mid_position.y - (sprite_frame_height * sprite->getScale().y / 2.0f) - camera_position.y) * 2.0f));
-	render_window->draw(*sprite);
+
+	//shader.setUniform("lightLocation", sf::Glsl::Vec2(sprite->getPosition().x, sprite->getPosition().y));
+
+	render_window->draw(*sprite);// , &shader);
 }
 
 void SpriteAnimation::Flip() {

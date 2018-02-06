@@ -12,11 +12,15 @@ private:
 	bool returning_to_ground;
 	bool hovering_altitude_reached;
 	bool hovering;
+	float viewport_width;
+	float viewport_height;
+	sf::RectangleShape* healthBarBackgroundRect;
 public:
 	BossOne(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	virtual void UpdateBehavior();
 	virtual void Deaggro();
 	virtual void Land();
+	void Draw(sf::Vector2f camera_position);
 };
 
 #endif

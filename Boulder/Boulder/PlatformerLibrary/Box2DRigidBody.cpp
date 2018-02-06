@@ -44,7 +44,9 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, vector<string> json_poi
 
 	points[0] = b2Vec2(std::stof(vect0[0], &sz) / scalingRatio, std::stof(vect0[1], &sz) / scalingRatio);
 	points[1] = b2Vec2(std::stof(vect1[0], &sz) / scalingRatio, std::stof(vect1[1], &sz) / scalingRatio);
-	points[2] = b2Vec2(std::stof(vect2[0], &sz) / scalingRatio, std::stof(vect2[1], &sz) / scalingRatio);
+	points[2] = b2Vec2(std::stof(vect2[0], &sz) / scalingRatio, std::stof(vect2[1], &sz) / scalingRatio); 
+	
+	bodyDef.type = b2_staticBody;
 
 	body = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
 	polygon.Set(points, 3);
@@ -64,6 +66,7 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, vector<string> json_poi
 
 Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, bool subject_to_collision) {
 	bodyDef.position.Set(position.x, position.y);
+	bodyDef.type = b2_staticBody;
 	body = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
 	polygon.SetAsBox(dimensions.x, dimensions.y);
 

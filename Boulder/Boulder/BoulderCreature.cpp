@@ -28,13 +28,15 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	SetFacingRight(true);
 	player_index = 1;
 
-	cashinable_hit_point_value = hit_points = max_hit_points = jsonBestiariesData["DictOfUnits"][unit_type]["HitPoints"].asInt();
-	interaction_radius = jsonBestiariesData["DictOfUnits"][unit_type]["InteractionRadius"].asFloat();
+	unit_type_json_data = jsonBestiariesData["DictOfUnits"][unit_type];
+
+	cashinable_hit_point_value = hit_points = max_hit_points = unit_type_json_data["HitPoints"].asInt();
+	interaction_radius = unit_type_json_data["InteractionRadius"].asFloat();
 	can_take_input = false;
 
 	cashinable_hit_point_drain_rate = 2;
 
-	speed = jsonBestiariesData["DictOfUnits"][unit_type]["MovementSpeed"].asFloat();
+	speed = unit_type_json_data["MovementSpeed"].asFloat();
 	running_speed_multiplier = 3.0f;
 	jump_power = 10.0f;
 
@@ -86,7 +88,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	interactionCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
 	std::vector<float> vect_hurt_box;
-	string strHurtBoxValues = jsonBestiariesData["DictOfUnits"][unit_type]["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]["Box"].asString();
+	string strHurtBoxValues = unit_type_json_data["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]["Box"].asString();
 	std::stringstream ss_hurt_box;
 
 	if (strHurtBoxValues != "") {
@@ -148,7 +150,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 		body->SetGravityScale(0.0f);
 	}
 
-	hurt_box = new HurtBox(body, player_index, jsonBestiariesData["DictOfUnits"][unit_type]["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]);
+	hurt_box = new HurtBox(body, player_index, unit_type_json_data["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]);
 
 	body->SetFixedRotation(true);
 	body->SetUserData(this);
@@ -163,8 +165,8 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 
 	body->CreateFixture(&groundCheckFixtureDef);
 
-	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_SMASH, jsonBestiariesData["DictOfUnits"][unit_type]["AttackingAnimations"][0]));
-	attacks.push_back(new Attack(body, player_index, Attack::DOWN_SMASH, jsonBestiariesData["DictOfUnits"][unit_type]["AttackingAnimations"][1]));
+	attacks.push_back(new Attack(body, player_index, Attack::FORWARD_SMASH, unit_type_json_data["AttackingAnimations"][0]));
+	attacks.push_back(new Attack(body, player_index, Attack::DOWN_SMASH, unit_type_json_data["AttackingAnimations"][1]));
 
 	sprite_scale = 1.0f;
 
@@ -176,8 +178,9 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	GettingHitSoundBuffers = std::vector<sf::SoundBuffer*>();
 	GettingHitSounds = std::vector<sf::Sound*>();
 
-	for (int i = 0; i < (int)jsonBestiariesData["DictOfUnits"][unit_type]["GettingHitSoundFiles"].size(); i++) {
-		string soundFilePath = jsonBestiariesData["DictOfUnits"][unit_type]["GettingHitSoundFiles"][i].asString();
+	int getting_hit_sound_files_size = (int)unit_type_json_data["GettingHitSoundFiles"].size();
+	for (int i = 0; i < getting_hit_sound_files_size; i++) {
+		string soundFilePath = unit_type_json_data["GettingHitSoundFiles"][i].asString();
 		size_t findResult = soundFilePath.find("Sound\\");
 		string relativeFilePath = soundFilePath.substr(findResult);
 
@@ -189,8 +192,11 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 
 	LoadAllAnimations(unit_type, jsonBestiariesData);
 
-	for (int i = 0; i < (int)projectile_active_animations.size(); i++) {
-		projectiles.push_back(new BoulderProjectile(render_window, body, jsonBestiariesData["DictOfUnits"][unit_type]["ProjectileActiveAnimations"][i]["HitBoxPerFrame"][0][0], projectile_active_animations[i], projectile_hit_animations[i]));
+	 attacks_size = (int)attacks.size();
+
+	int projectile_active_animations_size = (int)projectile_active_animations.size();
+	for (int i = 0; i < projectile_active_animations_size; i++) {
+		projectiles.push_back(new BoulderProjectile(render_window, body, unit_type_json_data["ProjectileActiveAnimations"][i]["HitBoxPerFrame"][0][0], projectile_active_animations[i], projectile_hit_animations[i]));
 	}
 
 	hit_stun_timer = new StatusTimer(1);
@@ -246,11 +252,12 @@ void BoulderCreature::LoadAllAnimations(string unit_type, Json::Value jsonBestia
 
 std::vector<SpriteAnimation*> BoulderCreature::LoadAnimations(string animations_name, string unit_type, Json::Value jsonData) {
 	std::vector<SpriteAnimation*> animations = std::vector<SpriteAnimation*>();
-	int number_of_animations = (int)jsonData["DictOfUnits"][unit_type][animations_name].size();
+	Json::Value unit_type_json_bestiary_data = jsonData["DictOfUnits"][unit_type];
 
+	int number_of_animations = (int)unit_type_json_bestiary_data[animations_name].size();
 	for (int i = 0; i < number_of_animations; i++)
 	{
-		string filePath = jsonData["DictOfUnits"][unit_type][animations_name][i]["FilePath"].asString();
+		string filePath = unit_type_json_bestiary_data[animations_name][i]["FilePath"].asString();
 
 		if (filePath != "") {
 			size_t findResult = filePath.find("Units\\");
@@ -258,92 +265,88 @@ std::vector<SpriteAnimation*> BoulderCreature::LoadAnimations(string animations_
 
 			animations.push_back(new SpriteAnimation(render_window,
 				relativeFilePath,
-				jsonData["DictOfUnits"][unit_type][animations_name][i]["FrameDimensionsX"].asInt(),
-				jsonData["DictOfUnits"][unit_type][animations_name][i]["FrameDimensionsY"].asInt(),
-				jsonData["DictOfUnits"][unit_type][animations_name][i]["NumberOfFrames"].asInt(),
-				jsonData["DictOfUnits"][unit_type][animations_name][i]["FramesPerColumn"].asInt(),
-				jsonData["DictOfUnits"][unit_type][animations_name][i]["FramesPerRow"].asInt(),
+				unit_type_json_bestiary_data[animations_name][i]["FrameDimensionsX"].asInt(),
+				unit_type_json_bestiary_data[animations_name][i]["FrameDimensionsY"].asInt(),
+				unit_type_json_bestiary_data[animations_name][i]["NumberOfFrames"].asInt(),
+				unit_type_json_bestiary_data[animations_name][i]["FramesPerColumn"].asInt(),
+				unit_type_json_bestiary_data[animations_name][i]["FramesPerRow"].asInt(),
 				sprite_scale, sf::Color::White, animations_name != "JumpingAnimations" && animations_name != "JumpApexAnimations"));
 		}
 
-		if (jsonData["DictOfUnits"][unit_type][animations_name][i]["ProjectileSpawnBoxPerFrame"].size() > 0) {
-			for (int f = 0; f < (int)jsonData["DictOfUnits"][unit_type][animations_name][i]["ProjectileSpawnBoxPerFrame"].size(); f++) {
-				if (jsonData["DictOfUnits"][unit_type][animations_name][i]["ProjectileSpawnBoxPerFrame"][f][0]["Name"].asString() != "") {
-					std::vector<float> usable_box_data = Utilities::StringBoxDataToUsableVectorBoxData(jsonData["DictOfUnits"][unit_type][animations_name][i]["ProjectileSpawnBoxPerFrame"][f][0]["Box"].asString());
+		int projectile_spawn_box_per_frame_size = unit_type_json_bestiary_data[animations_name][i]["ProjectileSpawnBoxPerFrame"].size();
+		for (int f = 0; f < projectile_spawn_box_per_frame_size; f++) {
+			if (unit_type_json_bestiary_data[animations_name][i]["ProjectileSpawnBoxPerFrame"][f][0]["Name"].asString() != "") {
+				std::vector<float> usable_box_data = Utilities::StringBoxDataToUsableVectorBoxData(unit_type_json_bestiary_data[animations_name][i]["ProjectileSpawnBoxPerFrame"][f][0]["Box"].asString());
 
-					ProjectileFiringFrame projectile_firing_frame;
-					projectile_firing_frame.attack_animation_index = animations.size() - 1;
-					projectile_firing_frame.firing_frame = f;
-					projectile_firing_frame.relative_spawning_position_x = usable_box_data[0] + (usable_box_data[2] / 2.0f);
-					projectile_firing_frame.relative_spawning_position_y = usable_box_data[1] + (usable_box_data[3] / 2.0f);
+				ProjectileFiringFrame projectile_firing_frame;
+				projectile_firing_frame.attack_animation_index = animations.size() - 1;
+				projectile_firing_frame.firing_frame = f;
+				projectile_firing_frame.relative_spawning_position_x = usable_box_data[0] + (usable_box_data[2] / 2.0f);
+				projectile_firing_frame.relative_spawning_position_y = usable_box_data[1] + (usable_box_data[3] / 2.0f);
 
-					projectile_firing_frames.push_back(projectile_firing_frame);
+				projectile_firing_frames.push_back(projectile_firing_frame);
 
-					break;
-				}
+				break;
 			}
 		}
 
-		if (jsonData["DictOfUnits"][unit_type][animations_name][i]["AttackSoundFilePerFrame"].size() > 0) {
-			for (int f = 0; f < (int)jsonData["DictOfUnits"][unit_type][animations_name][i]["AttackSoundFilePerFrame"].size(); f++) {
-				if (jsonData["DictOfUnits"][unit_type][animations_name][i]["AttackSoundFilePerFrame"][f].asString() != "") {
-					string soundFilePath = jsonData["DictOfUnits"][unit_type][animations_name][i]["AttackSoundFilePerFrame"][f].asString();
-					size_t findResult = soundFilePath.find("Sound\\");
-					string relativeFilePath = soundFilePath.substr(findResult);
+		int attack_sound_file_per_frame_size = unit_type_json_bestiary_data[animations_name][i]["AttackSoundFilePerFrame"].size();
+		for (int f = 0; f < attack_sound_file_per_frame_size; f++) {
+			if (unit_type_json_bestiary_data[animations_name][i]["AttackSoundFilePerFrame"][f].asString() != "") {
+				string soundFilePath = unit_type_json_bestiary_data[animations_name][i]["AttackSoundFilePerFrame"][f].asString();
+				size_t findResult = soundFilePath.find("Sound\\");
+				string relativeFilePath = soundFilePath.substr(findResult);
 
-					AttackAnimationSoundFrames.push_back(f);
+				AttackAnimationSoundFrames.push_back(f);
 
-					AttackAnimationSoundBuffers.push_back(new sf::SoundBuffer());
-					AttackAnimationSoundBuffers[i]->loadFromFile(relativeFilePath);
-					AttackAnimationSounds.push_back(new sf::Sound());
-					AttackAnimationSounds[i]->setBuffer(*AttackAnimationSoundBuffers[i]);
+				AttackAnimationSoundBuffers.push_back(new sf::SoundBuffer());
+				AttackAnimationSoundBuffers[i]->loadFromFile(relativeFilePath);
+				AttackAnimationSounds.push_back(new sf::Sound());
+				AttackAnimationSounds[i]->setBuffer(*AttackAnimationSoundBuffers[i]);
 
-					break;
-				}
+				break;
 			}
 		}
 
-		if (jsonData["DictOfUnits"][unit_type][animations_name][i]["RightFootSoundFilePerFrame"].size() > 0) {
-			for (int f = 0; f < (int)jsonData["DictOfUnits"][unit_type][animations_name][i]["RightFootSoundFilePerFrame"].size(); f++) {
-				if (jsonData["DictOfUnits"][unit_type][animations_name][i]["RightFootSoundFilePerFrame"][f].asString() != "") {
-					string soundFilePath = jsonData["DictOfUnits"][unit_type][animations_name][i]["RightFootSoundFilePerFrame"][f].asString();
-					size_t findResult = soundFilePath.find("Sound\\");
-					string relativeFilePath = soundFilePath.substr(findResult);
+		int right_foot_sound_file_per_frame_size = unit_type_json_bestiary_data[animations_name][i]["RightFootSoundFilePerFrame"].size();
+		for (int f = 0; f < right_foot_sound_file_per_frame_size; f++) {
+			if (unit_type_json_bestiary_data[animations_name][i]["RightFootSoundFilePerFrame"][f].asString() != "") {
+				string soundFilePath = unit_type_json_bestiary_data[animations_name][i]["RightFootSoundFilePerFrame"][f].asString();
+				size_t findResult = soundFilePath.find("Sound\\");
+				string relativeFilePath = soundFilePath.substr(findResult);
 
-					RightFootStepSoundBuffer.loadFromFile(relativeFilePath);
-					RightFootStepSound.setBuffer(RightFootStepSoundBuffer);
+				RightFootStepSoundBuffer.loadFromFile(relativeFilePath);
+				RightFootStepSound.setBuffer(RightFootStepSoundBuffer);
 
-					std::size_t found = animations_name.find("Walk");
-					if (found != std::string::npos) {
-						RightFootStepSoundFrameWalk = f;
-					} else {
-						RightFootStepSoundFrameRun = f;
-					}
-
-					break;
+				std::size_t found = animations_name.find("Walk");
+				if (found != std::string::npos) {
+					RightFootStepSoundFrameWalk = f;
+				} else {
+					RightFootStepSoundFrameRun = f;
 				}
+
+				break;
 			}
 		}
 
-		if (jsonData["DictOfUnits"][unit_type][animations_name][i]["LeftFootSoundFilePerFrame"].size() > 0) {
-			for (int f = 0; f < (int)jsonData["DictOfUnits"][unit_type][animations_name][i]["LeftFootSoundFilePerFrame"].size(); f++) {
-				if (jsonData["DictOfUnits"][unit_type][animations_name][i]["LeftFootSoundFilePerFrame"][f].asString() != "") {
-					string soundFilePath = jsonData["DictOfUnits"][unit_type][animations_name][i]["LeftFootSoundFilePerFrame"][f].asString();
-					size_t findResult = soundFilePath.find("Sound\\");
-					string relativeFilePath = soundFilePath.substr(findResult);
+		int left_foot_sound_file_per_frame_size = unit_type_json_bestiary_data[animations_name][i]["RightFootSoundFilePerFrame"].size();
+		for (int f = 0; f < left_foot_sound_file_per_frame_size; f++) {
+			if (unit_type_json_bestiary_data[animations_name][i]["LeftFootSoundFilePerFrame"][f].asString() != "") {
+				string soundFilePath = unit_type_json_bestiary_data[animations_name][i]["LeftFootSoundFilePerFrame"][f].asString();
+				size_t findResult = soundFilePath.find("Sound\\");
+				string relativeFilePath = soundFilePath.substr(findResult);
 
-					LeftFootStepSoundBuffer.loadFromFile(relativeFilePath);
-					LeftFootStepSound.setBuffer(LeftFootStepSoundBuffer);
+				LeftFootStepSoundBuffer.loadFromFile(relativeFilePath);
+				LeftFootStepSound.setBuffer(LeftFootStepSoundBuffer);
 
-					std::size_t found = animations_name.find("Walk");
-					if (found != std::string::npos) {
-						LeftFootStepSoundFrameWalk = f;
-					} else {
-						LeftFootStepSoundFrameRun = f;
-					}
-
-					break;
+				std::size_t found = animations_name.find("Walk");
+				if (found != std::string::npos) {
+					LeftFootStepSoundFrameWalk = f;
+				} else {
+					LeftFootStepSoundFrameRun = f;
 				}
+
+				break;
 			}
 		}
 	}
@@ -351,13 +354,31 @@ std::vector<SpriteAnimation*> BoulderCreature::LoadAnimations(string animations_
 	return animations;
 }
 
+bool BoulderCreature::IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions) {
+	sf::Vector2f body_screen_pos = GetScreenPosition();
+
+	if (abs(player_screen_pos.x - body_screen_pos.x) > viewport_dimensions.x * 1.25f) {
+		return false;
+	}
+	
+	if (abs(player_screen_pos.y - body_screen_pos.y) > viewport_dimensions.y * 1.25f) {
+		return false;
+	}
+
+	return true;
+}
+
 void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
-	can_take_input = !hit_stun_timer->IsActive();
-	if (can_take_input) {
-		can_take_input = !IsAnAttackActive();
+	if (IsInTheAir() && body->GetLinearVelocity().y > maxVerticalVelocityReached) {
+		maxVerticalVelocityReached = body->GetLinearVelocity().y;
 	}
+
+	can_take_input = !hit_stun_timer->IsActive();
+	//if (can_take_input) {
+	//	can_take_input = !IsAnAttackActive();
+	//}
 
 	hurt_box->Update(IsFacingRight());
 
@@ -386,8 +407,8 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		topCircleFixture->SetFilterData(topCircleFixtureDef.filter);
 		botCircleFixture->SetFilterData(botCircleFixtureDef.filter);
 	}
-
-	for (int i = 0; i < (int)attacks.size(); i++) {
+	
+	for (int i = 0; i < attacks_size; i++) {
 		attacks[i]->Update(curr_frame, IsFacingRight());
 	}
 
@@ -395,8 +416,7 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		topCircleFixture->SetColor(1.0f, 0.0f, 0.0f, 1.0f);
 		botCircleFixture->SetColor(1.0f, 0.0f, 0.0f, 1.0f);
 		centerBoxFixture->SetColor(1.0f, 0.0f, 0.0f, 1.0f);
-	}
-	else {
+	} else {
 		topCircleFixture->SetColor(0.0f, 1.0f, 0.0f, 1.0f);
 		botCircleFixture->SetColor(0.0f, 1.0f, 0.0f, 1.0f);
 		centerBoxFixture->SetColor(0.0f, 1.0f, 0.0f, 1.0f);
@@ -417,7 +437,8 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			LeftFootStepSound.play();
 		}
 	} else if (State == STATE_ATTACKING) {
-		for (int i = 0; i < (int)projectile_firing_frames.size(); i++) {
+		int projectile_firing_frames_size = (int)projectile_firing_frames.size();
+		for (int i = 0; i < projectile_firing_frames_size; i++) {
 			if (projectile_firing_frames[i].attack_animation_index == GetActiveAttackIndex()) {
 				for (int p = 0; p < (int)projectiles.size(); p++) {
 					if (!projectiles[p]->IsActive()) {
@@ -428,7 +449,8 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		}
 	}
 
-	for (int i = 0; i < (int)projectiles.size(); i++) {
+	int projectiles_size = (int)projectiles.size();
+	for (int i = 0; i < projectiles_size; i++) {
 		projectiles[i]->Update();// curr_frame, delta_time);
 	}
 }
@@ -443,7 +465,7 @@ void BoulderCreature::UpdateBehavior() {
 
 		if (distance < 2.0f) {
 			if (!IsAnAttackActive()) {
-				UseAttack(0);
+				//UseAttack(0);
 			}
 		}
 		else {
@@ -485,8 +507,7 @@ void BoulderCreature::UpdateBehavior() {
 		else {
 			State = STATE_IDLE;
 		}
-	}
-	else {
+	} else {
 		Move(movement, 0.0f);
 
 		if (hit_points <= 0) {
@@ -537,7 +558,8 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 	FlipAnimationsIfNecessary(landing_animations);
 	FlipAnimationsIfNecessary(talking_animations);
 
-	for (int i = 0; i < (int)projectiles.size(); i++) {
+	int projectiles_size = (int)projectiles.size();
+	for (int i = 0; i < projectiles_size; i++) {
 		projectiles[i]->Draw(camera_position);
 	}
 
@@ -589,8 +611,9 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 		}
 	}
 
-	std::size_t found = name.find("Player");
-	if (found == std::string::npos) {
+	std::size_t foundPlayer = name.find("Player");
+	std::size_t foundBoss = name.find("Boss");
+	if (foundPlayer == std::string::npos && foundBoss == std::string::npos) {
 		float percent_health = ((float)hit_points / (float)max_hit_points);
 
 		healthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_health, 5.0f));
@@ -605,7 +628,9 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 		render_window->draw(*cashInHealthBarRect);
 	}
 
-	render_window->draw(*healthBarRect);
+	if (hit_points > 0) {
+		render_window->draw(*healthBarRect);
+	}
 
 	if (is_interactable && draw_interaction_button) {
 		current_y_offset += (int)((current_frame % 60) - 30) / 120.0f;
@@ -623,9 +648,9 @@ void BoulderCreature::AddActivaty(string activity) {
 	}
 }
 
-void BoulderCreature::FlipAnimationsIfNecessary(std::vector<SpriteAnimation*> animations)
-{
-	for (int i = 0; i < (int)animations.size(); i++) {
+void BoulderCreature::FlipAnimationsIfNecessary(std::vector<SpriteAnimation*> animations) {
+	int animations_size = (int)animations.size();
+	for (int i = 0; i < animations_size; i++) {
 		if (IsFacingRight() != animations[i]->IsFacingRight()) {
 			animations[i]->Flip();
 		}
@@ -633,19 +658,35 @@ void BoulderCreature::FlipAnimationsIfNecessary(std::vector<SpriteAnimation*> an
 }
 
 void BoulderCreature::Move(float horizontal, float vertical) {
-	if (can_take_input && hit_points > 0) {
-		body->SetLinearVelocity(b2Vec2((horizontal / 100.0f) * speed * (running ? running_speed_multiplier : 1.0f), body->GetLinearVelocity().y));
+	if (can_take_input && hit_points > 0 && !landing_animation_timer->IsActive()) {
+		if (!IsInTheAir()) {
+			if (!IsAnAttackActive()) {
+				body->SetLinearVelocity(b2Vec2((horizontal / 100.0f) * speed * (running ? running_speed_multiplier : 1.0f), body->GetLinearVelocity().y));
 
-		if (horizontal > 0) {
-			SetFacingRight(true);
-		} else if (horizontal < 0) {
-			SetFacingRight(false);
+				if (horizontal > 0) {
+					SetFacingRight(true);
+				}
+				else if (horizontal < 0) {
+					SetFacingRight(false);
+				}
+			}
+		} else {
+			float x_drift = horizontal / 200.0f;
+			float x_vel = body->GetLinearVelocity().x + x_drift;
+
+			if (x_vel > speed) {
+				x_vel = speed;
+			} else if (x_vel < -speed) {
+				x_vel = -speed;
+			}
+
+			body->SetLinearVelocity(b2Vec2(x_vel, body->GetLinearVelocity().y));
 		}
 	}
 }
 
 void BoulderCreature::Jump() {
-	if (can_take_input && hit_points > 0) {
+	if (can_take_input && hit_points > 0 && !IsAnAttackActive()) {
 		bool jumping = false;
 
 		if (!IsInTheAir()) {
@@ -664,7 +705,10 @@ void BoulderCreature::Jump() {
 }
 
 void BoulderCreature::Land() {
-	landing_animation_timer->Start();
+	if (maxVerticalVelocityReached > 20.0f) {
+		landing_animation_timer->Start();
+	}
+	maxVerticalVelocityReached = 0.0f;
 	SetInTheAir(false);
 	has_double_jump = true;
 	if (IsAnAttackActive()) {
@@ -733,15 +777,19 @@ void BoulderCreature::ReceiveHeal(int heal) {
 	}
 }
 
-void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames) {
+void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies) {
+	Singleton<SmashWorld>::Get()->ScreenShake(3.0f);
+
+	if (is_hittable) {
+		if (GettingHitSounds.size() > 0) {
+			GettingHitSounds[rand() % (int)GettingHitSounds.size()]->play();
+		}
+	}
+
 	if (hit_points > 0 && is_hittable) {
 		cout << "got hit for " << damage << " damage and " << hit_stun_frames << " hit stun frames!\n";
 		hit_stun_timer = new StatusTimer(hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames);
 		hit_stun_timer->Start();
-
-		if (GettingHitSounds.size() > 0) {
-			GettingHitSounds[rand() % (int)GettingHitSounds.size()]->play();
-		}
 
 		hit_points -= damage;
 
@@ -749,18 +797,23 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			hit_points = 0;
 			cashinable_hit_point_value = 0;
 			dying_animation_timer->Start();
-			if ((int)activities.size() > 0) {
-				for (int a = 0; a < (int)activities.size(); a++) {
-					if (Contains(activities[a], "OnDeath")) {
-						Singleton<SmashWorld>::Get()->ExecuteAction(activities[a]);
-					}
+
+			int activities_size = (int)activities.size();
+			for (int a = 0; a < activities_size; a++) {
+				if (Contains(activities[a], "OnDeath")) {
+					Singleton<SmashWorld>::Get()->ExecuteAction(activities[a]);
 				}
 			}
+
 			if (!IsInTheAir()) {
 				body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
 			}
 		} else {
-			body->SetLinearVelocity(b2Vec2(knock_back.x, knock_back.y));
+			if (pop_up_grounded_enemies && !IsInTheAir()) {
+				body->SetLinearVelocity(b2Vec2(knock_back.x, -knock_back.y));
+			} else {
+				body->SetLinearVelocity(b2Vec2(knock_back.x, knock_back.y));
+			}
 
 			if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
 				health_cash_in_timer->Start();
@@ -769,8 +822,8 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 	}
 }
 
-int BoulderCreature::TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back, int hit_stun_frames) {
-	TakeDamage(damage, knock_back, hit_stun_frames);
+int BoulderCreature::TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies) {
+	TakeDamage(damage, knock_back, hit_stun_frames, pop_up_grounded_enemies);
 
 	if (hit_points > 0 && cashinable_hit_point_value > 0) {
 		int amount_of_life_stolen = cashinable_hit_point_value - hit_points;
@@ -787,7 +840,7 @@ int BoulderCreature::TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back
 Attack* BoulderCreature::GetActiveAttack() {
 	Attack* active_attack = attacks[0];
 
-	for (int i = 0; i < (int)attacks.size(); i++) {
+	for (int i = 0; i < attacks_size; i++) {
 		if (attacks[i]->IsAttacking()) {
 			active_attack = attacks[i];
 		}
@@ -797,7 +850,7 @@ Attack* BoulderCreature::GetActiveAttack() {
 }
 
 int BoulderCreature::GetActiveAttackIndex() {
-	for (int i = 0; i < (int)attacks.size(); i++) {
+	for (int i = 0; i < attacks_size; i++) {
 		if (attacks[i]->IsAttacking()) {
 			return i;
 		}
@@ -807,7 +860,7 @@ int BoulderCreature::GetActiveAttackIndex() {
 }
 
 bool BoulderCreature::IsAnAttackActive() {
-	for (int i = 0; i < (int)attacks.size(); i++) {
+	for (int i = 0; i < attacks_size; i++) {
 		if (attacks[i]->IsAttacking()) {
 			return true;
 		}

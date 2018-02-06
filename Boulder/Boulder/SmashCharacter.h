@@ -36,7 +36,7 @@ public:
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
-	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames);
+	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies);
 	virtual void ReceiveHeal(int heal);
 	void UpdateHealthBar();
 
@@ -112,7 +112,7 @@ public:
 	}
 
 	void SmashCharacter::HandleButtonAPress() {
-		if (IsInTheAir() && !has_double_jump) {
+		if (IsInTheAir() && !has_double_jump && IsAnAttackActive()) {
 			jump_input_buffer->Start();
 		} else {
 			Jump();

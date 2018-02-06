@@ -5,6 +5,7 @@ using namespace std;
 #include <iostream>
 #include "Menu.h"
 #include "SmashWorld.h"
+#include <fstream>
 
 Menu::Menu(sf::RenderWindow* window, sf::Vector2f dimensions) {
 	render_window = window;
@@ -31,7 +32,6 @@ void Menu::AddItem(string text, callback_function pFunc) {
 	menu_items.push_back(MenuItem(text, pFunc));
 
 	int item_in_list = (int)menu_items.size() - 1;
-	//menu_items[item_in_list].GetMenuItemText().setPosition(sf::Vector2f(50.0f, 50.0f + 50.0f * item_in_list));
 }
 
 void Menu::Draw(sf::Int64 curr_frame) {
@@ -39,9 +39,10 @@ void Menu::Draw(sf::Int64 curr_frame) {
 		menu_items[i].Draw(render_window, sf::Vector2f(50.0f, 50.0f + 50.0f * i));
 	}
 
-	current_y_offset += (int)((curr_frame % 60) - 30) / 120.0f;
+	current_y_offset += (int)((curr_frame % 61) - 30) / 120.0f;
 
-	cursor.setPosition(sf::Vector2f(menu_items[cursor_position].GetMenuItemText().getPosition().x - 20.0f, menu_items[cursor_position].GetMenuItemText().getPosition().y + 25.0f + current_y_offset));
+	sf::Vector2f menu_item_position = menu_items[cursor_position].GetMenuItemText().getPosition();
+	cursor.setPosition(sf::Vector2f(menu_item_position.x - 20.0f, menu_item_position.y + 25.0f + current_y_offset));
 	render_window->draw(cursor);
 }
 
@@ -77,11 +78,32 @@ sf::Text MenuItem::GetMenuItemText() {
 }
 
 void MenuItem::ExecutionAction() {
-	Action();
+	if (Enabled()) {
+		Action();
+	}
 }
 
 void MenuItem::Draw(sf::RenderWindow* window, sf::Vector2f position) {
 	MenuItemText = sf::Text(Text, Font, 45);
 	MenuItemText.setPosition(position);
+
+	if (!Enabled()) {
+		sf::Color gray = sf::Color(105, 105, 105);
+		MenuItemText.setFillColor(gray);
+		MenuItemText.setOutlineColor(gray);
+	}
+
 	window->draw(MenuItemText);
+}
+
+bool MenuItem::Enabled() {
+	if (Text == "Load Game") {
+		string save_data_file_name = "save_data.txt";
+		ifstream f(save_data_file_name.c_str());
+		if (!f.good()) {
+			return false;
+		}
+	}
+
+	return true;
 }

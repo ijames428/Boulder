@@ -20,6 +20,7 @@ private:
 	sf::Sprite* sprite;
 	sf::IntRect texture_rect;
 	bool looping;
+	//sf::Shader shader;
 public:
 	sf::RenderWindow *render_window;
 	SpriteAnimation(sf::RenderWindow* window, std::string file_path_and_name, int frame_width, int frame_height, int total_frames, int columns_count, int rows_count, float scale, sf::Color color, bool loop = true);

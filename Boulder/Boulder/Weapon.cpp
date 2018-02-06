@@ -106,7 +106,7 @@ void Weapon::Collision(b2Fixture* collider_fixture, float angle) {
 			//}
 			if (collider_fixture->GetFilterData().categoryBits == 0x0002) {
 				BoulderCreature* entity = static_cast<BoulderCreature*>(collider_fixture->GetBody()->GetUserData());
-				life_stolen += entity->TakeDamageWithLifeSteal(2, sf::Vector2f(-weaponBody->GetLinearVelocity().y / 2.0f, abs(weaponBody->GetLinearVelocity().x) / -2.0f), 10);
+				life_stolen += entity->TakeDamageWithLifeSteal(0, sf::Vector2f(-weaponBody->GetLinearVelocity().y / 2.0f, abs(weaponBody->GetLinearVelocity().x) / -2.0f), 10, false);
 			}
 		} else {
 			Stick(collider_fixture, angle);

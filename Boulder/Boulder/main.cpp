@@ -90,6 +90,9 @@ Menu* MainMenu;
 bool can_take_another_left_stick_input_from_menu_controller = true;
 bool load_game = false;
 
+int good_frames = 0;
+int bad_frames = 0;
+
 void NewGame() {
 	MainMenu->Close();
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
@@ -108,6 +111,11 @@ void Exit() {
 
 int main()
 {
+	if (!sf::Shader::isAvailable())
+	{
+		cout << "----Shaders are not supported on this setup.\n";
+	}
+
 	sf::Clock clock;
 	sf::Time time;
 	viewport_width = 1280.0f;
@@ -148,6 +156,7 @@ int main()
 
 	camera = new Camera(sf::Vector2f(0, 0), sf::Vector2f(viewport_width, viewport_height));
 	window = new sf::RenderWindow(sf::VideoMode::VideoMode((int)window_width, (int)window_height), "Shadhorimn");// , sf::Style::Fullscreen);
+	window->setVerticalSyncEnabled(false);
 	//sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode::getDesktopMode(), "Shadhorimn");// , sf::Style::Fullscreen);
 	//main_character = new PlayerCharacter(window, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(40.0f, 80.0f), true);
 	//input_handler = new InputHandler(main_character);
@@ -232,6 +241,15 @@ int main()
 			}
 
 			current_frame++;
+
+			if (microseconds_in_a_second / frame_delta == frames_per_second - 1) {
+				good_frames++;
+			} else {
+				bad_frames++;
+			}
+
+			//std::printf("%4.2f pct good frames\t%4.2f pct bad frames.  \r", (((float)good_frames / (float)current_frame) * 100.0f), (((float)bad_frames / (float)current_frame) * 100.0f));
+			//cout << (((float)good_frames / (float)current_frame) * 100.0f) << "% of frames are good\t\t" << (((float)bad_frames / (float)current_frame) * 100.0f) << "% of frames are bad\r";
 		}
 	}
 

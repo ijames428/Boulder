@@ -19,6 +19,7 @@ public:
 	void ExecutionAction();
 	sf::Text GetMenuItemText();
 	void Draw(sf::RenderWindow* window, sf::Vector2f position);
+	bool Enabled();
 };
 
 class Menu {
