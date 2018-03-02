@@ -12,7 +12,7 @@
       "name": "Kaltar's Introduction",
       "pid": "1",
       "position": {
-        "x": "751",
+        "x": "750",
         "y": "198"
       },
       "tags": [
@@ -21,7 +21,14 @@
       ]
     },
     {
-      "text": "I've been captured and held against my will.",
+      "text": "I've been captured and held against my will.\n[[Untitled Passage]]",
+      "links": [
+        {
+          "name": "Untitled Passage",
+          "link": "Untitled Passage",
+          "pid": "3"
+        }
+      ],
       "name": "Kaltar's Explanation",
       "pid": "2",
       "position": {
@@ -31,6 +38,39 @@
       "tags": [
         "Intro",
         "Kaltar"
+      ]
+    },
+    {
+      "text": "You have defeated the monter!\n[[Untitled Passage 1]] ",
+      "links": [
+        {
+          "name": "Untitled Passage 1",
+          "link": "Untitled Passage 1",
+          "pid": "4"
+        }
+      ],
+      "name": "Untitled Passage",
+      "pid": "3",
+      "position": {
+        "x": "770",
+        "y": "524"
+      },
+      "tags": [
+        "Kaltar",
+        "AfterFirstBoss"
+      ]
+    },
+    {
+      "text": "You may now leave, for the door has opened.",
+      "name": "Untitled Passage 1",
+      "pid": "4",
+      "position": {
+        "x": "786",
+        "y": "719"
+      },
+      "tags": [
+        "Kaltar",
+        "AfterFirstBoss"
       ]
     }
   ],

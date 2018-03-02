@@ -162,6 +162,18 @@ protected:
 	int attacks_size;
 
 	float maxVerticalVelocityReached = 0.0f;
+	//float xVelocityWhenJumpHappened = 0.0f;
+	float maxAirSpeed = 0.0f;
+	float attackDistance = 0.0f;
+
+	float knockBackMultiplier = 1.0f;
+	float knockBackMultiplierIncreasePerHit = 0.2f;
+
+	float hitStunMultiplier = 1.0f;
+	float hitStunMultiplierDecreasePerHit = 0.2f;
+	float minimumHitStunMultiplier = 0.2f;
+
+	bool attacksAreInterruptible;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
@@ -180,7 +192,8 @@ public:
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 	void AddActivaty(string activity);
 	virtual void UpdateBehavior(); 
-	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions);
+	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions); 
+	void ReverseHorizontalDirectionIfInHitStun();
 
 	string GetName() {
 		return name;

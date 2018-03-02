@@ -6,7 +6,7 @@ using namespace std;
 #include "Door.h"
 #include "SmashWorld.h"
 
-Door::Door(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) : Box2DRigidBody(window, position, dimensions, subject_to_gravity) {
+Door::Door(sf::RenderWindow *window, string name, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) : Box2DRigidBody(window, position, dimensions, subject_to_gravity) {
 	opening = false;
 	closing = false;
 	percent_open = 0;
@@ -20,18 +20,39 @@ Door::Door(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensi
 	body->SetUserData(this);
 
 	original_y = body->GetPosition().y;
+
+	Name = name;
 }
 
-void Door::TryToActivate(string activating_objects_name) {
-	if (std::find(names_of_activating_objects.begin(), names_of_activating_objects.end(), activating_objects_name) != names_of_activating_objects.end()) {
-		/* v does contain x */
-		if (percent_open == 100) {
-			closing = true;
-		} else if (percent_open == 0) {
-			opening = true;
+void Door::SetLocked(bool locked) {
+	Locked = locked;
+}
+
+void Door::OpenDoor() {
+	opening = true;
+	closing = false;
+}
+
+void Door::CloseDoor() {
+	closing = true;
+	opening = false;
+}
+
+void Door::TryToActivate(string activating_objects_name, bool to_open) {
+	if (!Locked) {
+		if (std::find(names_of_activating_objects.begin(), names_of_activating_objects.end(), activating_objects_name) != names_of_activating_objects.end() ||
+			activating_objects_name == Name) {
+			/* v does contain x */
+			if (percent_open == 100 && !to_open) {
+				closing = true;
+			}
+			else if (percent_open == 0 && to_open) {
+				opening = true;
+			}
 		}
-	} else {
-		/* v does not contain x */
+		else {
+			/* v does not contain x */
+		}
 	}
 }
 

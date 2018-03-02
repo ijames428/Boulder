@@ -39,6 +39,7 @@ Weapon::Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dim
 	stuck = false;
 	recalling = false;
 	held_by_owner = true;
+	forcedRecall = false;
 
 	weaponBody->SetGravityScale(0.0f);
 }
@@ -50,6 +51,7 @@ void Weapon::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		weaponBody->SetTransform(b2Vec2(ownersBody->GetPosition().x, ownersBody->GetPosition().y), 0.0f);
 	} else if (stuck) {
 		weaponBody->SetTransform(b2Vec2(stuck_fixture->GetBody()->GetPosition().x - stuck_position_offset.x, stuck_fixture->GetBody()->GetPosition().y - stuck_position_offset.y), stuck_angle);
+		HandleMaxDistanceRecall();
 	} else if (recalling) {
 		b2Vec2 recall_velocity = b2Vec2(ownersBody->GetPosition().x - weaponBody->GetPosition().x, ownersBody->GetPosition().y - weaponBody->GetPosition().y);
 
@@ -57,6 +59,7 @@ void Weapon::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			recalling = false;
 			held_by_owner = true;
 			stuck_to_door = false;
+			forcedRecall = false;
 			weaponBody->SetGravityScale(0.0f);
 			weaponBody->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
 
@@ -69,6 +72,19 @@ void Weapon::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			float32 speed = 15.0f;
 			weaponBody->SetLinearVelocity(b2Vec2(recall_velocity.x * speed, recall_velocity.y * speed));
 		}
+	} else {
+		HandleMaxDistanceRecall();
+	}
+}
+
+void Weapon::HandleMaxDistanceRecall() {
+	float delta_x = ownersBody->GetPosition().x - weaponBody->GetPosition().x;
+	float delta_y = ownersBody->GetPosition().y - weaponBody->GetPosition().y;
+
+	float distance = sqrtf(powf(delta_x, 2) + powf(delta_y, 2));
+
+	if (distance > 10.0f) {
+		Recall();
 	}
 }
 
@@ -95,7 +111,7 @@ void Weapon::Collision(b2Fixture* collider_fixture, float angle) {
 		if (collider_fixture->GetFilterData().categoryBits == Singleton<SmashWorld>::Get()->DOOR && !stuck_to_door) {
 			Door* entity = static_cast<Door*>(collider_fixture->GetBody()->GetUserData());
 			SmashCharacter* owner = static_cast<SmashCharacter*>(ownersBody->GetUserData());
-			entity->TryToActivate(owner->GetName());
+			entity->TryToActivate(owner->GetName(), true);
 			Stick(collider_fixture, angle);
 			stuck_to_door = true;
 		} else if (recalling) {
@@ -114,13 +130,18 @@ void Weapon::Collision(b2Fixture* collider_fixture, float angle) {
 	}
 }
 
+void Weapon::ForcedRecall() {
+	forcedRecall = true;
+	Recall();
+}
+
 void Weapon::Recall() {
 	stuck = false;
 	recalling = true;
 	weaponBody->SetGravityScale(0.0f);
 }
 
-void Weapon::TeleportedTo() {
+void Weapon::TeleportedToWeapon() {
 	stuck = false;
 	recalling = false;
 	held_by_owner = true;
@@ -130,4 +151,8 @@ void Weapon::TeleportedTo() {
 
 bool Weapon::Throwable() {
 	return held_by_owner;
+}
+
+bool Weapon::CanTeleportToWeapon() {
+	return !forcedRecall && !held_by_owner;
 }

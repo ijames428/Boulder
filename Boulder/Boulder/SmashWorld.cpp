@@ -8,13 +8,14 @@ using namespace std;
 #include "SmashWorld.h"
 #include "Constants.h"
 #include <thread>
+#include "Utilities.h"
 
 typedef void(*callback_function)(void); // type for conciseness
 
 SmashWorld::SmashWorld() {
 }
 
-void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
+void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_second) {
 	render_window = window;
 	camera = cam;
 
@@ -65,11 +66,16 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam) {
 
 	std::thread thread(&SmashWorld::UpdateVideo, this);
 
-	Setup();
+	Setup(frames_per_second);
 
 	thread.join();
 
-	render_window->setActive(true); 
+	render_window->setActive(true);
+
+	if (!audioCommentary.openFromFile("Sound/AudioCommentary02062018.wav"))
+		return;
+	audioCommentary.setVolume(50.0f * (Singleton<Settings>::Get()->music_volume / 100.0f));
+	audioCommentary.setLoop(false);
 }
 
 void SmashWorld::ImportSaveData() {
@@ -178,7 +184,7 @@ void SmashWorld::CloseCurrentMenu() {
 	}
 }
 
-void SmashWorld::Setup() {
+void SmashWorld::Setup(float frames_per_second) {
 	exit_to_main_menu = false;
 	unit_type_player_is_talking_to = "";
 	boss_one_fight_started = false;
@@ -187,18 +193,14 @@ void SmashWorld::Setup() {
 	world = new b2World(*gravity);
 
 	//ParseWorld("Maps\\ComboTesting");
-	ParseWorld("Maps\\BossOneBugFixing0");
+	ParseWorld("Maps\\DemoLevel");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
 	ParseDialogue("BoulderDialogue.txt");
 
-	parallax_background_texture.loadFromFile("Images/parallax_background.jpg");
-	parallax_background_sprite = sf::Sprite(parallax_background_texture);
-	parallax_background_sprite.setPosition(0.0f, 0.0f);
-
 	BuildWorld();
 
-	timeStep = 1.0f / 60.0f;
+	timeStep = 1.0f / frames_per_second;
 	velocityIterations = 6;
 	positionIterations = 2;
 
@@ -257,9 +259,9 @@ void SmashWorld::UpdateVideo() {
 	render_window->setActive(false);
 }
 
-void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
+bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	if (!render_window->hasFocus()) {
-		return;
+		return false;
 	}
 
 	render_window->clear();
@@ -279,7 +281,8 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	} else if (DeadMenu->IsOpen) {
 		player_menu_input->Update();
 		DeadMenu->Draw(curr_frame);
-	} else {
+	}
+	else {
 		current_frame = curr_frame;
 
 		world->Step(timeStep, velocityIterations, positionIterations);
@@ -288,19 +291,22 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 		if (unit_type_player_is_talking_to != "") {
 			player_menu_input->Update();
-		} else {
+		}
+		else {
 			player_character_input->Update();
 		}
 
-		parallax_background_viewport_position = sf::Vector2f(-(camera->viewport_position.x * 5.0f), -(camera->viewport_position.y * 5.0f));
-		parallax_background_sprite.setPosition(parallax_background_viewport_position);
+		for (int i = 0; i < parallax_background_sprites_size; i++) {
+			parallax_background_viewport_position = sf::Vector2f(-(camera->viewport_position.x * (i * 3.0f)), -(camera->viewport_position.y * (i * 3.0f)));
+			parallax_background_sprites[i]->setPosition(parallax_background_viewport_position);
 
-		shader.setUniform("timer", (float)curr_frame);
-		shader.setUniform("x_magnitude", 0.0f);// 0.035f);
-		shader.setUniform("y_magnitude", 0.0f);// 0.015f);
+			//shader.setUniform("timer", (float)curr_frame);
+			//shader.setUniform("x_magnitude", 0.0f);// 0.035f);
+			//shader.setUniform("y_magnitude", 0.0f);// 0.015f);
 
-		//lighting_shader.setUniform("lightPosition", sf::Glsl::Vec2((PlayerOne->GetBody()->GetPosition().x - camera->viewport_position.x) * 40.0f, (PlayerOne->GetBody()->GetPosition().y - camera->viewport_position.y) * 40.0f));
-		render_window->draw(parallax_background_sprite, &shader);
+			//lighting_shader.setUniform("lightPosition", sf::Glsl::Vec2((PlayerOne->GetBody()->GetPosition().x - camera->viewport_position.x) * 40.0f, (PlayerOne->GetBody()->GetPosition().y - camera->viewport_position.y) * 40.0f));
+			render_window->draw(*parallax_background_sprites[i]);// , &shader);
+		}
 
 		world->DrawDebugData();
 
@@ -327,10 +333,19 @@ void SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 			}
 		}
 
+		int platform_sprites_size = (int)platformSprites.size();
+		for (int i = 0; i < platform_sprites_size; i++) {
+			platformSprites[i]->setPosition(sf::Vector2f((platformXs[i] - camera->viewport_position.x) * 40.0f + 0.0f, (platformYs[i] - camera->viewport_position.y) * 40.0f + 0.0f));
+
+			render_window->draw(*platformSprites[i]);
+		}
+
 		render_window->draw(dialogue_text);
 	}		
 
 	render_window->display();
+
+	return goToCredits;
 }
 
 void SmashWorld::ScreenShake(float magnitude) {
@@ -410,6 +425,8 @@ void SmashWorld::BuildWorld() {
 	Json::Value doors_data = jsonWorldData["doors"];
 	Json::Value triggers_data = jsonWorldData["triggers"];
 	Json::Value units_data = jsonWorldData["units"];
+	Json::Value images_data = jsonWorldData["images"];
+	Json::Value parallaxing_backgrounds_data = jsonWorldData["parallaxingBackgrounds"];
 
 	x = std::stof(player_data["x"].asString(), &sz) / scalingRatio;
 	y = std::stof(player_data["y"].asString(), &sz) / scalingRatio;
@@ -470,7 +487,7 @@ void SmashWorld::BuildWorld() {
 		x += width;
 		y += height;
 
-		doors.push_back(new Door(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+		doors.push_back(new Door(render_window, door_data["name"].asString(), sf::Vector2f(x, y), sf::Vector2f(width, height)));
 		doors[i]->AddActivator(jsonWorldData["doors"][i]["activator"].asString());
 	}
 
@@ -530,6 +547,47 @@ void SmashWorld::BuildWorld() {
 		}
 	}
 
+	Json::Value image_data;
+	int images_data_size = (int)images_data.size();
+	for (int i = 0; i < images_data_size; i++) {
+		image_data = images_data[i];
+
+		string file_path_and_name = image_data["FilePath"].asString();
+		size_t findResult = file_path_and_name.find("Images\\");
+		string relativeFilePath = file_path_and_name.substr(findResult);
+
+		x = std::stof(image_data["x"].asString(), &sz) / scalingRatio;
+		y = std::stof(image_data["y"].asString(), &sz) / scalingRatio;
+
+		platformTextures.push_back(Singleton<AssetManager>().Get()->GetTexture(relativeFilePath));
+		platformSprites.push_back(new sf::Sprite(*platformTextures[i]));
+		platformSprites[i]->setScale(0.666667f, 0.68f);
+		platformXs.push_back(x);
+		platformYs.push_back(y);
+	}
+
+	Json::Value parallaxing_background_data;
+	int parallaxing_backgrounds_data_size = (int)parallaxing_backgrounds_data.size();
+	parallax_background_sprites_size = parallaxing_backgrounds_data_size;
+	for (int i = 0; i < parallaxing_backgrounds_data_size; i++) {
+		parallaxing_background_data = parallaxing_backgrounds_data[i];
+
+		string file_path_and_name = parallaxing_background_data["FilePath"].asString();
+		size_t findResult = file_path_and_name.find("Images\\");
+		string relativeFilePath = file_path_and_name.substr(findResult);
+
+		x = std::stof(parallaxing_background_data["x"].asString(), &sz) / scalingRatio;
+		y = std::stof(parallaxing_background_data["y"].asString(), &sz) / scalingRatio;
+
+		parallax_background_textures.insert(parallax_background_textures.begin(), Singleton<AssetManager>().Get()->GetTexture(relativeFilePath));//.loadFromFile("Images/parallax_background.jpg");
+		parallax_background_sprites.insert(parallax_background_sprites.begin(), new sf::Sprite(*parallax_background_textures[0]));
+		parallax_background_sprites[0]->setPosition(0.0f, 0.0f);
+		parallax_background_sprites[0]->setScale(1.0f + 0.2f * (parallaxing_backgrounds_data_size - i), 1.0f + 0.2f * (parallaxing_backgrounds_data_size - i));
+
+		//parallax_background_texture.loadFromFile("Images/parallax_background.jpg");
+		//parallax_background_sprite = sf::Sprite(parallax_background_texture);
+		//parallax_background_sprite.setPosition(0.0f, 0.0f);
+	}
 }
 
 void SmashWorld::ParseBestiaries() {
@@ -576,49 +634,63 @@ void SmashWorld::StartDialogue(string unit_type) {
 
 void SmashWorld::ProgressDialogueText() {
 	if (CurrentDialogueLine == nullptr) {
-		CurrentDialogueLine = RootDialogueLine;
+		CurrentDialogueLine = RootDialogueLine->GetFirstRelevantDialogueLine(StageOfTheGame);
 	} else if (CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame) != nullptr) {
 		CurrentDialogueLine = CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame);
 	}
 
 	player_menu_input->EatInputsForNumberOfFrames(1);
 
-	dialogue_text.setString(CurrentDialogueLine->Line);
-}
-
-template<typename Out>
-void split(const std::string &s, char delim, Out result) {
-	std::stringstream ss(s);
-	std::string item;
-	while (std::getline(ss, item, delim)) {
-		*(result++) = item;
+	if (CurrentDialogueLine != nullptr) {
+		dialogue_text.setString(CurrentDialogueLine->Line);
 	}
 }
 
-std::vector<std::string> split(const std::string &s, char delim) {
-	std::vector<std::string> elems;
-	split(s, delim, std::back_inserter(elems));
-	return elems;
-}
-
 void SmashWorld::ExecuteAction(string action_call) {
-	std::vector<string> vstrings = split(action_call, '(');
+	std::vector<string> vstrings = Utilities::Split(action_call, '(');
 
 	string call = vstrings[0];
 	string argument = vstrings[1].substr(0, vstrings[1].size() - 1);
 
-	if (call == "OpenDoor") {
+	if (Utilities::Contains(call, "LockDoor")) {
 		int doors_size = (int)doors.size();
 		for (int i = 0; i < doors_size; i++) {
-			doors[i]->TryToActivate(vstrings[1].substr(0, vstrings[1].size() - 1));
+			if (doors[i]->Name == argument) {
+				doors[i]->SetLocked(true);
+			}
 		}
-	} else if (call == "ChangeStageOnDeath" || call == "ChangeStage") {
+	} else if (Utilities::Contains(call, "UnlockDoor")) {
+		int doors_size = (int)doors.size();
+		for (int i = 0; i < doors_size; i++) {
+			if (doors[i]->Name == argument) {
+				doors[i]->SetLocked(false);
+			}
+		}
+	} else if (Utilities::Contains(call, "OpenDoor")) {
+		int doors_size = (int)doors.size();
+		for (int i = 0; i < doors_size; i++) {
+			if (doors[i]->Name == argument) {
+				doors[i]->OpenDoor();
+			}
+		}
+	} else if (Utilities::Contains(call, "CloseDoor")) {
+		int doors_size = (int)doors.size();
+		for (int i = 0; i < doors_size; i++) {
+			if (doors[i]->Name == argument) {
+				doors[i]->CloseDoor();
+			}
+		}
+	} else if (Utilities::Contains(call, "ChangeStage")) {
 		StageOfTheGame = argument;
-	} else if (call == "Aggro") {
+	} else if (Utilities::Contains(call, "Aggro")) {
 		if (boss_one->GetName() == argument) {
 			boss_one->Aggro((BoulderCreature*)PlayerOne);
 			boss_one_fight_started = true;
 		}
+	} else if (Utilities::Contains(call, "EndGame")) {
+		goToCredits = true;
+	} else if (Utilities::Contains(call, "ForcedRecall")) {
+		PlayerOne->ForcedRecall();
 	}
 }
 
@@ -719,4 +791,8 @@ void SmashWorld::HandleButtonSelectPress() {
 }
 
 void SmashWorld::HandleButtonSelectRelease() {
+}
+
+void SmashWorld::StartAudioCommentary() {
+	audioCommentary.play();
 }

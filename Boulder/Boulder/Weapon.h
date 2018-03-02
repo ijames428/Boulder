@@ -24,6 +24,7 @@ private:
 	b2Body* ownersBody;
 	bool stuck_to_door;
 	int life_stolen;
+	bool forcedRecall;
 public:
 	Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, int player_idx, b2Body* owners_body);// , SmashCharacter* player);
 	void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
@@ -31,8 +32,11 @@ public:
 	void Stick(b2Fixture* stuck_fix, float angle);
 	void Collision(b2Fixture* stuck_fix, float angle);
 	void Recall();
-	void TeleportedTo();
+	void ForcedRecall();
+	void TeleportedToWeapon();
+	bool CanTeleportToWeapon();
 	bool Throwable();
+	void HandleMaxDistanceRecall();
 
 	b2Body* GetBody() {
 		return weaponBody;

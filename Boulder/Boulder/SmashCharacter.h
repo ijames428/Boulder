@@ -29,6 +29,7 @@ private:
 	void ThrowWeapon();
 	void TeleportToWeapon();
 	sf::RectangleShape* healthBarBackgroundRect;
+	bool teleportedSinceLastLanding;
 protected:
 public:
 	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
@@ -39,6 +40,8 @@ public:
 	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies);
 	virtual void ReceiveHeal(int heal);
 	void UpdateHealthBar();
+	void ForcedRecall();
+	virtual void Land();
 
 	virtual int GetPlayerIndex() {
 		return player_index;

@@ -21,6 +21,8 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	speed = 5.0f;
 	running_speed_multiplier = 2.0f;
 	jump_power = 10.0f;
+	attacksAreInterruptible = true;
+	teleportedSinceLastLanding = false;
 
 	sf::RectangleShape shape(dimensions);
 	shape.setFillColor(sf::Color::Yellow);
@@ -271,17 +273,21 @@ void SmashCharacter::ThrowWeapon() {
 }
 
 void SmashCharacter::TeleportToWeapon() {
-	b2Vec2 original_position = body->GetPosition();
-	b2Vec2 new_position = weapon->GetBody()->GetPosition();
+	if (weapon->CanTeleportToWeapon() && !teleportedSinceLastLanding) {
+		b2Vec2 original_position = body->GetPosition();
+		b2Vec2 new_position = weapon->GetBody()->GetPosition();
 
-	b2Vec2 travel_vector = b2Vec2(new_position.x - original_position.x, new_position.y - original_position.y);
-	travel_vector.Normalize();
-	float32 speed = 10.0f;
+		b2Vec2 travel_vector = b2Vec2(new_position.x - original_position.x, new_position.y - original_position.y);
+		travel_vector.Normalize();
+		float32 speed = 10.0f;
 
-	body->SetTransform(weapon->GetBody()->GetPosition(), body->GetAngle());
-	body->SetLinearVelocity(b2Vec2(travel_vector.x * speed, travel_vector.y * speed));
+		body->SetTransform(weapon->GetBody()->GetPosition(), body->GetAngle());
+		body->SetLinearVelocity(b2Vec2(travel_vector.x * speed, travel_vector.y * speed));
 
-	weapon->TeleportedTo();
+		teleportedSinceLastLanding = true;
+
+		weapon->TeleportedToWeapon();
+	}
 }
 
 void SmashCharacter::HandleButtonSelectPress() {
@@ -298,4 +304,14 @@ void SmashCharacter::HandleButtonStartPress() {
 
 void SmashCharacter::HandleButtonStartRelease() {
 	Singleton<SmashWorld>::Get()->HandleButtonStartRelease();
+}
+
+void SmashCharacter::ForcedRecall() {
+	weapon->ForcedRecall();
+}
+
+void SmashCharacter::Land() {
+	teleportedSinceLastLanding = false;
+
+	BoulderCreature::Land();
 }

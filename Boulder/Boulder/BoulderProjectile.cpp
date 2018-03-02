@@ -97,25 +97,25 @@ void BoulderProjectile::Update() {//sf::Int64 curr_frame, sf::Int64 delta_time) 
 }
 
 void BoulderProjectile::Draw(sf::Vector2f camera_position) {
-	if (IsActive()) {
-		float half_height = ((b2PolygonShape*)fixture->GetShape())->m_vertices[3].y;
+	float half_height = ((b2PolygonShape*)fixture->GetShape())->m_vertices[3].y;
 
+	if (IsActive()) {
 		if (state == STATE_TRAVELLING) {
 			if (is_facing_right != travel_animation->IsFacingRight()) {
 				travel_animation->Flip();
 			}
 			travel_animation->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
-		} else if (state == STATE_DYING) {
-			if (is_facing_right != on_hit_animation->IsFacingRight()) {
-				on_hit_animation->Flip();
-			}
-			on_hit_animation->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
+		} 
+	} else if (state == STATE_DYING) {
+		if (is_facing_right != on_hit_animation->IsFacingRight()) {
+			on_hit_animation->Flip();
 		}
+		on_hit_animation->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 	}
 }
 
 bool BoulderProjectile::IsActive() {
-	return state != STATE_INACTIVE;
+	return state != STATE_INACTIVE && state != STATE_DYING;
 }
 
 void BoulderProjectile::Activate(float pos_x, float pos_y, bool facing_right) {
@@ -128,7 +128,7 @@ void BoulderProjectile::Activate(float pos_x, float pos_y, bool facing_right) {
 }
 
 void BoulderProjectile::Hit() {
-	if (state != STATE_DYING && IsActive()) {
+	if (IsActive()) {
 		state = STATE_DYING;
 
 		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));

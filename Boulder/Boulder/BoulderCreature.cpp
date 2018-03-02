@@ -26,7 +26,8 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	type = unit_type;
 	movement = 0.0f;
 	SetFacingRight(true);
-	player_index = 1;
+	player_index = 1; 
+	attacksAreInterruptible = true;
 
 	unit_type_json_data = jsonBestiariesData["DictOfUnits"][unit_type];
 
@@ -64,7 +65,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	cashInHealthBarRect->setFillColor(sf::Color(255, 127, 127, 255));
 
 	aggroCircleShape.m_p.Set(0, 0); //position, relative to body position
-	aggroCircleShape.m_radius = 3.0f;
+	aggroCircleShape.m_radius = 5.0f;
 	aggroCircleFixtureDef.shape = &aggroCircleShape;
 	aggroCircleFixtureDef.isSensor = true;
 	aggroCircleFixtureDef.m_color = new b2Color(1.0f, 1.0f, 1.0f, 1.0f);
@@ -72,7 +73,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	aggroCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
 	deaggroCircleShape.m_p.Set(0, 0); //position, relative to body position
-	deaggroCircleShape.m_radius = 5.0f;
+	deaggroCircleShape.m_radius = 10.0f;
 	deaggroCircleFixtureDef.shape = &deaggroCircleShape;
 	deaggroCircleFixtureDef.isSensor = true;
 	deaggroCircleFixtureDef.m_color = new b2Color(1.0f, 1.0f, 1.0f, 1.0f);
@@ -80,7 +81,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	deaggroCircleFixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
 	interactionCircleShape.m_p.Set(0, 0); //position, relative to body position
-	interactionCircleShape.m_radius = interaction_radius / 100.0f;
+	interactionCircleShape.m_radius = interaction_radius / 40.0f;
 	interactionCircleFixtureDef.shape = &interactionCircleShape;
 	interactionCircleFixtureDef.isSensor = true;
 	interactionCircleFixtureDef.m_color = new b2Color(1.0f, 1.0f, 0.0f, 1.0f);
@@ -197,6 +198,11 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	int projectile_active_animations_size = (int)projectile_active_animations.size();
 	for (int i = 0; i < projectile_active_animations_size; i++) {
 		projectiles.push_back(new BoulderProjectile(render_window, body, unit_type_json_data["ProjectileActiveAnimations"][i]["HitBoxPerFrame"][0][0], projectile_active_animations[i], projectile_hit_animations[i]));
+	}
+	if ((int)projectiles.size() > 0) {
+		attackDistance = 3.5f;
+	} else {
+		attackDistance = 1.5f;
 	}
 
 	hit_stun_timer = new StatusTimer(1);
@@ -441,7 +447,7 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		for (int i = 0; i < projectile_firing_frames_size; i++) {
 			if (projectile_firing_frames[i].attack_animation_index == GetActiveAttackIndex()) {
 				for (int p = 0; p < (int)projectiles.size(); p++) {
-					if (!projectiles[p]->IsActive()) {
+					if (attacking_animations[GetActiveAttackIndex()]->GetCurrentFrame() == projectile_firing_frames[i].firing_frame && !projectiles[p]->IsActive()) {
 						projectiles[p]->Activate(body->GetPosition().x + (IsFacingRight() ? projectile_firing_frames[i].relative_spawning_position_x : -projectile_firing_frames[i].relative_spawning_position_x), body->GetPosition().y + projectile_firing_frames[i].relative_spawning_position_y, IsFacingRight());
 					}
 				}
@@ -463,36 +469,29 @@ void BoulderCreature::UpdateBehavior() {
 
 		float distance = sqrtf(powf(delta_x, 2) + powf(delta_y, 2));
 
-		if (distance < 2.0f) {
+		if (distance < attackDistance) {
 			if (!IsAnAttackActive()) {
-				//UseAttack(0);
+				UseAttack(0);
 			}
-		}
-		else {
-			if (target->GetBody()->GetPosition().x < body->GetPosition().x)
-			{
+		} else {
+			if (target->GetBody()->GetPosition().x < body->GetPosition().x) {
 				movement = -100.0f;
 				running = true;
-			}
-			else if (target->GetBody()->GetPosition().x > body->GetPosition().x)
-			{
+			} else if (target->GetBody()->GetPosition().x > body->GetPosition().x) {
 				movement = 100.0f;
 				running = true;
 			}
 		}
-	}
-	else if (current_frame % 60 == 0) {
+	} else if (current_frame % 60 == 0) {
 		int rng = rand() % 5;
 
 		if (rng == 0) {
 			movement = -100.0f;
 			running = false;
-		}
-		else if (rng == 1) {
+		} else if (rng == 1) {
 			movement = 0.0f;
 			running = false;
-		}
-		else if (rng == 2) {
+		} else if (rng == 2) {
 			movement = 100.0f;
 			running = false;
 		}
@@ -641,9 +640,14 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 }
 
 void BoulderCreature::AddActivaty(string activity) {
-	if (activity != "") {
-		if (std::find(activities.begin(), activities.end(), activity) == activities.end()) {
-			activities.push_back(activity);
+	std::vector<string> vstrings = Utilities::Split(activity, ';');
+	int vstrings_size = (int)vstrings.size();
+
+	for (int i = 0; i < vstrings_size; i++) {
+		if (vstrings[i] != "") {
+			if (std::find(activities.begin(), activities.end(), vstrings[i]) == activities.end()) {
+				activities.push_back(vstrings[i]);
+			}
 		}
 	}
 }
@@ -665,20 +669,41 @@ void BoulderCreature::Move(float horizontal, float vertical) {
 
 				if (horizontal > 0) {
 					SetFacingRight(true);
-				}
-				else if (horizontal < 0) {
+				} else if (horizontal < 0) {
 					SetFacingRight(false);
 				}
 			}
 		} else {
+			float old_body_vel_x = body->GetLinearVelocity().x;
 			float x_drift = horizontal / 200.0f;
-			float x_vel = body->GetLinearVelocity().x + x_drift;
+			float x_vel = old_body_vel_x + x_drift;
+			float max_speed = 0.0f;
 
-			if (x_vel > speed) {
-				x_vel = speed;
-			} else if (x_vel < -speed) {
-				x_vel = -speed;
+			if (maxAirSpeed > 0 && maxAirSpeed > speed) {
+				max_speed = maxAirSpeed;
+
+				if (x_vel < maxAirSpeed) {
+					maxAirSpeed = x_vel;
+				}
+			} else if (maxAirSpeed < 0 && maxAirSpeed < -speed) {
+				max_speed = maxAirSpeed;
+
+				if (x_vel > maxAirSpeed) {
+					maxAirSpeed = x_vel;
+				}
+			} else {
+				max_speed = x_vel < 0 ? -speed : speed;
 			}
+
+			if ((max_speed > 0 && x_vel > max_speed) || (max_speed < 0 && x_vel < max_speed)) {
+				x_vel = max_speed;
+			}
+
+			//if (max_speed > 0 && x_vel > max_speed) {
+			//	x_vel = max_speed;
+			//} else if (max_speed < 0 && x_vel < max_speed) {
+			//	x_vel = max_speed;
+			//}
 
 			body->SetLinearVelocity(b2Vec2(x_vel, body->GetLinearVelocity().y));
 		}
@@ -686,21 +711,28 @@ void BoulderCreature::Move(float horizontal, float vertical) {
 }
 
 void BoulderCreature::Jump() {
-	if (can_take_input && hit_points > 0 && !IsAnAttackActive()) {
+	if (can_take_input && hit_points > 0 && !IsAnAttackActive() && !landing_animation_timer->IsActive()) {
 		bool jumping = false;
 
 		if (!IsInTheAir()) {
 			jumping = true;
-		}
-		else if (has_double_jump) {
+		} else if (has_double_jump) {
 			jumping = true;
 			has_double_jump = false;
 		}
 
 		if (jumping) {
-			body->SetLinearVelocity(b2Vec2(body->GetLinearVelocity().x, -jump_power));
+			maxAirSpeed = body->GetLinearVelocity().x;
+			body->SetLinearVelocity(b2Vec2(maxAirSpeed, -jump_power));
 			SetInTheAir(true);
 		}
+	}
+}
+
+void BoulderCreature::ReverseHorizontalDirectionIfInHitStun() {
+	if (hit_stun_timer->IsActive() && IsInTheAir()) {
+		b2Vec2 linear_velocity = body->GetLinearVelocity();
+		body->SetLinearVelocity(b2Vec2(-linear_velocity.x, linear_velocity.y));
 	}
 }
 
@@ -755,7 +787,7 @@ void BoulderCreature::SetInteractable(BoulderCreature* new_interactable) {
 }
 
 void BoulderCreature::UseAttack(int move_type) {
-	if (can_take_input && hit_points > 0) {
+	if (can_take_input && hit_points > 0 && !landing_animation_timer->IsActive() && !hit_stun_timer->IsActive()) {
 		attacks[move_type]->InitiateAttack();
 
 		if (move_type < (int)attacking_animations.size()) {
@@ -778,8 +810,6 @@ void BoulderCreature::ReceiveHeal(int heal) {
 }
 
 void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies) {
-	Singleton<SmashWorld>::Get()->ScreenShake(3.0f);
-
 	if (is_hittable) {
 		if (GettingHitSounds.size() > 0) {
 			GettingHitSounds[rand() % (int)GettingHitSounds.size()]->play();
@@ -787,9 +817,27 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 	}
 
 	if (hit_points > 0 && is_hittable) {
-		cout << "got hit for " << damage << " damage and " << hit_stun_frames << " hit stun frames!\n";
-		hit_stun_timer = new StatusTimer(hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames);
-		hit_stun_timer->Start();
+		Singleton<SmashWorld>::Get()->ScreenShake(3.0f);
+
+		if (hit_stun_timer->IsActive()) {
+			knockBackMultiplier += knockBackMultiplierIncreasePerHit;
+			hitStunMultiplier -= hitStunMultiplierDecreasePerHit;
+
+			if (hitStunMultiplier < minimumHitStunMultiplier) {
+				hitStunMultiplier = minimumHitStunMultiplier;
+			}
+		} else {
+			knockBackMultiplier = 1.0f;
+			hitStunMultiplier = 1.0f;
+		}
+		
+		bool is_an_attack_active = IsAnAttackActive();
+
+		if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
+			hit_stun_timer = new StatusTimer((hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) * hitStunMultiplier);
+			hit_stun_timer->Start();
+			GetActiveAttack()->StopAttack();
+		}
 
 		hit_points -= damage;
 
@@ -809,16 +857,20 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 				body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
 			}
 		} else {
-			if (pop_up_grounded_enemies && !IsInTheAir()) {
-				body->SetLinearVelocity(b2Vec2(knock_back.x, -knock_back.y));
-			} else {
-				body->SetLinearVelocity(b2Vec2(knock_back.x, knock_back.y));
+			if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
+				if (pop_up_grounded_enemies && !IsInTheAir()) {
+					body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, -knock_back.y * knockBackMultiplier));
+				} else {
+					body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, knock_back.y * knockBackMultiplier));
+				}
 			}
 
 			if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
 				health_cash_in_timer->Start();
 			}
 		}
+	} else {
+		Singleton<SmashWorld>::Get()->ScreenShake(1.5f);
 	}
 }
 

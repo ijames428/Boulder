@@ -15,6 +15,7 @@ private:
 	float viewport_width;
 	float viewport_height;
 	sf::RectangleShape* healthBarBackgroundRect;
+	bool hitStunWasActiveLastFrame;
 public:
 	BossOne(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	virtual void UpdateBehavior();

@@ -325,7 +325,7 @@ HitBox::HitBox(b2Body* bod, int player_index, int frame_in_attack, sf::Vector2f 
 	
 	if (player_index == 0) {
 		myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY;
+		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY | Singleton<SmashWorld>::Get()->DOOR;
 	} else {
 		myFixtureDefLeft.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
 		myFixtureDefLeft.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
@@ -342,7 +342,7 @@ HitBox::HitBox(b2Body* bod, int player_index, int frame_in_attack, sf::Vector2f 
 	
 	if (player_index == 0) {
 		myFixtureDefRight.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
-		myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY;
+		myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->ENEMY | Singleton<SmashWorld>::Get()->DOOR;
 	} else {
 		myFixtureDefRight.filter.categoryBits = Singleton<SmashWorld>::Get()->HIT_BOX;
 		myFixtureDefRight.filter.maskBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;

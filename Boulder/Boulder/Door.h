@@ -19,11 +19,16 @@ class Door : public Box2DRigidBody {
 	float original_width;
 	float original_height;
 	float original_y;
+	bool Locked;
 public:
-	Door(sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
-	void TryToActivate(string activating_objects_name);
+	Door(sf::RenderWindow *window, string name, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
+	void TryToActivate(string activating_objects_name, bool to_open);
+	void CloseDoor();
+	void OpenDoor();
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	void AddActivator(string activator_name);
+	void SetLocked(bool locked);
+	string Name;
 };
 
 #endif

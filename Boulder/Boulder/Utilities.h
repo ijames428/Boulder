@@ -9,6 +9,26 @@ class Utilities {
 public:
 	Utilities() { }
 
+	template<typename Out>
+	static void Split(const std::string &s, char delim, Out result) {
+		std::stringstream ss(s);
+		std::string item;
+		while (std::getline(ss, item, delim)) {
+			*(result++) = item;
+		}
+	}
+
+	static std::vector<std::string> Split(const std::string &s, char delim) {
+		std::vector<std::string> elems;
+		Split(s, delim, std::back_inserter(elems));
+		return elems;
+	}
+
+	static bool Contains(string string_being_searched, string string_being_searched_for) {
+		std::size_t found = string_being_searched.find(string_being_searched_for);
+		return found != std::string::npos;
+	}
+
 	static std::vector<float> StringBoxDataToUsableVectorBoxData(string str_box_data) {
 		float boxScale = 40.0f;
 

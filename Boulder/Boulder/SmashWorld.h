@@ -31,51 +31,86 @@ class MyContactListener : public b2ContactListener
 	// PLATFORM = 0x0008,
 	// HIT_BOX = 0x0010,
 	// WEAPON = 0x0020,
-	// DOOR = 0x0040
+	// DOOR = 0x0040,
+	// AGGRO_CIRCLE = 0x0080,
+	// DEAGGRO_CIRCLE = 0x0100,
+	// INTERACTION_CIRCLE = 0x0200,
+	// TRIGGER = 0x0400,
+	// PROJECTILE = 0x0800
 	int contact_count = 0;
 
 	void BeginContact(b2Contact* contact) {
 		b2Fixture* fixtureA = contact->GetFixtureA();
 		b2Fixture* fixtureB = contact->GetFixtureB();
+		uint16 fixture_a_category_bits = fixtureA->GetFilterData().categoryBits;
+		uint16 fixture_b_category_bits = fixtureB->GetFilterData().categoryBits;
 
-		if (fixtureA->GetFilterData().categoryBits == 0x0004) {
-			if (fixtureB->GetFilterData().categoryBits == 0x0008) { // PLATFORM
+		//if (fixture_a_category_bits == 0x0002) {
+		//	if (fixture_b_category_bits == 0x0008) { // PLATFORM
+		//		BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+		//		entityA->ReverseHorizontalDirectionIfInHitStun();
+		//	}
+		//} else if (fixture_b_category_bits == 0x0002) {
+		//	if (fixture_a_category_bits == 0x0008) { // PLATFORM
+		//		BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+		//		entityB->ReverseHorizontalDirectionIfInHitStun();
+		//	}
+		//}
+		//
+		//if (fixture_a_category_bits == 0x0004) {
+		//	if (fixture_b_category_bits == 0x0008) { // PLATFORM
+		//		BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+		//		entityA->Land();
+		//	}
+		//} else if (fixture_b_category_bits == 0x0004) {
+		//	if (fixture_a_category_bits == 0x0008) { // PLATFORM
+		//		BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+		//		entityB->Land();
+		//	}
+		//}
+
+		if (fixture_b_category_bits == 0x0008) { // PLATFORM
+			if (fixture_a_category_bits == 0x0002) { // ENEMY
+				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+				entityA->ReverseHorizontalDirectionIfInHitStun();
+			} else if (fixture_a_category_bits == 0x0004) {
 				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 				entityA->Land();
-				cout << "A Landed\n";
 			}
-		} else if (fixtureB->GetFilterData().categoryBits == 0x0004) {
-			if (fixtureA->GetFilterData().categoryBits == 0x0008) { // PLATFORM
+		} else if (fixture_a_category_bits == 0x0008) { // PLATFORM
+			if (fixture_b_category_bits == 0x0002) { // ENEMY
+				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+				entityB->ReverseHorizontalDirectionIfInHitStun();
+			} else if (fixture_b_category_bits == 0x0004) {
 				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 				entityB->Land();
-				cout << "B Landed\n";
 			}
 		}
 
-		if (fixtureA->GetFilterData().categoryBits == 0x0080) {
+		if (fixture_a_category_bits == 0x0080) {
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			entityA->Aggro(entityB);
-		} else if (fixtureB->GetFilterData().categoryBits == 0x0080) {
+		} else if (fixture_b_category_bits == 0x0080) {
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			entityB->Aggro(entityA);
 		}
 
-		if (fixtureA->GetFilterData().categoryBits == 0x0200) {
+		if (fixture_a_category_bits == 0x0200) {
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			entityB->SetInteractable(entityA);
-		} else if (fixtureB->GetFilterData().categoryBits == 0x0200) {
+		} else if (fixture_b_category_bits == 0x0200) {
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 			entityA->SetInteractable(entityB);
 		}
 
-		if (fixtureA->GetFilterData().categoryBits == 0x0400) {
+		if (fixture_a_category_bits == 0x0400) {
 			Trigger* entityA = static_cast<Trigger*>(fixtureA->GetBody()->GetUserData());
 			entityA->Triggered();
-		} else if (fixtureB->GetFilterData().categoryBits == 0x0400) {
+		} else if (fixture_b_category_bits == 0x0400) {
 			Trigger* entityB = static_cast<Trigger*>(fixtureB->GetBody()->GetUserData());
 			entityB->Triggered();
 		}
@@ -124,12 +159,18 @@ class MyContactListener : public b2ContactListener
 		b2Fixture* fixtureB = contact->GetFixtureB();
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
-			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-			Attack* active_attack = entityA->GetActiveAttack();
-			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			if (fixtureB->GetFilterData().categoryBits == 0x0040) {
+				cout << "hit that door!\n";
+				Door* entity = static_cast<Door*>(fixtureB->GetBody()->GetUserData());
+				entity->TryToActivate("Player 0", true);
+			} else {
+				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+				Attack* active_attack = entityA->GetActiveAttack();
+				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
-			if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
-				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
+				if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
+					entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
+				}
 			}
 
 			return;
@@ -139,12 +180,18 @@ class MyContactListener : public b2ContactListener
 		fixtureB = contact->GetFixtureA();
 		
 		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
-			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-			Attack* active_attack = entityA->GetActiveAttack();
-			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			if (fixtureB->GetFilterData().categoryBits == 0x0040) {
+				cout << "hit that door!!\n";
+				Door* entity = static_cast<Door*>(fixtureB->GetBody()->GetUserData());
+				entity->TryToActivate("Player 0", true);
+			} else {
+				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+				Attack* active_attack = entityA->GetActiveAttack();
+				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
-			if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
-				entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
+				if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
+					entityB->TakeDamage(active_attack->GetDamage(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
+				}
 			}
 
 			return;
@@ -198,8 +245,8 @@ private:
 	};
 
 	string STAGE_OF_GAME_INTRO = "Intro";
-	string STAGE_OF_GAME_OPENED_UP = "Opened Up";
-	string STAGE_OF_GAME_AFTER_FIRST_BOSS = "After First Boss";
+	string STAGE_OF_GAME_OPENED_UP = "OpenedUp";
+	string STAGE_OF_GAME_AFTER_FIRST_BOSS = "AfterFirstBoss";
 
 	string StageOfTheGame;
 	sf::Int64 current_frame;
@@ -242,9 +289,10 @@ private:
 #else
 #endif
 	bool past_setup = false;
+	int parallax_background_sprites_size;
 	sf::Vector2f parallax_background_viewport_position;
-	sf::Texture parallax_background_texture;
-	sf::Sprite parallax_background_sprite;
+	std::vector<sf::Texture*> parallax_background_textures;
+	std::vector<sf::Sprite*> parallax_background_sprites;
 
 	Menu* DeadMenu;
 	Menu* PauseMenu;
@@ -252,10 +300,18 @@ private:
 
 	sf::Shader shader;
 	//sf::Shader lighting_shader;
+
+	sf::Music audioCommentary;
+	bool goToCredits = false;
+
+	std::vector<sf::Texture*> platformTextures;
+	std::vector<sf::Sprite*> platformSprites;
+	std::vector<float> platformXs;
+	std::vector<float> platformYs;
 public:
 	SmashWorld();
-	void Init(sf::RenderWindow* window, Camera* cam);
-	void Update(sf::Int64 curr_frame, sf::Int64 frame_delta);
+	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second);
+	bool Update(sf::Int64 curr_frame, sf::Int64 frame_delta);
 	bool ShouldExitToMainMenu();
 	Camera* GetCamera() { return camera; };
 	b2World* GetB2World() { return world; };
@@ -265,7 +321,7 @@ public:
 	void ProgressDialogueText();
 	string GetCurrentPointInGame();
 	void UpdateVideo();
-	void Setup();
+	void Setup(float frames_per_second);
 	void ExportSaveData();
 	void ImportSaveData();
 	void ExitGame();
@@ -286,6 +342,7 @@ public:
 	void HandleButtonSelectPress();
 	void HandleButtonSelectRelease();
 	void ScreenShake(float magnitude);
+	void StartAudioCommentary();
 
 	bool Contains(string string_being_searched, string string_being_searched_for) {
 		std::size_t found = string_being_searched.find(string_being_searched_for);

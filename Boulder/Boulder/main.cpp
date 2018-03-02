@@ -92,11 +92,20 @@ bool load_game = false;
 
 int good_frames = 0;
 int bad_frames = 0;
+bool playGameWithCommentary = false;
 
 void NewGame() {
 	MainMenu->Close();
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
 	load_game = false;
+	playGameWithCommentary = false;
+}
+
+void NewGameWithCommentary() {
+	MainMenu->Close();
+	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+	load_game = false;
+	playGameWithCommentary = true;
 }
 
 void LoadGame() {
@@ -130,15 +139,17 @@ int main()
 	sf::Int64 frame_delta;
 	sf::Int64 start_time = time.asMicroseconds();
 	
-	float background_music_volume = 100.0f;
+	float background_music_volume = 10.0f;
 	float combat_music_volume = 0.0f;
+
+	bool go_to_credits = false;
 
 	Singleton<Settings>::Get()->effects_volume = 10.0f;
 	Singleton<Settings>::Get()->music_volume = 50.0f;
 
 	if (!background_music.openFromFile("Sound/background_music0.ogg"))
 		return -1;
-	combat_music.setVolume((float)background_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
+	background_music.setVolume((float)background_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
 #ifdef _DEBUG
 #else
 	background_music.play();
@@ -186,6 +197,7 @@ int main()
 
 	MainMenu = new Menu(window, camera->viewport_dimensions);
 	MainMenu->AddItem("New Game", &NewGame);
+	MainMenu->AddItem("Play Game With Audio Commentary", &NewGameWithCommentary);
 	MainMenu->AddItem("Load Game", &LoadGame);
 	MainMenu->AddItem("Exit", &Exit);
 
@@ -221,15 +233,20 @@ int main()
 			} else if (GameState == GAME_STATE_INIT_SINGLE_PLAYER) {
 				window->clear();
 				UpdateGameStateLoadingScreen();
-				Singleton<SmashWorld>::Get()->Init(window, camera);
+				Singleton<SmashWorld>::Get()->Init(window, camera, (float)frames_per_second);
 				if (load_game) {
 					Singleton<SmashWorld>::Get()->ImportSaveData();
 				}
+				if (playGameWithCommentary) {
+					Singleton<SmashWorld>::Get()->StartAudioCommentary();
+				}
 				GameState = GAME_STATE_IN_SINGLE_PLAYER;
 			} else if (GameState == GAME_STATE_IN_SINGLE_PLAYER) {
-				Singleton<SmashWorld>::Get()->Update(current_frame, frame_delta / 1000);
+				go_to_credits = Singleton<SmashWorld>::Get()->Update(current_frame, frame_delta / 1000);
 
-				if (Singleton<SmashWorld>::Get()->ShouldExitToMainMenu()) {
+				if (go_to_credits) {
+					GameState = GAME_STATE_CREDITS;
+				} else if (Singleton<SmashWorld>::Get()->ShouldExitToMainMenu()) {
 					MainMenu->Open();
 					GameState = GAME_STATE_START_MENU;
 				}
@@ -362,7 +379,7 @@ void SetPreviousButtonValues() {
 void HandleClosingEvent() {
 	while (window->pollEvent(event))
 	{
-		if (event.type == sf::Event::Closed || event.key.code == sf::Keyboard::Escape)
+		if (event.type == sf::Event::Closed)
 			window->close();
 	}
 }

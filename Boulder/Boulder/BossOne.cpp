@@ -12,6 +12,8 @@ BossOne::BossOne(string unit_name, string unit_type, string bestiary_name, bool 
 	jump_power = 15.0f;
 	distance_from_target_last_frame = 10.0f;
 	hovering = false;
+	hitStunWasActiveLastFrame = false;
+	attacksAreInterruptible = false;
 
 	sf::Vector2f viewport = Singleton<SmashWorld>::Get()->GetCamera()->viewport_dimensions;
 	viewport_width = viewport.x;
@@ -53,8 +55,8 @@ void BossOne::UpdateBehavior() {
 		float distance = sqrtf(powf(delta_x, 2) + powf(delta_y, 2));
 
 		if (distance < 12.0f) {
-			if (current_frame % 60 == 0 || (distance_from_target_last_frame >= 12.0f)) {
-				int rng = rand() % 5;
+			if (current_frame % 60 == 0 || (distance_from_target_last_frame >= 12.0f) || (hitStunWasActiveLastFrame && !hit_stun_timer->IsActive())) {
+				int rng = 2;// rand() % 5;
 
 				if (!IsAnAttackActive() && hit_points > 0) {
 					if (target->GetBody()->GetPosition().x < body->GetPosition().x) {
@@ -110,8 +112,7 @@ void BossOne::UpdateBehavior() {
 		}
 
 		distance_from_target_last_frame = distance;
-	}
-	else if (current_frame % 60 == 0) {
+	} else if (current_frame % 60 == 0) {
 		int rng = rand() % 5;
 
 		if (rng == 0) {
@@ -139,7 +140,7 @@ void BossOne::UpdateBehavior() {
 	} else {
 		Move(movement, 0.0f);
 
-		if (hovering) {
+		if (hovering && !hit_stun_timer->IsActive()) {
 			body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
 		}
 
@@ -173,6 +174,8 @@ void BossOne::UpdateBehavior() {
 			State = STATE_IDLE;
 		}
 	}
+
+	hitStunWasActiveLastFrame = hit_stun_timer->IsActive();
 }
 
 void BossOne::Deaggro() {
