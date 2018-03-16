@@ -170,11 +170,15 @@ void InputHandler::Update() {
 		if ((left_stick_horizontal >= deadzone || left_stick_horizontal <= -deadzone) ||
 			(left_stick_vertical >= deadzone || left_stick_vertical <= -deadzone)) {
 			player_character->HandleLeftStickInput(left_stick_horizontal, left_stick_vertical);
+		} else {
+			player_character->HandleLeftStickInput(0.0f, 0.0f);
 		}
 
 		if ((right_stick_horizontal >= deadzone || right_stick_horizontal <= -deadzone) ||
 			(right_stick_vertical >= deadzone || right_stick_vertical <= -deadzone)) {
 			player_character->HandleRightStickInput(right_stick_horizontal, right_stick_vertical);
+		} else {
+			player_character->HandleRightStickInput(0.0f, 0.0f);
 		}
 	}
 

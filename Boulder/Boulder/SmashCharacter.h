@@ -30,6 +30,29 @@ private:
 	void TeleportToWeapon();
 	sf::RectangleShape* healthBarBackgroundRect;
 	bool teleportedSinceLastLanding;
+	bool rightStickWasCentered;
+	sf::Vector2f leftStickInputs;
+	int characterLevel;
+	int weaponLevel;
+	int characterLevelForDisplay;
+	int weaponLevelForDisplay;
+	int characterExperienceTowardsNextLevel;
+	int characterExperienceTowardsNextLevelForAnimatedBar;
+	int weaponExperienceTowardsNextLevel;
+	int weaponExperienceTowardsNextLevelForAnimatedBar;
+	int CharacterExperienceNeededForNextLevel(int level);
+	int WeaponExperienceNeededForNextLevel(int level);
+	sf::RectangleShape* characterExperienceBarRect;
+	sf::RectangleShape* weaponExperienceBarRect;
+	sf::RectangleShape* characterExperienceBarAnimatedRect;
+	sf::RectangleShape* weaponExperienceBarAnimatedRect;
+	sf::RectangleShape* characterExperienceBarBackgroundRect;
+	sf::RectangleShape* weaponExperienceBarBackgroundRect;
+	void UpdateCharacterExperienceBar();
+	void UpdateWeaponExperienceBar();
+	sf::Font ringbearerFont;
+	sf::Text* characterLevelText;
+	sf::Text* weaponLevelText;
 protected:
 public:
 	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
@@ -42,6 +65,12 @@ public:
 	void UpdateHealthBar();
 	void ForcedRecall();
 	virtual void Land();
+	void DetermineWhichAttackToUseAndActivateIt(float x_input, float y_input);
+	void ReceiveExperience(int experience_points);
+	void LevelUpCharacter();
+	void LevelUpWeapon();
+	virtual int GetDamageOfCurrentAttack();
+	virtual void UpdateEffectsVolumes(float new_effects_volume);
 
 	virtual int GetPlayerIndex() {
 		return player_index;
@@ -58,71 +87,38 @@ public:
 	
 	void SmashCharacter::HandleLeftStickInput(float horizontal, float vertical) {
 		Move(horizontal, vertical);
+
+		leftStickInputs.x = horizontal;
+		leftStickInputs.y = vertical;
 	}
 
 	void SmashCharacter::HandleRightStickInput(float horizontal, float vertical) {
-		if ((vertical > -0.9f && vertical < 0.9f && horizontal > -0.9f && horizontal < 0.9f) || IsAnAttackActive()) {
+		if (vertical > -90.0f && vertical < 90.0f && horizontal > -90.0f && horizontal < 90.0f) {
+			rightStickWasCentered = true;
+			return;
+		}
+		
+		if (!rightStickWasCentered) {
 			return;
 		}
 
-		if (IsInTheAir()) {
-			if (vertical < -90.0f) {
-				UseAttack(Attack::UP_AIR);
-				//cout << "UP_AIR\n";
-			} else if (vertical > 90.0f) {
-				UseAttack(Attack::DOWN_AIR);
-				//cout << "DOWN_AIR\n";
-			} else if (horizontal < -90.0f) {
-				if (IsFacingRight()) {
-					UseAttack(Attack::BACK_AIR);
-					//cout << "BACK_AIR\n";
-				} else {
-					UseAttack(Attack::FORWARD_AIR);
-					//cout << "FORWARD_AIR\n";
-				}
-			} else if (horizontal > 90.0f) {
-				if (IsFacingRight()) {
-					UseAttack(Attack::FORWARD_AIR);
-					//cout << "FORWARD_AIR\n";
-				} else {
-					UseAttack(Attack::BACK_AIR);
-					//cout << "BACK_AIR\n";
-				}
-			}
-		} else {
-			if (vertical < -90.0f) {
-				UseAttack(Attack::UP_SMASH);
-				//cout << "UP_SMASH\n";
-			} else if (vertical > 90.0f) {
-				UseAttack(Attack::DOWN_SMASH);
-				//cout << "DOWN_SMASH\n";
-			} else if (horizontal < -90.0f) {
-				if (IsFacingRight()) {
-					SetFacingRight(false);
-				}
-				attacks[Attack::FORWARD_SMASH]->Update(current_frame, IsFacingRight());
-				UseAttack(Attack::FORWARD_SMASH);
-				//cout << "FORWARD_SMASH\n";
-			} else if (horizontal > 90.0f) {
-				if (!IsFacingRight()) {
-					SetFacingRight(true);
-				}
-				attacks[Attack::FORWARD_SMASH]->Update(current_frame, IsFacingRight());
-				UseAttack(Attack::FORWARD_SMASH);
-				//cout << "FORWARD_SMASH\n";
-			}
-		}
+		rightStickWasCentered = false;
+
+		DetermineWhichAttackToUseAndActivateIt(horizontal, vertical);
 	}
 
 	void SmashCharacter::HandleButtonAPress() {
-		if (IsInTheAir() && !has_double_jump && IsAnAttackActive()) {
-			jump_input_buffer->Start();
+		releasedJumpButton = false;
+
+		if (IsInTheAir() && !has_double_jump/* && IsAnAttackActive()*/) {
+			jumpInputBuffer->Start();
 		} else {
-			Jump();
+			StartJump();
 		}
 	}
 
 	void SmashCharacter::HandleButtonARelease() {
+		releasedJumpButton = true;
 	}
 
 	void SmashCharacter::HandleButtonBPress() {

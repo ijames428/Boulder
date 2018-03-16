@@ -91,3 +91,32 @@ void Door::AddActivator(string activator_name) {
 		names_of_activating_objects.push_back(activator_name);
 	}
 }
+
+void Door::ApplyObjectDataToSaveData(Json::Value& save_data) {
+	//save_data["Name"] = name;
+	save_data["percent_open"] = percent_open;
+	save_data["opening"] = opening;
+	save_data["closing"] = closing;
+}
+
+void Door::ApplySaveDataToObjectData(Json::Value& save_data) {
+	percent_open = save_data["percent_open"].asInt();
+	opening = save_data["opening"].asBool();
+	closing = save_data["closing"].asBool();
+
+	body->SetTransform(b2Vec2(body->GetPosition().x, original_y - (original_height * (percent_open * 0.01f) * 2.0f)), 0.0f);
+}
+
+bool Door::IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions) {
+	sf::Vector2f body_screen_pos = GetScreenPosition();
+
+	if (abs(player_screen_pos.x - body_screen_pos.x) > viewport_dimensions.x * 1.25f) {
+		return false;
+	}
+
+	if (abs(player_screen_pos.y - body_screen_pos.y) > viewport_dimensions.y * 1.25f) {
+		return false;
+	}
+
+	return true;
+}

@@ -206,8 +206,15 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	}
 
 	hit_stun_timer = new StatusTimer(1);
-	jump_input_buffer = new StatusTimer(6);
 	health_cash_in_timer = new StatusTimer(360);
+	jumpStartUpTimer = new StatusTimer(6);
+	jumpInputBuffer = new StatusTimer(6); 
+	attack_input_buffer = new StatusTimer(6);
+	attack_buffer_attack_index = 0;
+	anAttackWasActiveLastFrame = false;
+
+	jumpStartUpTimerWasActiveLastFrame = false;
+	releasedJumpButton = true;
 
 	int numberOfDyingAnimationFrames = dying_animations.size() > 0 ? dying_animations[0]->GetNumberOfFrames() : 0;
 	dying_animation_timer = new StatusTimer(numberOfDyingAnimationFrames);
@@ -335,7 +342,7 @@ std::vector<SpriteAnimation*> BoulderCreature::LoadAnimations(string animations_
 			}
 		}
 
-		int left_foot_sound_file_per_frame_size = unit_type_json_bestiary_data[animations_name][i]["RightFootSoundFilePerFrame"].size();
+		int left_foot_sound_file_per_frame_size = unit_type_json_bestiary_data[animations_name][i]["LeftFootSoundFilePerFrame"].size();
 		for (int f = 0; f < left_foot_sound_file_per_frame_size; f++) {
 			if (unit_type_json_bestiary_data[animations_name][i]["LeftFootSoundFilePerFrame"][f].asString() != "") {
 				string soundFilePath = unit_type_json_bestiary_data[animations_name][i]["LeftFootSoundFilePerFrame"][f].asString();
@@ -665,7 +672,43 @@ void BoulderCreature::Move(float horizontal, float vertical) {
 	if (can_take_input && hit_points > 0 && !landing_animation_timer->IsActive()) {
 		if (!IsInTheAir()) {
 			if (!IsAnAttackActive()) {
-				body->SetLinearVelocity(b2Vec2((horizontal / 100.0f) * speed * (running ? running_speed_multiplier : 1.0f), body->GetLinearVelocity().y));
+				b2Vec2 lin_vel = body->GetLinearVelocity();
+				float hyp = (horizontal / 100.0f) * speed * (running ? running_speed_multiplier : 1.0f);
+
+				body->SetLinearVelocity(b2Vec2(hyp, lin_vel.y));// 0.0f));
+
+				//if ((lin_vel.x == 0.0f || lin_vel.y == 0.0f) && hyp > 0.1f) {
+				//	body->SetLinearVelocity(b2Vec2(hyp, 0.0f));
+				////} else if (lin_vel.x == 0.0f) {
+				////	body->SetLinearVelocity(b2Vec2(hyp, body->GetLinearVelocity().y));
+				////} else if (lin_vel.y == 0.0f) {
+				////	body->SetLinearVelocity(b2Vec2(hyp, body->GetLinearVelocity().y));
+				//} else {
+				//	if (hyp != 0.0f) {
+				//		float32 radians = 0.0f;
+				//		float32 angle = 0.0f;
+				//
+				//		radians = atan(lin_vel.y / lin_vel.x);
+				//		angle = radians * 180.0f / 3.141592653589793238463f;
+				//
+				//		float32 hor = hyp * cosf(radians);
+				//		float32 ver = hyp * sinf(radians);
+				//
+				//		//if ((lin_vel.x > 0.0f && hor < 0.0f) || (lin_vel.x < 0.0f && hor > 0.0f)) {
+				//		//	hor *= -1.0f;
+				//		//}
+				//		//if ((lin_vel.y < 0.0f && ver < 0.0f) || (lin_vel.y > 0.0f && ver > 0.0f)) {
+				//		//	ver *= -1.0f;
+				//		//}
+				//
+				//		body->SetLinearVelocity(b2Vec2(hor, ver));
+				//
+				//		if (Utilities::Contains(name, "Player")) {
+				//			float32 len = body->GetLinearVelocity().Length();
+				//			cout << len << "\t" << hyp << "\n";
+				//		}
+				//	}
+				//}
 
 				if (horizontal > 0) {
 					SetFacingRight(true);
@@ -710,7 +753,17 @@ void BoulderCreature::Move(float horizontal, float vertical) {
 	}
 }
 
-void BoulderCreature::Jump() {
+bool BoulderCreature::IsJumping() {
+	return jumpStartUpTimer->IsActive();
+}
+
+void BoulderCreature::StartJump() {
+	if (can_take_input && hit_points > 0 && !IsAnAttackActive() && !landing_animation_timer->IsActive()) {
+		jumpStartUpTimer->Start();
+	}
+}
+
+void BoulderCreature::ActuallyJump(bool short_hop) {
 	if (can_take_input && hit_points > 0 && !IsAnAttackActive() && !landing_animation_timer->IsActive()) {
 		bool jumping = false;
 
@@ -723,7 +776,7 @@ void BoulderCreature::Jump() {
 
 		if (jumping) {
 			maxAirSpeed = body->GetLinearVelocity().x;
-			body->SetLinearVelocity(b2Vec2(maxAirSpeed, -jump_power));
+			body->SetLinearVelocity(b2Vec2(maxAirSpeed, short_hop ? -jump_power * 0.8f : -jump_power));
 			SetInTheAir(true);
 		}
 	}
@@ -736,18 +789,35 @@ void BoulderCreature::ReverseHorizontalDirectionIfInHitStun() {
 	}
 }
 
+void BoulderCreature::AddPlatformContact() {
+	if (platformContacts == 0) {
+		Land();
+	}
+
+	platformContacts++;
+}
+
+void BoulderCreature::RemovePlatformContact() {
+	if (platformContacts == 1) {
+		SetInTheAir(true);
+	}
+
+	platformContacts--;
+}
+
 void BoulderCreature::Land() {
 	if (maxVerticalVelocityReached > 20.0f) {
-		landing_animation_timer->Start();
+		//landing_animation_timer->Start();
 	}
 	maxVerticalVelocityReached = 0.0f;
 	SetInTheAir(false);
 	has_double_jump = true;
+	fastFalling = false;
 	if (IsAnAttackActive()) {
 		GetActiveAttack()->StopAttack();
 	}
-	if (jump_input_buffer->IsActive()) {
-		Jump();
+	if (jumpInputBuffer->IsActive()) {
+		StartJump();
 	}
 	if (hit_points <= 0) {
 		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
@@ -786,8 +856,23 @@ void BoulderCreature::SetInteractable(BoulderCreature* new_interactable) {
 	}
 }
 
-void BoulderCreature::UseAttack(int move_type) {
-	if (can_take_input && hit_points > 0 && !landing_animation_timer->IsActive() && !hit_stun_timer->IsActive()) {
+void BoulderCreature::UseAttack(int move_type, bool activate_buffer) {
+	if (activate_buffer) {
+		attack_input_buffer->Start();
+		attack_buffer_attack_index = move_type;
+	}
+
+	if (IsInTheAir()) {
+		if (move_type == Attack::UP_SMASH || move_type == Attack::FORWARD_SMASH || move_type == Attack::DOWN_SMASH || move_type == Attack::JAB) {
+			return;
+		}
+	} else {
+		if (move_type == Attack::UP_AIR || move_type == Attack::FORWARD_AIR || move_type == Attack::DOWN_AIR || move_type == Attack::BACK_AIR || move_type == Attack::NEUTRAL_AIR) {
+			return;
+		}
+	}
+
+	if (can_take_input && hit_points > 0 && !landing_animation_timer->IsActive() && !hit_stun_timer->IsActive() && !IsAnAttackActive()) {
 		attacks[move_type]->InitiateAttack();
 
 		if (move_type < (int)attacking_animations.size()) {
@@ -817,7 +902,7 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 	}
 
 	if (hit_points > 0 && is_hittable) {
-		Singleton<SmashWorld>::Get()->ScreenShake(3.0f);
+		Singleton<SmashWorld>::Get()->ScreenShake((int)(hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) / 8.0f);
 
 		if (hit_stun_timer->IsActive()) {
 			knockBackMultiplier += knockBackMultiplierIncreasePerHit;
@@ -834,14 +919,24 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 		bool is_an_attack_active = IsAnAttackActive();
 
 		if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
-			hit_stun_timer = new StatusTimer((hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) * hitStunMultiplier);
+			hit_stun_timer = new StatusTimer((int)((hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) * hitStunMultiplier));
 			hit_stun_timer->Start();
 			GetActiveAttack()->StopAttack();
 		}
 
-		hit_points -= damage;
-
 		if (hit_points <= 0) {
+			knockBackMultiplier = 1.0f;
+		}
+
+		if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
+			if (pop_up_grounded_enemies && !IsInTheAir()) {
+				body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, -knock_back.y * knockBackMultiplier));
+			} else {
+				body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, knock_back.y * knockBackMultiplier));
+			}
+		}
+
+		if (hit_points > 0 && hit_points - damage <= 0) {
 			hit_points = 0;
 			cashinable_hit_point_value = 0;
 			dying_animation_timer->Start();
@@ -853,17 +948,21 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 				}
 			}
 
-			if (!IsInTheAir()) {
-				body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+			if (player_index != 0) {
+				Singleton<SmashWorld>::Get()->EnemyDied(50);
 			}
+			//if (!IsInTheAir()) {
+			//	body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+			//}
 		} else {
-			if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
-				if (pop_up_grounded_enemies && !IsInTheAir()) {
-					body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, -knock_back.y * knockBackMultiplier));
-				} else {
-					body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, knock_back.y * knockBackMultiplier));
-				}
-			}
+			hit_points -= damage;
+			//if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
+			//	if (pop_up_grounded_enemies && !IsInTheAir()) {
+			//		body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, -knock_back.y * knockBackMultiplier));
+			//	} else {
+			//		body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, knock_back.y * knockBackMultiplier));
+			//	}
+			//}
 
 			if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
 				health_cash_in_timer->Start();
@@ -923,4 +1022,17 @@ bool BoulderCreature::IsAnAttackActive() {
 
 void BoulderCreature::StartTalking() {
 	talking_animation_timer->Start();
+}
+
+int BoulderCreature::GetDamageOfCurrentAttack() {
+	return GetActiveAttack()->GetDamage();
+}
+
+void BoulderCreature::UpdateEffectsVolumes(float new_effects_volume) {
+	RightFootStepSound.setVolume(new_effects_volume);
+	LeftFootStepSound.setVolume(new_effects_volume);
+
+	for (int i = 0; i < (int)GettingHitSounds.size(); i++) {
+		GettingHitSounds[i]->setVolume(new_effects_volume);
+	}
 }

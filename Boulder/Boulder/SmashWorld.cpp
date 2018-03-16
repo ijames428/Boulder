@@ -78,6 +78,45 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_se
 	audioCommentary.setLoop(false);
 }
 
+void SmashWorld::ExportSaveData() {
+	//string save_data_file_name = "save_data.txt";
+	//ifstream f(save_data_file_name.c_str());
+	//if (!f.good()) {
+	//
+	//}
+
+	ofstream ofs("save_data.txt", ios::binary | ios::out);
+
+	Json::Value save_data;
+
+	save_data["WorldData"]["StageOfTheGame"] = StageOfTheGame;
+
+	PlayerOne->ApplyObjectDataToSaveData(save_data);
+
+	if (boss_one != nullptr) {
+		boss_one->ApplyObjectDataToSaveData(save_data);
+	}
+
+	int enemies_size = (int)enemies.size();
+	for (int i = 0; i < enemies_size; i++) {
+		enemies[i]->ApplyObjectDataToSaveData(save_data[enemies[i]->GetName()]);
+	}
+
+	int doors_size = (int)doors.size();
+	for (int i = 0; i < doors_size; i++) {
+		doors[i]->ApplyObjectDataToSaveData(save_data[doors[i]->GetName()]);
+	}
+
+	Json::StreamWriterBuilder wbuilder;
+	std::string document = Json::writeString(wbuilder, save_data);
+
+	ofs << document;
+
+	ofs.close();
+
+	cout << "########## Saved ##########\n";
+}
+
 void SmashWorld::ImportSaveData() {
 	string file_path = "save_data.txt";
 
@@ -112,6 +151,11 @@ void SmashWorld::ImportSaveData() {
 		enemies[i]->ApplySaveDataToObjectData(save_data[enemies[i]->GetName()]);
 	}
 
+	int doors_size = (int)doors.size();
+	for (int i = 0; i < doors_size; i++) {
+		doors[i]->ApplySaveDataToObjectData(save_data[doors[i]->GetName()]);
+	}
+
 	myfile.close();
 }
 
@@ -138,27 +182,25 @@ void ExternalExitToMainMenu() {
 	Singleton<SmashWorld>::Get()->ExitToMainMenu();
 }
 
-void SmashWorld::ExitGame() {
-	render_window->close();
+void ExternalOpenOptionsMenu() {
+	Singleton<SmashWorld>::Get()->OpenOptionsMenu();
 }
 
-void SmashWorld::ExportSaveData() {
-	ofstream ofs("save_data.txt", ios::binary);
+void ExternalCloseOptionsMenu() {
+	Singleton<SmashWorld>::Get()->CloseOptionsMenu();
+}
+
+void ExternalSaveSettings() {
+	Singleton<SmashWorld>::Get()->SaveSettings();
+}
+
+void SmashWorld::SaveSettings() {
+	ofstream ofs("settings_data.txt", ios::binary | ios::out);
 
 	Json::Value save_data;
 
-	save_data["WorldData"]["StageOfTheGame"] = StageOfTheGame;
-
-	PlayerOne->ApplyObjectDataToSaveData(save_data);
-
-	if (boss_one != nullptr) {
-		boss_one->ApplyObjectDataToSaveData(save_data);
-	}
-
-	int enemies_size = (int)enemies.size();
-	for (int i = 0; i < enemies_size; i++) {
-		enemies[i]->ApplyObjectDataToSaveData(save_data[enemies[i]->GetName()]);
-	}
+	save_data["MusicVolume"] = Singleton<Settings>::Get()->music_volume;
+	save_data["EffectsVolume"] = Singleton<Settings>::Get()->effects_volume;
 
 	Json::StreamWriterBuilder wbuilder;
 	std::string document = Json::writeString(wbuilder, save_data);
@@ -166,8 +208,27 @@ void SmashWorld::ExportSaveData() {
 	ofs << document;
 
 	ofs.close();
+}
 
-	cout << "########## Saved ##########\n";
+void SmashWorld::OpenOptionsMenu() {
+	PauseMenu->Close();
+
+	OptionsMenu->SetCurrentSliderValueByText("Music Volume", (int)Singleton<Settings>::Get()->music_volume);
+	OptionsMenu->SetCurrentSliderValueByText("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume);
+
+	OptionsMenu->Open();
+}
+
+void SmashWorld::CloseOptionsMenu() {
+	OptionsMenu->Close();
+
+	UpdateEffectsSoundsThroughoutGame();
+
+	PauseMenu->Open();
+}
+
+void SmashWorld::ExitGame() {
+	render_window->close();
 }
 
 void SmashWorld::PlayerDied() {
@@ -180,6 +241,9 @@ void SmashWorld::CloseCurrentMenu() {
 		player_character_input->EatInputsForNumberOfFrames(1);
 	} else if (DeadMenu->IsOpen) {
 		DeadMenu->Close();
+		player_character_input->EatInputsForNumberOfFrames(1);
+	} else if (OptionsMenu->IsOpen) {
+		CloseOptionsMenu();
 		player_character_input->EatInputsForNumberOfFrames(1);
 	}
 }
@@ -225,6 +289,7 @@ void SmashWorld::Setup(float frames_per_second) {
 	PauseMenu->AddItem("Resume Game", &ExternalResumeGame);
 	PauseMenu->AddItem("Save Game", &ExternalExportSaveData);
 	PauseMenu->AddItem("Load Game", &ExternalImportSaveData);
+	PauseMenu->AddItem("Options", &ExternalOpenOptionsMenu);
 	PauseMenu->AddItem("Go To Main Menu", &ExternalExitToMainMenu);
 	PauseMenu->AddItem("Exit Game", &ExternalExitGame);
 
@@ -233,10 +298,13 @@ void SmashWorld::Setup(float frames_per_second) {
 	DeadMenu->AddItem("Go To Main Menu", &ExternalExitToMainMenu);
 	DeadMenu->AddItem("Exit Game", &ExternalExitGame);
 
-	//parallax_background_texture.loadFromFile("Images/parallax_background.jpg");
-	//parallax_background_sprite = sf::Sprite(parallax_background_texture);
-	//parallax_background_sprite.setPosition(0.0f, 0.0f);
-	//parallax_background_sprite.setScale(0.4f, 0.4f);
+	OptionsMenu = new Menu(render_window, camera->viewport_dimensions);
+	OptionsMenu->AddItem("Music Volume", (int)Singleton<Settings>::Get()->music_volume, 100);
+	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
+	OptionsMenu->AddItem("Save Settings", &ExternalSaveSettings);
+	OptionsMenu->AddItem("Back", &ExternalCloseOptionsMenu);
+	
+	UpdateEffectsSoundsThroughoutGame();
 }
 
 void SmashWorld::UpdateVideo() {
@@ -246,7 +314,7 @@ void SmashWorld::UpdateVideo() {
 	while (intro_cutscene.getStatus() == sfe::Playing) {
 		render_window->clear();
 	
-		player_menu_input->Update();
+		//player_menu_input->Update();
 	
 		intro_cutscene.update();
 		render_window->draw(intro_cutscene);
@@ -268,7 +336,7 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 #ifdef _DEBUG
 	if (intro_cutscene.getStatus() == sfe::Playing) {
-		player_menu_input->Update();
+		//player_menu_input->Update();
 	
 		intro_cutscene.update();
 		render_window->draw(intro_cutscene);
@@ -281,8 +349,10 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	} else if (DeadMenu->IsOpen) {
 		player_menu_input->Update();
 		DeadMenu->Draw(curr_frame);
-	}
-	else {
+	} else if (OptionsMenu->IsOpen) {
+		player_menu_input->Update();
+		OptionsMenu->Draw(curr_frame);
+	} else {
 		current_frame = curr_frame;
 
 		world->Step(timeStep, velocityIterations, positionIterations);
@@ -291,8 +361,7 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 		if (unit_type_player_is_talking_to != "") {
 			player_menu_input->Update();
-		}
-		else {
+		} else {
 			player_character_input->Update();
 		}
 
@@ -317,12 +386,16 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 		int doors_size = (int)doors.size();
 		for (int i = 0; i < doors_size; i++) {
-			doors[i]->Update(current_frame, frame_delta);
+			if (doors[i]->IfShouldUpdate(player_screen_pos, camera->viewport_dimensions)) {
+				doors[i]->Update(current_frame, frame_delta);
+			}
 		}
 
 		if (boss_one_fight_started) {
-			boss_one->Update(current_frame, frame_delta);
-			boss_one->Draw(camera->viewport_position);
+			if (boss_one->IfShouldUpdate(player_screen_pos, camera->viewport_dimensions)) {
+				boss_one->Update(current_frame, frame_delta);
+				boss_one->Draw(camera->viewport_position);
+			}
 		}
 
 		int enemies_size = (int)enemies.size();
@@ -336,6 +409,14 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		int platform_sprites_size = (int)platformSprites.size();
 		for (int i = 0; i < platform_sprites_size; i++) {
 			platformSprites[i]->setPosition(sf::Vector2f((platformXs[i] - camera->viewport_position.x) * 40.0f + 0.0f, (platformYs[i] - camera->viewport_position.y) * 40.0f + 0.0f));
+
+			if (abs(player_screen_pos.x - platformSprites[i]->getPosition().x) > camera->viewport_position.x * 1.25f) {
+				continue;
+			}
+
+			if (abs(player_screen_pos.y - platformSprites[i]->getPosition().y) > camera->viewport_position.y * 1.25f) {
+				continue;
+			}
 
 			render_window->draw(*platformSprites[i]);
 		}
@@ -707,12 +788,14 @@ string SmashWorld::GetCurrentPointInGame() {
 }
 
 void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
-	if (PauseMenu->IsOpen || DeadMenu->IsOpen) {
+	if (PauseMenu->IsOpen || DeadMenu->IsOpen || OptionsMenu->IsOpen) {
 		if (vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
 			if (PauseMenu->IsOpen) {
 				PauseMenu->MoveCursorDown();
 			} else if (DeadMenu->IsOpen) {
 				DeadMenu->MoveCursorDown();
+			} else if (OptionsMenu->IsOpen) {
+				OptionsMenu->MoveCursorDown();
 			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
@@ -720,10 +803,31 @@ void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
 				PauseMenu->MoveCursorUp();
 			} else if (DeadMenu->IsOpen) {
 				DeadMenu->MoveCursorUp();
+			} else if (OptionsMenu->IsOpen) {
+				OptionsMenu->MoveCursorUp();
 			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical >= -90.0f && vertical <= 90.0f) {
 			can_take_another_left_stick_input_from_menu_controller = true;
+		}
+
+		int return_value = 0;
+		bool apply_return_value = false;
+
+		if (horizontal > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			return_value = OptionsMenu->MoveCursorRight();
+			apply_return_value = true;
+		} else if (horizontal < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			return_value = OptionsMenu->MoveCursorLeft();
+			apply_return_value = true;
+		}
+
+		if (apply_return_value) {
+			if (OptionsMenu->GetCurrentSelectionText() == "Music Volume") {
+				Singleton<Settings>::Get()->music_volume = (float)return_value;
+			} else if (OptionsMenu->GetCurrentSelectionText() == "Effects Volume") {
+				Singleton<Settings>::Get()->effects_volume = (float)return_value;
+			}
 		}
 	}
 }
@@ -736,10 +840,33 @@ void SmashWorld::HandleButtonBPress() {
 		PauseMenu->Close();
 	} else if (DeadMenu->IsOpen) {
 		DeadMenu->Close();
+	} else if (OptionsMenu->IsOpen) {
+		CloseOptionsMenu();
 	} else if (unit_type_player_is_talking_to != "") {
 		unit_type_player_is_talking_to = "";
 		CurrentDialogueLine = nullptr;
 		dialogue_text.setString("");
+	}
+}
+
+void SmashWorld::UpdateEffectsSoundsThroughoutGame() {
+	float new_effects_volume = (float)OptionsMenu->GetCurrentSliderValueByText("Effects Volume");
+
+	PlayerOne->UpdateEffectsVolumes(new_effects_volume);
+
+	// Doors will eventually have sounds.
+	//int doors_size = (int)doors.size();
+	//for (int i = 0; i < doors_size; i++) {
+	//	doors[i]->UpdateEffectsVolumes(new_effects_volume);
+	//}
+
+	if (boss_one_fight_started) {
+		boss_one->UpdateEffectsVolumes(new_effects_volume);
+	}
+
+	int enemies_size = (int)enemies.size();
+	for (int i = 0; i < enemies_size; i++) {
+		enemies[i]->UpdateEffectsVolumes(new_effects_volume);
 	}
 }
 
@@ -766,6 +893,8 @@ void SmashWorld::HandleButtonAPress() {
 		PauseMenu->ExecuteCurrentSelection();
 	} else if (DeadMenu->IsOpen) {
 		DeadMenu->ExecuteCurrentSelection();
+	} else if (OptionsMenu->IsOpen) {
+		OptionsMenu->ExecuteCurrentSelection();
 	}
 }
 
@@ -779,7 +908,7 @@ void SmashWorld::HandleButtonStartPress() {
 	} else 
 #else
 #endif
-	if (past_setup) {
+	if (past_setup && (!DeadMenu->IsOpen && !OptionsMenu->IsOpen)) {
 		PauseMenu->Open();
 	}
 }
@@ -794,5 +923,10 @@ void SmashWorld::HandleButtonSelectRelease() {
 }
 
 void SmashWorld::StartAudioCommentary() {
+	audioCommentary.setVolume(Singleton<Settings>::Get()->music_volume);
 	audioCommentary.play();
+}
+
+void SmashWorld::EnemyDied(int experience_points) {
+	PlayerOne->ReceiveExperience(experience_points);
 }

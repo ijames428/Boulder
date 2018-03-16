@@ -90,8 +90,10 @@ protected:
 	b2FixtureDef groundCheckFixtureDef;
 	bool has_double_jump;
 	void Move(float horizontal, float vertical);
-	void Jump();
-	void UseAttack(int move_type);
+	bool IsJumping();
+	void StartJump();
+	void ActuallyJump(bool short_hop = false);
+	void UseAttack(int move_type, bool activate_buffer = true);
 	sf::RectangleShape* healthBarRect;
 	float starting_health_bar_width;
 	string name = "";
@@ -124,7 +126,17 @@ protected:
 	StatusTimer* dying_animation_timer;
 	StatusTimer* landing_animation_timer;
 	StatusTimer* talking_animation_timer;
-	StatusTimer* jump_input_buffer;
+	StatusTimer* jumpStartUpTimer;
+	StatusTimer* jumpInputBuffer;
+
+	bool jumpInputBufferWasActiveLastFrame;
+	bool jumpStartUpTimerWasActiveLastFrame;
+	bool releasedJumpButton;
+
+	StatusTimer* attack_input_buffer;
+	int attack_buffer_attack_index;
+	bool anAttackWasActiveLastFrame;
+
 	StatusTimer* health_cash_in_timer;
 	sf::Int16 cashinable_hit_point_value;
 	sf::Int16 cashinable_hit_point_drain_rate;
@@ -164,16 +176,22 @@ protected:
 	float maxVerticalVelocityReached = 0.0f;
 	//float xVelocityWhenJumpHappened = 0.0f;
 	float maxAirSpeed = 0.0f;
+	float normalTerminalVelocity = 20.0f;
+	float fastFallingVelocity = 40.0f;
+	bool fastFalling = false;
+
 	float attackDistance = 0.0f;
 
 	float knockBackMultiplier = 1.0f;
-	float knockBackMultiplierIncreasePerHit = 0.2f;
+	float knockBackMultiplierIncreasePerHit = 0.3f;
 
 	float hitStunMultiplier = 1.0f;
-	float hitStunMultiplierDecreasePerHit = 0.2f;
+	float hitStunMultiplierDecreasePerHit = 0.1f;
 	float minimumHitStunMultiplier = 0.2f;
 
 	bool attacksAreInterruptible;
+
+	int platformContacts = 0;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
@@ -184,6 +202,8 @@ public:
 	Attack* GetActiveAttack();
 	bool IsAnAttackActive();
 	virtual void Land();
+	void AddPlatformContact();
+	void RemovePlatformContact();
 	void Aggro(BoulderCreature* new_target);
 	virtual void Deaggro();
 	void SetInteractable(BoulderCreature* new_interactable);
@@ -194,6 +214,8 @@ public:
 	virtual void UpdateBehavior(); 
 	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions); 
 	void ReverseHorizontalDirectionIfInHitStun();
+	virtual int GetDamageOfCurrentAttack();
+	virtual void UpdateEffectsVolumes(float new_effects_volume);
 
 	string GetName() {
 		return name;

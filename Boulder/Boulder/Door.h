@@ -29,6 +29,17 @@ public:
 	void AddActivator(string activator_name);
 	void SetLocked(bool locked);
 	string Name;
+	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
+	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
+	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions);
+
+	sf::Vector2f GetScreenPosition() {
+		return sf::Vector2f(body->GetPosition().x * 40.0f, body->GetPosition().y * 40.0f);
+	}
+
+	string GetName() {
+		return Name;
+	};
 };
 
 #endif

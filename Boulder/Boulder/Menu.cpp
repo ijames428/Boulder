@@ -34,6 +34,12 @@ void Menu::AddItem(string text, callback_function pFunc) {
 	int item_in_list = (int)menu_items.size() - 1;
 }
 
+void Menu::AddItem(string text, int current_value, int number_of_possible_values) {
+	menu_items.push_back(MenuItem(text, current_value, number_of_possible_values));
+
+	int item_in_list = (int)menu_items.size() - 1;
+}
+
 void Menu::Draw(sf::Int64 curr_frame) {
 	for (int i = 0; i < (int)menu_items.size(); i++) {
 		menu_items[i].Draw(render_window, sf::Vector2f(50.0f, 50.0f + 50.0f * i));
@@ -62,6 +68,36 @@ void Menu::MoveCursorUp() {
 	}
 }
 
+int Menu::MoveCursorRight() {
+	return menu_items[cursor_position].MoveSliderRight();
+}
+
+int Menu::MoveCursorLeft() {
+	return menu_items[cursor_position].MoveSliderLeft();
+}
+
+string Menu::GetCurrentSelectionText() {
+	return menu_items[cursor_position].GetString();
+}
+
+void Menu::SetCurrentSliderValueByText(string menu_item_text, int new_value) {
+	int menu_items_size = (int)menu_items.size();
+	for (int i = 0; i < menu_items_size; i++) {
+		if (menu_items[i].GetString() == menu_item_text) {
+			menu_items[i].SetCurrentSliderValue(new_value);
+		}
+	}
+}
+
+int Menu::GetCurrentSliderValueByText(string menu_item_text) {
+	int menu_items_size = (int)menu_items.size();
+	for (int i = 0; i < menu_items_size; i++) {
+		if (menu_items[i].GetString() == menu_item_text) {
+			return menu_items[i].GetCurrentSliderValue();
+		}
+	}
+}
+
 MenuItem::MenuItem(string text, callback_function action) {
 	Text = text;
 	Action = action;
@@ -69,7 +105,20 @@ MenuItem::MenuItem(string text, callback_function action) {
 	MenuItemText = sf::Text(text, Font, 45);
 }
 
-string MenuItem::GetText() {
+MenuItem::MenuItem(string text, int current_value, int number_of_possible_values) {
+	Text = text;
+	CurrentSliderValue = current_value;
+	TotalSliderValues = number_of_possible_values;
+
+	SliderLine = new sf::RectangleShape(sf::Vector2f(300, 4));
+	SliderCursor = new sf::RectangleShape(sf::Vector2f(20, 8));
+	SliderCursor->rotate(90);
+
+	Font.loadFromFile("Images/RingbearerFont.ttf");
+	MenuItemText = sf::Text(text, Font, 45);
+}
+
+string MenuItem::GetString() {
 	return Text;
 }
 
@@ -83,14 +132,51 @@ void MenuItem::ExecutionAction() {
 	}
 }
 
+int MenuItem::MoveSliderRight() {
+	if (TotalSliderValues == 0) {
+		return 0;
+	}
+
+	CurrentSliderValue++;
+
+	if (CurrentSliderValue > TotalSliderValues) {
+		CurrentSliderValue = TotalSliderValues;
+	}
+
+	return CurrentSliderValue;
+}
+
+int MenuItem::MoveSliderLeft() {
+	if (TotalSliderValues == 0) {
+		return 0;
+	}
+
+	CurrentSliderValue--;
+
+	if (CurrentSliderValue < 0) {
+		CurrentSliderValue = 0;
+	}
+
+	return CurrentSliderValue;
+}
+
 void MenuItem::Draw(sf::RenderWindow* window, sf::Vector2f position) {
 	MenuItemText = sf::Text(Text, Font, 45);
 	MenuItemText.setPosition(position);
 
+	sf::Color gray = sf::Color(105, 105, 105);
+
 	if (!Enabled()) {
-		sf::Color gray = sf::Color(105, 105, 105);
 		MenuItemText.setFillColor(gray);
 		MenuItemText.setOutlineColor(gray);
+	}
+
+	if (TotalSliderValues != 0) {
+		SliderLine->setPosition(sf::Vector2f(position.x + 395.0f, position.y + 23.0f));
+		SliderCursor->setPosition(sf::Vector2f(position.x + 400.0f + ((300.0f / TotalSliderValues) * (CurrentSliderValue - 1)), position.y + 16.0f));
+
+		window->draw(*SliderLine);
+		window->draw(*SliderCursor);
 	}
 
 	window->draw(MenuItemText);
@@ -106,4 +192,12 @@ bool MenuItem::Enabled() {
 	}
 
 	return true;
+}
+
+void MenuItem::SetCurrentSliderValue(int new_value) {
+	CurrentSliderValue = new_value;
+}
+
+int MenuItem::GetCurrentSliderValue() {
+	return CurrentSliderValue;
 }

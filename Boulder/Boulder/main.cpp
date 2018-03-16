@@ -9,6 +9,7 @@
 #include "SmashWorld.h"
 #include "GameLibrary\InputHandler.h"
 #include "Menu.h"
+#include <fstream>
 //#include "PlayerCharacter.h"
 //#include "Drone.h"
 //#include "..\GameLibrary\Camera.h"
@@ -74,6 +75,7 @@ bool a_button_current;
 bool b_button_current;
 bool start_button_current;
 float left_stick_vertical = 0.0f;
+float left_stick_horizontal = 0.0f;
 
 bool a_button_previous = false;
 bool b_button_previous = false;
@@ -87,6 +89,7 @@ sf::Int64 microseconds_per_frame = microseconds_in_a_second / frames_per_second;
 sf::Int64 current_frame = 0;
 
 Menu* MainMenu;
+Menu* OptionsMenu;
 bool can_take_another_left_stick_input_from_menu_controller = true;
 bool load_game = false;
 
@@ -118,6 +121,66 @@ void Exit() {
 	window->close();
 }
 
+void OpenOptionsMenu() {
+	MainMenu->Close();
+
+	OptionsMenu->SetCurrentSliderValueByText("Music Volume", (int)Singleton<Settings>::Get()->music_volume);
+	OptionsMenu->SetCurrentSliderValueByText("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume);
+
+	OptionsMenu->Open();
+}
+
+void ExitOptionsMenu() {
+	OptionsMenu->Close();
+	MainMenu->Open();
+}
+
+void LoadSettings() {
+	string save_data_file_name = "settings_data.txt";
+	ifstream f(save_data_file_name.c_str());
+	if (f.good()) {
+		Json::Value save_data;
+		string rawData = "";
+		string line;
+		ifstream myfile(save_data_file_name, ios::binary);
+
+		if (myfile.is_open()) {
+			while (getline(myfile, line)) {
+				rawData += line;
+			}
+
+			myfile.close();
+		}
+		else {
+			cout << "Unable to open file " << save_data_file_name << "\n";
+		}
+
+		Json::Reader reader;
+		reader.parse(rawData, save_data);
+
+		Singleton<Settings>::Get()->music_volume = save_data["MusicVolume"].asFloat();
+		Singleton<Settings>::Get()->effects_volume = save_data["EffectsVolume"].asFloat();
+
+		myfile.close();
+	}
+}
+
+void SaveSettings() {
+	ofstream ofs("settings_data.txt", ios::binary | ios::out);
+
+	Json::Value save_data;
+
+	save_data["MusicVolume"] = Singleton<Settings>::Get()->music_volume;
+	save_data["EffectsVolume"] = Singleton<Settings>::Get()->effects_volume;
+
+	Json::StreamWriterBuilder wbuilder;
+	std::string document = Json::writeString(wbuilder, save_data);
+
+	ofs << document;
+
+	ofs.close();
+}
+
 int main()
 {
 	if (!sf::Shader::isAvailable())
@@ -138,31 +201,21 @@ int main()
 	sf::Int64 time_previous = time.asMicroseconds();
 	sf::Int64 frame_delta;
 	sf::Int64 start_time = time.asMicroseconds();
-	
-	float background_music_volume = 10.0f;
-	float combat_music_volume = 0.0f;
 
 	bool go_to_credits = false;
-
-	Singleton<Settings>::Get()->effects_volume = 10.0f;
-	Singleton<Settings>::Get()->music_volume = 50.0f;
+	
+	LoadSettings();
 
 	if (!background_music.openFromFile("Sound/background_music0.ogg"))
 		return -1;
-	background_music.setVolume((float)background_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
-#ifdef _DEBUG
-#else
+	background_music.setVolume(Singleton<Settings>::Get()->music_volume);
 	background_music.play();
-#endif
 	background_music.setLoop(true);
 
 	if (!combat_music.openFromFile("Sound/combat_music.ogg"))
 		return -1;
-	combat_music.setVolume((float)combat_music_volume * (Singleton<Settings>::Get()->music_volume / 100.0f));
-#ifdef _DEBUG
-#else
+	combat_music.setVolume(0.0f);
 	combat_music.play();
-#endif
 	combat_music.setLoop(true);
 
 	camera = new Camera(sf::Vector2f(0, 0), sf::Vector2f(viewport_width, viewport_height));
@@ -176,7 +229,8 @@ int main()
 		return -1;
 
 	logo_screen_sprite = sf::Sprite(logo_screen_texture);
-	int logo_screen_sprite_transparency = 0;
+	logo_screen_sprite.setScale(viewport_width / logo_screen_texture.getSize().x, viewport_height / logo_screen_texture.getSize().y);
+	logo_screen_sprite_transparency = 0;
 
 	if (!start_menu_background_texture.loadFromFile("Images/StartMenuBackground.png"))
 		return -1;
@@ -199,7 +253,14 @@ int main()
 	MainMenu->AddItem("New Game", &NewGame);
 	MainMenu->AddItem("Play Game With Audio Commentary", &NewGameWithCommentary);
 	MainMenu->AddItem("Load Game", &LoadGame);
+	MainMenu->AddItem("Options", &OpenOptionsMenu);
 	MainMenu->AddItem("Exit", &Exit);
+
+	OptionsMenu = new Menu(window, camera->viewport_dimensions);
+	OptionsMenu->AddItem("Music Volume", (int)Singleton<Settings>::Get()->music_volume, 100);
+	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
+	OptionsMenu->AddItem("Save Settings", &SaveSettings);
+	OptionsMenu->AddItem("Back", &ExitOptionsMenu);
 
 	while (window->isOpen())
 	{
@@ -211,6 +272,7 @@ int main()
 		start_button_current = sf::Joystick::isButtonPressed(0, start_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
 
 		left_stick_vertical = 0.0f;
+		left_stick_horizontal = 0.0f;
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
 			left_stick_vertical = 100.0f;
@@ -218,6 +280,14 @@ int main()
 			left_stick_vertical = -100.0f;
 		} else {
 			left_stick_vertical = sf::Joystick::getAxisPosition(0, sf::Joystick::Y);
+		}
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+			left_stick_horizontal = 100.0f;
+		} else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+			left_stick_horizontal = -100.0f;
+		} else {
+			left_stick_horizontal = sf::Joystick::getAxisPosition(0, sf::Joystick::X);
 		}
 
 		if (time_previous + microseconds_per_frame < time_current) {
@@ -268,6 +338,10 @@ int main()
 			//std::printf("%4.2f pct good frames\t%4.2f pct bad frames.  \r", (((float)good_frames / (float)current_frame) * 100.0f), (((float)bad_frames / (float)current_frame) * 100.0f));
 			//cout << (((float)good_frames / (float)current_frame) * 100.0f) << "% of frames are good\t\t" << (((float)bad_frames / (float)current_frame) * 100.0f) << "% of frames are bad\r";
 		}
+
+		if (background_music.getVolume() != Singleton<Settings>::Get()->music_volume) {
+			background_music.setVolume(Singleton<Settings>::Get()->music_volume);
+		}
 	}
 
 	return 0;
@@ -303,28 +377,69 @@ void UpdateGameStateLogos() {
 }
 
 void UpdateGameStateStartMenu() {
+	int return_value = 0;
+	bool apply_return_value = false;
+
 	window->clear();
+	window->draw(title_text);
 
 	if (MainMenu->IsOpen) {
 		if (left_stick_vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
 			MainMenu->MoveCursorDown();
 			can_take_another_left_stick_input_from_menu_controller = false;
-		}
-		else if (left_stick_vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+		} else if (left_stick_vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
 			MainMenu->MoveCursorUp();
 			can_take_another_left_stick_input_from_menu_controller = false;
-		}
-		else if (left_stick_vertical >= -90.0f && left_stick_vertical <= 90.0f) {
+		} else if (left_stick_vertical >= -90.0f && left_stick_vertical <= 90.0f) {
 			can_take_another_left_stick_input_from_menu_controller = true;
+		}
+
+		MainMenu->Draw(current_frame);
+	} else if (OptionsMenu->IsOpen) {
+		if (left_stick_vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			OptionsMenu->MoveCursorDown();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (left_stick_vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			OptionsMenu->MoveCursorUp();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (left_stick_vertical >= -90.0f && left_stick_vertical <= 90.0f) {
+			can_take_another_left_stick_input_from_menu_controller = true;
+		}
+
+		if (left_stick_horizontal > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			return_value = OptionsMenu->MoveCursorRight();
+			apply_return_value = true;
+		} else if (left_stick_horizontal < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			return_value = OptionsMenu->MoveCursorLeft();
+			apply_return_value = true;
+		}
+
+		if (apply_return_value) {
+			if (OptionsMenu->GetCurrentSelectionText() == "Music Volume") {
+				Singleton<Settings>::Get()->music_volume = (float)return_value;
+			} else if (OptionsMenu->GetCurrentSelectionText() == "Effects Volume") {
+				Singleton<Settings>::Get()->effects_volume = (float)return_value;
+			}
+		}
+
+		OptionsMenu->Draw(current_frame);
+	}
+
+	if (WasButtonAPressed() || WasButtonStartPressed()) {
+		if (MainMenu->IsOpen) {
+			MainMenu->ExecuteCurrentSelection();
+		} else if (OptionsMenu->IsOpen) {
+			OptionsMenu->ExecuteCurrentSelection();
 		}
 	}
 
-	window->draw(title_text);
-	//window->draw(start_text);
-	MainMenu->Draw(current_frame);
-
-	if (WasButtonAPressed() || WasButtonStartPressed()) {
-		MainMenu->ExecuteCurrentSelection();
+	if (WasButtonBPressed()) {
+		if (MainMenu->IsOpen) {
+			logo_screen_sprite_transparency = 0;
+			GameState = GAME_STATE_LOGOS;
+		} else if (OptionsMenu->IsOpen) {
+			ExitOptionsMenu();
+		}
 	}
 
 	HandleClosingEvent();
@@ -362,8 +477,7 @@ void UpdateGameStateCredits() {
 int IncrementTransparency(int transparency) {
 	if (transparency >= 255) {
 		transparency = 255;
-	}
-	else {
+	} else {
 		transparency++;
 	}
 

@@ -94,7 +94,7 @@ void BossOne::UpdateBehavior() {
 							UseAttack(0);
 						}
 					} else if (rng >= 3) {
-						Jump();
+						ActuallyJump();
 					}
 				}
 			}
