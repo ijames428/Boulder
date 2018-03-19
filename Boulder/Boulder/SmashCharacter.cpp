@@ -131,6 +131,66 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	dying_animation_timer = new StatusTimer(numberOfDyingAnimationFrames);
 
 	ringbearerFont.loadFromFile("Images/RingbearerFont.ttf");
+
+	rageLevel = 0;
+	angerTowardsNextRageLevel = 0;
+	angerNeededForNextRageLevel = 1000;
+
+	tierRageColors.push_back(sf::Color::Green);
+	tierRageColors.push_back(sf::Color::Yellow);
+	tierRageColors.push_back(sf::Color(255, 128, 0, 255));
+	tierRageColors.push_back(sf::Color::Red);
+
+	rageLevelText = new sf::Text(to_string(rageLevel), ringbearerFont, 25);
+	rageLevelText->setFillColor(sf::Color::White);
+	rageLevelText->setOutlineColor(sf::Color::Black);
+	rageLevelText->setOutlineThickness(1.5f);
+	rageLevelText->setPosition(5.0f, 90.0f);
+
+	rageLevelProgressBarRect = new sf::RectangleShape(sf::Vector2f(0.0f, 15.0f));
+	rageLevelProgressBarRect->setPosition(25.0f, 100.0f);
+	rageLevelProgressBarRect->setFillColor(tierRageColors[0]);
+
+	rageLevelBarBackgroundRect = new sf::RectangleShape(sf::Vector2f(200.0f, 15.0f));
+	rageLevelBarBackgroundRect->setPosition(25.0f, 100.0f);
+	rageLevelBarBackgroundRect->setFillColor(sf::Color::White);
+	rageLevelBarBackgroundRect->setOutlineThickness(5.0f);
+	rageLevelBarBackgroundRect->setOutlineColor(sf::Color::Black);
+
+	numberOfRunesYouCanActivate = 0;
+
+	sf::Vector2f viewport_dimensions = Singleton<SmashWorld>().Get()->GetCamera()->viewport_dimensions;
+
+	DpadTexture = Singleton<AssetManager>().Get()->GetTexture("Images/Runes/Dpad.png");
+	DpadSprite = new sf::Sprite(*DpadTexture);
+	DpadSprite->setPosition(viewport_dimensions.x - 150.0f, viewport_dimensions.y - 150.0f);
+
+	DamageRune = new Rune("Damage", "Increases damage.", "Images/Runes/DamageRune.png");
+	LifestealRune = new Rune("Lifesteal", "Restores health when hitting enemies", "Images/Runes/LifestealRune.png");
+	SuperJumpRune = new Rune("Super Jump", "Increases jumping power", "Images/Runes/SuperJumpRune.png");
+	DefenseRune = new Rune("Defense", "Reduces the amount of damage taken", "Images/Runes/ShieldRune.png");
+	BerserkerRune = new Rune("Berserker", "More damage at low health, less damage \nat high health", "Images/Runes/BerserkerRune.png");
+
+	RunesList.push_back(DamageRune);
+	RunesList.push_back(LifestealRune);
+	RunesList.push_back(SuperJumpRune);
+	RunesList.push_back(DefenseRune);
+	RunesList.push_back(BerserkerRune);
+
+	DpadLeftRune = DamageRune;
+	DpadLeftRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 200.0f, viewport_dimensions.y - 125.0f);
+	DpadLeftRune->UiSprite->setPosition(DpadLeftRune->UiPosition);
+	DpadLeftRune->UiSprite->setScale(rune_scale);
+
+	DpadUpRune = LifestealRune;
+	DpadUpRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 125.0f, viewport_dimensions.y - 200.0f);
+	DpadUpRune->UiSprite->setPosition(DpadUpRune->UiPosition);
+	DpadUpRune->UiSprite->setScale(rune_scale);
+
+	DpadRightRune = SuperJumpRune;
+	DpadRightRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 50.0f, viewport_dimensions.y - 125.0f);
+	DpadRightRune->UiSprite->setPosition(DpadRightRune->UiPosition);
+	DpadRightRune->UiSprite->setScale(rune_scale);
 }
 
 void SmashCharacter::ReceiveHeal(int heal) {
@@ -289,8 +349,95 @@ void SmashCharacter::UpdateWeaponExperienceBar() {
 	}
 }
 
+void SmashCharacter::UpdateRageLevelBar() {
+	if (angerTowardsNextRageLevel > 0) {
+		angerTowardsNextRageLevel -= 1;
+	} else if (angerTowardsNextRageLevel <= 0 && rageLevel > 0) {
+		DecreaseRageLevel();
+	} else {
+		angerTowardsNextRageLevel = 0;
+	}
+
+	rageLevelProgressBarRect->setSize(sf::Vector2f((float)angerTowardsNextRageLevel / (float)angerNeededForNextRageLevel * 200.0f, 15.0f));
+}
+
+void SmashCharacter::IncreaseRageLevel() {
+	rageLevel++;
+	rageLevelProgressBarRect->setFillColor(tierRageColors[rageLevel]);
+	rageLevelText->setString(to_string(rageLevel));
+	angerTowardsNextRageLevel = (int)(angerNeededForNextRageLevel * 0.25f);
+	numberOfRunesYouCanActivate++;
+}
+
+void SmashCharacter::DecreaseRageLevel() {
+	int number_of_active_runes = (int)tierActivatedRunes.size();
+
+	if (number_of_active_runes > 0) {
+		tierActivatedRunes[number_of_active_runes - 1]->Active = false;
+		cout << tierActivatedRunes[number_of_active_runes - 1]->Name << " deactivated.\n";
+		tierActivatedRunes.pop_back();
+	}
+
+	if (numberOfRunesYouCanActivate > rageLevel) {
+		numberOfRunesYouCanActivate = rageLevel;
+	}
+
+	rageLevel--;
+	rageLevelProgressBarRect->setFillColor(tierRageColors[rageLevel]);
+	rageLevelText->setString(to_string(rageLevel));
+	angerTowardsNextRageLevel = (int)(angerNeededForNextRageLevel * 0.75f);
+}
+
+void SmashCharacter::ResetRuneUiPositions(sf::Vector2f viewport_dimensions) {
+	DpadLeftRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 200.0f, viewport_dimensions.y - 125.0f);
+	DpadUpRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 125.0f, viewport_dimensions.y - 200.0f);
+	DpadRightRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 50.0f, viewport_dimensions.y - 125.0f);
+
+	DpadLeftRune->UiSprite->setPosition(DpadLeftRune->UiPosition);
+	DpadUpRune->UiSprite->setPosition(DpadUpRune->UiPosition);
+	DpadRightRune->UiSprite->setPosition(DpadRightRune->UiPosition);
+}
+
+void SmashCharacter::UpdateRuneUiItems() {
+	readyRuneOffset += (int)((current_frame % 61) - 30) / 120.0f;
+
+	if (numberOfRunesYouCanActivate > 0) {
+		if (!DpadLeftRune->Active) {
+			DpadLeftRune->UiSprite->setPosition(DpadLeftRune->UiPosition.x + readyRuneOffset, DpadLeftRune->UiPosition.y + readyRuneOffset);
+		}
+		if (!DpadUpRune->Active) {
+			DpadUpRune->UiSprite->setPosition(DpadUpRune->UiPosition.x + readyRuneOffset, DpadUpRune->UiPosition.y + readyRuneOffset);
+		}
+		if (!DpadRightRune->Active) {
+			DpadRightRune->UiSprite->setPosition(DpadRightRune->UiPosition.x + readyRuneOffset, DpadRightRune->UiPosition.y + readyRuneOffset);
+		}
+	}
+
+	if (DpadLeftRune->Active) {
+		DpadLeftRune->UiSprite->setScale(0.8f, 0.8f);
+	} else {
+		DpadLeftRune->UiSprite->setScale(0.3f, 0.3f);
+	}
+
+	if (DpadUpRune->Active) {
+		DpadUpRune->UiSprite->setScale(0.8f, 0.8f);
+	} else {
+		DpadUpRune->UiSprite->setScale(0.3f, 0.3f);
+	}
+
+	if (DpadRightRune->Active) {
+		DpadRightRune->UiSprite->setScale(0.8f, 0.8f);
+	} else {
+		DpadRightRune->UiSprite->setScale(0.3f, 0.3f);
+	}
+}
+
 void SmashCharacter::TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies) {
 	bool was_alive = hit_points > 0;
+
+	if (DefenseRune->Active) {
+		damage = (int)(damage * 0.75f);
+	}
 
 	BoulderCreature::TakeDamage(damage, knock_back, hit_stun_frames, pop_up_grounded_enemies);
 	UpdateHealthBar();
@@ -329,6 +476,8 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 
 	UpdateCharacterExperienceBar();
 	UpdateWeaponExperienceBar();
+	UpdateRageLevelBar();
+	UpdateRuneUiItems();
 
 	if (IsInTheAir()) {
 		b2Vec2 vel = body->GetLinearVelocity();
@@ -508,11 +657,46 @@ void SmashCharacter::Draw(sf::Vector2f camera_position) {
 	render_window->draw(*weaponExperienceBarBackgroundRect);
 	render_window->draw(*weaponExperienceBarRect);
 	render_window->draw(*weaponExperienceBarAnimatedRect);
+	render_window->draw(*rageLevelBarBackgroundRect);
+	render_window->draw(*rageLevelProgressBarRect);
 
 	render_window->draw(*characterLevelText);
 	render_window->draw(*weaponLevelText);
+	render_window->draw(*rageLevelText);
+
+	render_window->draw(*DpadSprite);
+	render_window->draw(*DpadLeftRune->UiSprite);
+	render_window->draw(*DpadUpRune->UiSprite);
+	render_window->draw(*DpadRightRune->UiSprite);
 
 	BoulderCreature::Draw(camera_position);
+
+	b2Vec2 pos = body->GetPosition();
+
+	//Set position to Center.X + Radius * cos(Period), Center.Y + Radius * sin(Period)
+	//Add 1 to Period
+	//If Period = 360, set it to 0
+	//Rinse, repeat
+
+
+	if (DpadLeftRune->Active) {
+		orbitPeriod1 = orbitPeriod1 + 0.02f;
+		if (orbitPeriod1 >= 360.0f) { orbitPeriod1 = 0.0f; }
+		DpadLeftRune->InGameSprite->setPosition(sf::Vector2f(((pos.x - camera_position.x) * 40.0f - 7.5f) + 25.0f * cos(orbitPeriod1), ((pos.y - camera_position.y) * 40.0f - 7.5f) + 25.0f * sin(orbitPeriod1)));
+		render_window->draw(*DpadLeftRune->InGameSprite);
+	}
+	if (DpadUpRune->Active) {
+		orbitPeriod2 = orbitPeriod2 + 0.04f;
+		if (orbitPeriod2 >= 360.0f) { orbitPeriod2 = 0.0f; }
+		DpadUpRune->InGameSprite->setPosition(sf::Vector2f(((pos.x - camera_position.x) * 40.0f - 7.5f) + 22.0f * cos(orbitPeriod2), ((pos.y - camera_position.y) * 40.0f - 7.5f) + 22.0f * sin(orbitPeriod2)));
+		render_window->draw(*DpadUpRune->InGameSprite);
+	}
+	if (DpadRightRune->Active) {
+		orbitPeriod3 = orbitPeriod3 + 0.06f;
+		if (orbitPeriod3 >= 360.0f) { orbitPeriod3 = 0.0f; }
+		DpadRightRune->InGameSprite->setPosition(sf::Vector2f(((pos.x - camera_position.x) * 40.0f - 7.5f) + 19.0f * cos(orbitPeriod3), ((pos.y - camera_position.y) * 40.0f - 7.5f) + 19.0f * sin(orbitPeriod3)));
+		render_window->draw(*DpadRightRune->InGameSprite);
+	}
 }
 
 void SmashCharacter::HandleButtonXPress() {
@@ -625,7 +809,17 @@ void SmashCharacter::LevelUpWeapon() {
 }
 
 int SmashCharacter::GetDamageOfCurrentAttack() {
-	return (int)(GetActiveAttack()->GetDamage() * (1.0f + weaponLevel * 0.1f));
+	int damage = (int)(GetActiveAttack()->GetDamage() * (1.0f + weaponLevel * 0.1f));
+
+	if (BerserkerRune->Active) {
+		damage = (int)(2.0f - (1.5f * (hit_points / max_hit_points)));
+	}
+
+	if (DamageRune->Active) {
+		damage = (int)(damage * 1.5f);
+	}
+
+	return (int)((GetActiveAttack()->GetDamage() * (1.0f + weaponLevel * 0.1f)) * (DamageRune->Active ? 1.5f : 1.0f));
 }
 
 void SmashCharacter::UpdateEffectsVolumes(float new_effects_volume) {
@@ -633,5 +827,85 @@ void SmashCharacter::UpdateEffectsVolumes(float new_effects_volume) {
 
 	for (int i = 0; i < (int)AttackAnimationSounds.size(); i++) {
 		AttackAnimationSounds[i]->setVolume(new_effects_volume);
+	}
+}
+
+void SmashCharacter::AddAnger(int anger_amount) {
+	angerTowardsNextRageLevel += anger_amount;
+
+	if (angerTowardsNextRageLevel >= angerNeededForNextRageLevel) {
+		if (rageLevel >= 3) {
+			angerTowardsNextRageLevel = angerNeededForNextRageLevel;
+		} else {
+			IncreaseRageLevel();
+		}
+	}
+
+	if (LifestealRune->Active) {
+		ReceiveHeal(25);
+	}
+}
+
+void SmashCharacter::HandleDpadRightPress() {
+	if (numberOfRunesYouCanActivate > 0) {
+		DpadRightRune->Active = true;
+		numberOfRunesYouCanActivate--;
+		cout << DpadRightRune->Name << " Activated!\n";
+		tierActivatedRunes.push_back(DpadRightRune);
+	}
+}
+
+void SmashCharacter::HandleDpadRightRelease() {
+}
+
+void SmashCharacter::HandleDpadLeftPress() {
+	if (numberOfRunesYouCanActivate > 0) {
+		DpadLeftRune->Active = true;
+		numberOfRunesYouCanActivate--;
+		cout << DpadLeftRune->Name << " Activated!\n";
+		tierActivatedRunes.push_back(DpadLeftRune);
+	}
+}
+
+void SmashCharacter::HandleDpadLeftRelease() {
+}
+
+void SmashCharacter::HandleDpadUpPress() {
+	if (numberOfRunesYouCanActivate > 0) {
+		DpadUpRune->Active = true;
+		numberOfRunesYouCanActivate--;
+		cout << DpadUpRune->Name << " Activated!\n";
+		tierActivatedRunes.push_back(DpadUpRune);
+	}
+}
+
+void SmashCharacter::HandleDpadUpRelease() {
+}
+
+void SmashCharacter::HandleDpadDownPress() {
+}
+
+void SmashCharacter::HandleDpadDownRelease() {
+}
+
+void SmashCharacter::ActuallyJump(bool short_hop) {
+	if (can_take_input && hit_points > 0 && !IsAnAttackActive() && !landing_animation_timer->IsActive()) {
+		bool jumping = false;
+
+		if (!IsInTheAir()) {
+			jumping = true;
+		}
+		else if (has_double_jump) {
+			jumping = true;
+			has_double_jump = false;
+		}
+
+		if (jumping) {
+			maxAirSpeed = body->GetLinearVelocity().x;
+			float jump_power_accounting_for_rune = (SuperJumpRune->Active ? jump_power * 2.0f : jump_power);
+
+			body->SetLinearVelocity(b2Vec2(maxAirSpeed, short_hop ? -jump_power_accounting_for_rune * 0.8f : -jump_power_accounting_for_rune));
+			SetInTheAir(true);
+		}
 	}
 }

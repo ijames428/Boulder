@@ -24,6 +24,8 @@ private:
 	bool left_bumper_button_previous = false;
 	bool select_button_previous = false;
 	bool start_button_previous = false;
+	float dpad_horizontal_previous = 0.0f;
+	float dpad_vertical_previous = 0.0f;
 	float deadzone = 20.0f;
 	ControllableCharacter* player_character;
 public:

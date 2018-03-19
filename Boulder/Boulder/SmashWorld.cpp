@@ -8,7 +8,6 @@ using namespace std;
 #include "SmashWorld.h"
 #include "Constants.h"
 #include <thread>
-#include "Utilities.h"
 
 typedef void(*callback_function)(void); // type for conciseness
 
@@ -236,6 +235,8 @@ void SmashWorld::PlayerDied() {
 }
 
 void SmashWorld::CloseCurrentMenu() {
+	bool was_a_menu_open = IsAMenuOpen();
+
 	if (PauseMenu->IsOpen) {
 		PauseMenu->Close();
 		player_character_input->EatInputsForNumberOfFrames(1);
@@ -245,6 +246,17 @@ void SmashWorld::CloseCurrentMenu() {
 	} else if (OptionsMenu->IsOpen) {
 		CloseOptionsMenu();
 		player_character_input->EatInputsForNumberOfFrames(1);
+	} else if (CharScreen->IsOpen) {
+		if (CharScreen->IsOnAssigningRunesPage) {
+			CharScreen->SwitchToCharacterStats();
+		} else {
+			CharScreen->Close();
+		}
+		player_character_input->EatInputsForNumberOfFrames(1);
+	}
+
+	if (was_a_menu_open && !IsAMenuOpen()) {
+		PlayerOne->ResetRuneUiPositions(camera->viewport_dimensions);
 	}
 }
 
@@ -303,6 +315,8 @@ void SmashWorld::Setup(float frames_per_second) {
 	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
 	OptionsMenu->AddItem("Save Settings", &ExternalSaveSettings);
 	OptionsMenu->AddItem("Back", &ExternalCloseOptionsMenu);
+
+	CharScreen = new CharacterScreen(PlayerOne, render_window, camera);
 	
 	UpdateEffectsSoundsThroughoutGame();
 }
@@ -352,6 +366,9 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	} else if (OptionsMenu->IsOpen) {
 		player_menu_input->Update();
 		OptionsMenu->Draw(curr_frame);
+	} else if (CharScreen->IsOpen) {
+		player_menu_input->Update();
+		CharScreen->Draw(camera->viewport_dimensions);
 	} else {
 		current_frame = curr_frame;
 
@@ -788,7 +805,7 @@ string SmashWorld::GetCurrentPointInGame() {
 }
 
 void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
-	if (PauseMenu->IsOpen || DeadMenu->IsOpen || OptionsMenu->IsOpen) {
+	if (IsAMenuOpen()) {
 		if (vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
 			if (PauseMenu->IsOpen) {
 				PauseMenu->MoveCursorDown();
@@ -796,6 +813,8 @@ void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
 				DeadMenu->MoveCursorDown();
 			} else if (OptionsMenu->IsOpen) {
 				OptionsMenu->MoveCursorDown();
+			} else if (CharScreen->IsOpen && CharScreen->IsOnAssigningRunesPage) {
+				CharScreen->MoveCursorDown();
 			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
@@ -805,6 +824,8 @@ void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
 				DeadMenu->MoveCursorUp();
 			} else if (OptionsMenu->IsOpen) {
 				OptionsMenu->MoveCursorUp();
+			} else if (CharScreen->IsOpen && CharScreen->IsOnAssigningRunesPage) {
+				CharScreen->MoveCursorUp();
 			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical >= -90.0f && vertical <= 90.0f) {
@@ -836,17 +857,17 @@ void SmashWorld::HandleRightStickInput(float horizontal, float vertical) {
 }
 
 void SmashWorld::HandleButtonBPress() {
-	if (PauseMenu->IsOpen) {
-		PauseMenu->Close();
-	} else if (DeadMenu->IsOpen) {
-		DeadMenu->Close();
-	} else if (OptionsMenu->IsOpen) {
-		CloseOptionsMenu();
+	if (IsAMenuOpen()) {
+		CloseCurrentMenu();
 	} else if (unit_type_player_is_talking_to != "") {
 		unit_type_player_is_talking_to = "";
 		CurrentDialogueLine = nullptr;
 		dialogue_text.setString("");
 	}
+}
+
+bool SmashWorld::IsAMenuOpen() {
+	return PauseMenu->IsOpen || DeadMenu->IsOpen || OptionsMenu->IsOpen || CharScreen->IsOpen;
 }
 
 void SmashWorld::UpdateEffectsSoundsThroughoutGame() {
@@ -895,21 +916,32 @@ void SmashWorld::HandleButtonAPress() {
 		DeadMenu->ExecuteCurrentSelection();
 	} else if (OptionsMenu->IsOpen) {
 		OptionsMenu->ExecuteCurrentSelection();
+	} else if (CharScreen->IsOpen) {
+		if (CharScreen->IsOnAssigningRunesPage) {
+			CharScreen->SwitchToCharacterStats();
+		}
+		else {
+			CharScreen->SwitchToAssigningRunes();
+		}
 	}
 }
 
 void SmashWorld::HandleButtonARelease() {
 }
 
+void SmashWorld::HandleButtonYPress() {
+}
+
+void SmashWorld::HandleButtonYRelease() {
+}
+
 void SmashWorld::HandleButtonStartPress() {
-#ifdef _DEBUG
-	if (intro_cutscene.getStatus() == sfe::Playing) {
-		intro_cutscene.stop();
-	} else 
-#else
-#endif
-	if (past_setup && (!DeadMenu->IsOpen && !OptionsMenu->IsOpen)) {
-		PauseMenu->Open();
+	if (!PauseMenu->IsOpen && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
+		if (CharScreen->IsOpen) {
+			CharScreen->Close();
+		} else {
+			CharScreen->Open();
+		}
 	}
 }
 
@@ -917,6 +949,16 @@ void SmashWorld::HandleButtonStartRelease() {
 }
 
 void SmashWorld::HandleButtonSelectPress() {
+#ifdef _DEBUG
+	if (intro_cutscene.getStatus() == sfe::Playing) {
+		intro_cutscene.stop();
+	}
+	else
+#else
+#endif
+	if (past_setup && !DeadMenu->IsOpen && !OptionsMenu->IsOpen && !CharScreen->IsOpen) {
+		PauseMenu->Open();
+	}
 }
 
 void SmashWorld::HandleButtonSelectRelease() {
@@ -929,4 +971,36 @@ void SmashWorld::StartAudioCommentary() {
 
 void SmashWorld::EnemyDied(int experience_points) {
 	PlayerOne->ReceiveExperience(experience_points);
+}
+
+void SmashWorld::HandleDpadRightPress() {
+	CharScreen->HandleDpadRightPress();
+}
+
+void SmashWorld::HandleDpadRightRelease() {
+	CharScreen->HandleDpadRightRelease();
+}
+
+void SmashWorld::HandleDpadLeftPress() {
+	CharScreen->HandleDpadLeftPress();
+}
+
+void SmashWorld::HandleDpadLeftRelease() {
+	CharScreen->HandleDpadLeftRelease();
+}
+
+void SmashWorld::HandleDpadUpPress() {
+	CharScreen->HandleDpadUpPress();
+}
+
+void SmashWorld::HandleDpadUpRelease() {
+	CharScreen->HandleDpadUpRelease();
+}
+
+void SmashWorld::HandleDpadDownPress() {
+	CharScreen->HandleDpadDownPress();
+}
+
+void SmashWorld::HandleDpadDownRelease() {
+	CharScreen->HandleDpadDownRelease();
 }

@@ -92,7 +92,7 @@ protected:
 	void Move(float horizontal, float vertical);
 	bool IsJumping();
 	void StartJump();
-	void ActuallyJump(bool short_hop = false);
+	virtual void ActuallyJump(bool short_hop = false);
 	void UseAttack(int move_type, bool activate_buffer = true);
 	sf::RectangleShape* healthBarRect;
 	float starting_health_bar_width;
@@ -216,6 +216,8 @@ public:
 	void ReverseHorizontalDirectionIfInHitStun();
 	virtual int GetDamageOfCurrentAttack();
 	virtual void UpdateEffectsVolumes(float new_effects_volume);
+	virtual void AddAnger(int anger_amount);
+	bool IsInHitStun();
 
 	string GetName() {
 		return name;

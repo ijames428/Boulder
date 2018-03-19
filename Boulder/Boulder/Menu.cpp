@@ -96,6 +96,8 @@ int Menu::GetCurrentSliderValueByText(string menu_item_text) {
 			return menu_items[i].GetCurrentSliderValue();
 		}
 	}
+
+	return 0;
 }
 
 MenuItem::MenuItem(string text, callback_function action) {

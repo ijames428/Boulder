@@ -23,4 +23,12 @@ public:
 	virtual void HandleButtonSelectRelease() = 0;
 	virtual void HandleButtonStartPress() = 0;
 	virtual void HandleButtonStartRelease() = 0;
+	virtual void HandleDpadRightPress() = 0;
+	virtual void HandleDpadRightRelease() = 0;
+	virtual void HandleDpadLeftPress() = 0;
+	virtual void HandleDpadLeftRelease() = 0;
+	virtual void HandleDpadUpPress() = 0;
+	virtual void HandleDpadUpRelease() = 0;
+	virtual void HandleDpadDownPress() = 0;
+	virtual void HandleDpadDownRelease() = 0;
 };

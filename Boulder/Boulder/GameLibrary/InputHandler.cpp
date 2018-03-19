@@ -180,12 +180,39 @@ void InputHandler::Update() {
 		} else {
 			player_character->HandleRightStickInput(0.0f, 0.0f);
 		}
+
+		if (dpad_horizontal == 100 && dpad_horizontal_previous != 100) {
+			player_character->HandleDpadRightPress();
+		} else if (dpad_horizontal == -100 && dpad_horizontal_previous != -100) {
+			player_character->HandleDpadLeftPress();
+		}
+
+		if (dpad_vertical == 100 && dpad_vertical_previous != 100) {
+			player_character->HandleDpadUpPress();
+		} else if (dpad_vertical == -100 && dpad_vertical_previous != -100) {
+			player_character->HandleDpadDownPress();
+		}
+
+		if (dpad_horizontal_previous == 100 && dpad_horizontal != 100) {
+			player_character->HandleDpadRightRelease();
+		} else if (dpad_horizontal_previous == -100 && dpad_horizontal != -100) {
+			player_character->HandleDpadLeftRelease();
+		}
+
+		if (dpad_vertical_previous == 100 && dpad_vertical != 100) {
+			player_character->HandleDpadUpRelease();
+		} else if (dpad_vertical_previous == -100 && dpad_vertical != -100) {
+			player_character->HandleDpadDownRelease();
+		}
 	}
 
 	a_button_previous = a_button_current;
 	b_button_previous = b_button_current;
 	x_button_previous = x_button_current;
 	y_button_previous = y_button_current;
+
+	dpad_horizontal_previous = dpad_horizontal;
+	dpad_vertical_previous = dpad_vertical;
 
 	right_bumper_button_previous = right_bumper_button_current;
 	left_bumper_button_previous = left_bumper_button_current;

@@ -19,6 +19,7 @@ using namespace std;
 #include "Weapon.h"
 #include "StatusTimer.h"
 #include "AdvancedInput.h"
+#include "Rune.h"
 #include "GameLibrary\Json\json.h"
 
 class SmashCharacter : public BoulderCreature, public ControllableCharacter {
@@ -40,8 +41,6 @@ private:
 	int characterExperienceTowardsNextLevelForAnimatedBar;
 	int weaponExperienceTowardsNextLevel;
 	int weaponExperienceTowardsNextLevelForAnimatedBar;
-	int CharacterExperienceNeededForNextLevel(int level);
-	int WeaponExperienceNeededForNextLevel(int level);
 	sf::RectangleShape* characterExperienceBarRect;
 	sf::RectangleShape* weaponExperienceBarRect;
 	sf::RectangleShape* characterExperienceBarAnimatedRect;
@@ -53,7 +52,40 @@ private:
 	sf::Font ringbearerFont;
 	sf::Text* characterLevelText;
 	sf::Text* weaponLevelText;
+
+	int rageLevel;
+	int angerTowardsNextRageLevel;
+	int angerNeededForNextRageLevel;
+	sf::Text* rageLevelText;
+	sf::RectangleShape* rageLevelProgressBarRect;
+	sf::RectangleShape* rageLevelBarBackgroundRect;
+	std::vector<sf::Color> tierRageColors; 
+	void UpdateRageLevelBar();
+	void IncreaseRageLevel();
+	void DecreaseRageLevel();
+	void UpdateRuneUiItems();
+
+	int numberOfRunesYouCanActivate;
+
+	std::vector<Rune*> tierActivatedRunes;
+
+	sf::Texture* DpadTexture;
+	sf::Sprite* DpadSprite;
+	float readyRuneOffset = 0.0f;
+
+	sf::Vector2f rune_scale = sf::Vector2f(0.5f, 0.5f);
+
+	float orbitPeriod1 = 0.0f;
+	float orbitPeriod2 = 0.0f;
+	float orbitPeriod3 = 0.0f;
+
+	Rune* DamageRune;
+	Rune* LifestealRune;
+	Rune* SuperJumpRune;
+	Rune* DefenseRune;
+	Rune* BerserkerRune;
 protected:
+	virtual void ActuallyJump(bool short_hop = false);
 public:
 	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);
@@ -71,6 +103,16 @@ public:
 	void LevelUpWeapon();
 	virtual int GetDamageOfCurrentAttack();
 	virtual void UpdateEffectsVolumes(float new_effects_volume);
+	virtual void AddAnger(int anger_amount);
+	int CharacterExperienceNeededForNextLevel(int level);
+	int WeaponExperienceNeededForNextLevel(int level);
+	void ResetRuneUiPositions(sf::Vector2f viewport_dimensions);
+
+	Rune* DpadLeftRune;
+	Rune* DpadUpRune;
+	Rune* DpadRightRune;
+
+	std::vector<Rune*> RunesList;
 
 	virtual int GetPlayerIndex() {
 		return player_index;
@@ -81,8 +123,24 @@ public:
 	virtual int GetHitPoints() {
 		return hit_points;
 	};
+	virtual int GetMaxHitPoints() {
+		return max_hit_points;
+	};
 	virtual bool CanTakeInput() {
 		return can_take_input;
+	};
+
+	int GetCharacterLevel() {
+		return characterLevel;
+	};
+	int GetWeaponLevel() {
+		return weaponLevel;
+	};
+	int GetExperienceTowardsNextCharacterLevel() {
+		return characterExperienceTowardsNextLevel;
+	};
+	int GetExperienceTowardsNextWeaponLevel() {
+		return weaponExperienceTowardsNextLevel;
 	};
 	
 	void SmashCharacter::HandleLeftStickInput(float horizontal, float vertical) {
@@ -168,6 +226,22 @@ public:
 	void SmashCharacter::HandleButtonStartPress();
 
 	void SmashCharacter::HandleButtonStartRelease();
+
+	void SmashCharacter::HandleDpadRightPress();
+
+	void SmashCharacter::HandleDpadRightRelease();
+
+	void SmashCharacter::HandleDpadLeftPress();
+
+	void SmashCharacter::HandleDpadLeftRelease();
+
+	void SmashCharacter::HandleDpadUpPress();
+
+	void SmashCharacter::HandleDpadUpRelease();
+
+	void SmashCharacter::HandleDpadDownPress();
+
+	void SmashCharacter::HandleDpadDownRelease();
 };
 
 #endif

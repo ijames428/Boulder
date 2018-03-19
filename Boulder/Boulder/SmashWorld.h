@@ -22,6 +22,8 @@ using namespace std;
 #endif
 #include "Menu.h"
 #include "BossOne.h"
+#include "Utilities.h"
+#include "CharacterScreen.h"
 
 class MyContactListener : public b2ContactListener
 {
@@ -185,7 +187,24 @@ class MyContactListener : public b2ContactListener
 				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
 				if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
+					bool entity_was_alive = entityB->GetHitPoints() > 0;
+					bool entity_was_in_hit_stun = entityB->IsInHitStun();
+
 					entityB->TakeDamage(entityA->GetDamageOfCurrentAttack(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
+
+					bool entity_died_with_this_hit = entity_was_alive && entityB->GetHitPoints() <= 0;
+
+					if (entity_was_alive && Utilities::Contains(entityA->GetName(), "Player")) {
+						if (entity_was_in_hit_stun && entity_died_with_this_hit) {
+							entityA->AddAnger(650);
+						} else if (entity_was_in_hit_stun) {
+							entityA->AddAnger(350);
+						} else if (entity_died_with_this_hit) {
+							entityA->AddAnger(450);
+						} else {
+							entityA->AddAnger(150);
+						}
+					}
 				}
 			}
 
@@ -206,7 +225,24 @@ class MyContactListener : public b2ContactListener
 				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
 				if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
+					bool entity_was_alive = entityB->GetHitPoints() > 0;
+					bool entity_was_in_hit_stun = entityB->IsInHitStun();
+
 					entityB->TakeDamage(entityA->GetDamageOfCurrentAttack(), active_attack->GetKnockBack(), active_attack->GetHitStunFrames(), active_attack->IsPopUpMove());
+
+					bool entity_died_with_this_hit = entity_was_alive && entityB->GetHitPoints() <= 0;
+
+					if (entity_was_alive && Utilities::Contains(entityA->GetName(), "Player")) {
+						if (entity_was_in_hit_stun && entity_died_with_this_hit) {
+							entityA->AddAnger(650);
+						} else if (entity_was_in_hit_stun) {
+							entityA->AddAnger(350);
+						} else if (entity_died_with_this_hit) {
+							entityA->AddAnger(450);
+						} else {
+							entityA->AddAnger(150);
+						}
+					}
 				}
 			}
 
@@ -337,6 +373,10 @@ private:
 	std::vector<sf::Sprite*> platformSprites;
 	std::vector<float> platformXs;
 	std::vector<float> platformYs;
+
+	CharacterScreen* CharScreen;
+
+	bool IsAMenuOpen();
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second);
@@ -367,10 +407,20 @@ public:
 	void HandleButtonXRelease();
 	void HandleButtonAPress();
 	void HandleButtonARelease();
+	void HandleButtonYPress();
+	void HandleButtonYRelease();
 	void HandleButtonStartPress();
 	void HandleButtonStartRelease();
 	void HandleButtonSelectPress();
 	void HandleButtonSelectRelease();
+	void HandleDpadRightPress();
+	void HandleDpadRightRelease();
+	void HandleDpadLeftPress();
+	void HandleDpadLeftRelease();
+	void HandleDpadUpPress();
+	void HandleDpadUpRelease();
+	void HandleDpadDownPress();
+	void HandleDpadDownRelease();
 	void ScreenShake(float magnitude);
 	void StartAudioCommentary(); 
 	void OpenOptionsMenu();

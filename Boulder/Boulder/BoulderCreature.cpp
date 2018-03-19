@@ -1036,3 +1036,10 @@ void BoulderCreature::UpdateEffectsVolumes(float new_effects_volume) {
 		GettingHitSounds[i]->setVolume(new_effects_volume);
 	}
 }
+
+void BoulderCreature::AddAnger(int anger_amount) {
+}
+
+bool BoulderCreature::IsInHitStun() {
+	return hit_stun_timer->IsActive();
+}
