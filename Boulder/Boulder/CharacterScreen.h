@@ -11,8 +11,8 @@ private:
 	sf::Text HitPointsText;
 	sf::Text CharacterLevelText;
 	sf::Text CharacterExperiencePointsText;
-	sf::Text WeaponLevelText;
-	sf::Text WeaponExperiencePointsText;
+	//sf::Text WeaponLevelText;
+	//sf::Text WeaponExperiencePointsText;
 	sf::Text BonusesFromLevelsText;
 	sf::Text RunesSectionText;
 	sf::Text RuneDescriptionText;
@@ -45,6 +45,14 @@ private:
 	sf::RectangleShape* cursorRectangle;
 
 	void ResetPositionOfRuneImagesAroundDpad();
+	void ResetEquippedValuesOnRunes();
+
+	sf::RectangleShape* scrollBarLengthRectangle;
+	sf::RectangleShape* scrollBarCursorRectangle;
+
+	sf::Text GoToAssignRunesPageText;
+	sf::Text GoBackToCharacterStatsPageText;
+	sf::Text InstructionsText;
 public:
 	CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_win, Camera* cam);
 	void Draw(sf::Vector2f camera_dimensions);

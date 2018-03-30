@@ -34,24 +34,24 @@ private:
 	bool rightStickWasCentered;
 	sf::Vector2f leftStickInputs;
 	int characterLevel;
-	int weaponLevel;
+	//int weaponLevel;
 	int characterLevelForDisplay;
-	int weaponLevelForDisplay;
+	//int weaponLevelForDisplay;
 	int characterExperienceTowardsNextLevel;
 	int characterExperienceTowardsNextLevelForAnimatedBar;
-	int weaponExperienceTowardsNextLevel;
-	int weaponExperienceTowardsNextLevelForAnimatedBar;
+	//int weaponExperienceTowardsNextLevel;
+	//int weaponExperienceTowardsNextLevelForAnimatedBar;
 	sf::RectangleShape* characterExperienceBarRect;
-	sf::RectangleShape* weaponExperienceBarRect;
+	//sf::RectangleShape* weaponExperienceBarRect;
 	sf::RectangleShape* characterExperienceBarAnimatedRect;
-	sf::RectangleShape* weaponExperienceBarAnimatedRect;
+	//sf::RectangleShape* weaponExperienceBarAnimatedRect;
 	sf::RectangleShape* characterExperienceBarBackgroundRect;
-	sf::RectangleShape* weaponExperienceBarBackgroundRect;
+	//sf::RectangleShape* weaponExperienceBarBackgroundRect;
 	void UpdateCharacterExperienceBar();
-	void UpdateWeaponExperienceBar();
+	//void UpdateWeaponExperienceBar();
 	sf::Font ringbearerFont;
 	sf::Text* characterLevelText;
-	sf::Text* weaponLevelText;
+	//sf::Text* weaponLevelText;
 
 	int rageLevel;
 	int angerTowardsNextRageLevel;
@@ -65,7 +65,7 @@ private:
 	void DecreaseRageLevel();
 	void UpdateRuneUiItems();
 
-	int numberOfRunesYouCanActivate;
+	//int numberOfRunesYouCanActivate;
 
 	std::vector<Rune*> tierActivatedRunes;
 
@@ -84,6 +84,10 @@ private:
 	Rune* SuperJumpRune;
 	Rune* DefenseRune;
 	Rune* BerserkerRune;
+
+	std::vector<SpriteAnimation*> rageTierAuraAnimations;
+
+	int baseMaxHitPoints;
 protected:
 	virtual void ActuallyJump(bool short_hop = false);
 public:
@@ -100,13 +104,16 @@ public:
 	void DetermineWhichAttackToUseAndActivateIt(float x_input, float y_input);
 	void ReceiveExperience(int experience_points);
 	void LevelUpCharacter();
-	void LevelUpWeapon();
+	//void LevelUpWeapon();
 	virtual int GetDamageOfCurrentAttack();
 	virtual void UpdateEffectsVolumes(float new_effects_volume);
 	virtual void AddAnger(int anger_amount);
 	int CharacterExperienceNeededForNextLevel(int level);
-	int WeaponExperienceNeededForNextLevel(int level);
+	//int WeaponExperienceNeededForNextLevel(int level);
 	void ResetRuneUiPositions(sf::Vector2f viewport_dimensions);
+	float GetDamageMultiplierFromLevel(int char_level);
+	int GetNumberOfRuneSlotsFromLevel(int char_level);
+	int GetMaximumHitPointsFromLevel(int char_level);
 
 	Rune* DpadLeftRune;
 	Rune* DpadUpRune;
@@ -133,15 +140,15 @@ public:
 	int GetCharacterLevel() {
 		return characterLevel;
 	};
-	int GetWeaponLevel() {
-		return weaponLevel;
-	};
+	//int GetWeaponLevel() {
+	//	return weaponLevel;
+	//};
 	int GetExperienceTowardsNextCharacterLevel() {
 		return characterExperienceTowardsNextLevel;
 	};
-	int GetExperienceTowardsNextWeaponLevel() {
-		return weaponExperienceTowardsNextLevel;
-	};
+	//int GetExperienceTowardsNextWeaponLevel() {
+	//	return weaponExperienceTowardsNextLevel;
+	//};
 	
 	void SmashCharacter::HandleLeftStickInput(float horizontal, float vertical) {
 		Move(horizontal, vertical);

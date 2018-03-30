@@ -97,6 +97,12 @@ int good_frames = 0;
 int bad_frames = 0;
 bool playGameWithCommentary = false;
 
+int numberOfSouls = 200;
+std::vector<sf::CircleShape*> souls;
+sf::Vector2f soulOriginPoint = sf::Vector2f(0.0f, 0.0f);
+std::vector<sf::Vector2f*> soulVectors;
+std::vector<float> soulAlphas;
+
 void NewGame() {
 	MainMenu->Close();
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
@@ -185,7 +191,7 @@ int main()
 {
 	if (!sf::Shader::isAvailable())
 	{
-		cout << "----Shaders are not supported on this setup.\n";
+		cout << "Shaders are not supported on this setup.\n";
 	}
 
 	sf::Clock clock;
@@ -219,9 +225,9 @@ int main()
 	combat_music.setLoop(true);
 
 	camera = new Camera(sf::Vector2f(0, 0), sf::Vector2f(viewport_width, viewport_height));
-	window = new sf::RenderWindow(sf::VideoMode::VideoMode((int)window_width, (int)window_height), "Shadhorimn");// , sf::Style::Fullscreen);
+	window = new sf::RenderWindow(sf::VideoMode::VideoMode((int)window_width, (int)window_height), "Project Boulder");// , sf::Style::Fullscreen);
 	window->setVerticalSyncEnabled(false);
-	//sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode::getDesktopMode(), "Shadhorimn");// , sf::Style::Fullscreen);
+	//sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode::getDesktopMode(), "Project Boulder");// , sf::Style::Fullscreen);
 	//main_character = new PlayerCharacter(window, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(40.0f, 80.0f), true);
 	//input_handler = new InputHandler(main_character);
 
@@ -232,7 +238,7 @@ int main()
 	logo_screen_sprite.setScale(viewport_width / logo_screen_texture.getSize().x, viewport_height / logo_screen_texture.getSize().y);
 	logo_screen_sprite_transparency = 0;
 
-	if (!start_menu_background_texture.loadFromFile("Images/StartMenuBackground.png"))
+	if (!start_menu_background_texture.loadFromFile("Images/MainMenuBackground.jpg"))
 		return -1;
 
 	start_menu_background_sprite = sf::Sprite(start_menu_background_texture);
@@ -240,13 +246,13 @@ int main()
 	if (!ringbearer_font.loadFromFile("Images/RingbearerFont.ttf"))
 		return -1;
 
-	title_text = sf::Text("Shadhorimn 2", ringbearer_font, 90);
-	title_text.setPosition(viewport_width / 2.0f - 260.0f, viewport_height / 2.0f - 200.0f);
+	title_text = sf::Text("Project Boulder", ringbearer_font, 90);
+	title_text.setPosition(viewport_width / 2.0f - 260.0f, viewport_height / 2.0f - 0.0f);
 
 	start_text = sf::Text("Press A/Start to Begin", ringbearer_font);
 	start_text.setPosition(viewport_width / 2.0f - 120.0f, viewport_height / 2.0f - 60.0f);
 
-	credits_text = sf::Text("Made by Ian James\n\n\n\n\nThank you for playing Shadhorimn", ringbearer_font);
+	credits_text = sf::Text("Made by Ian James\n\n\n\n\nThank you for playing Project Boulder", ringbearer_font);
 	credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 
 	MainMenu = new Menu(window, camera->viewport_dimensions);
@@ -261,6 +267,15 @@ int main()
 	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
 	OptionsMenu->AddItem("Save Settings", &SaveSettings);
 	OptionsMenu->AddItem("Back", &ExitOptionsMenu);
+
+	soulOriginPoint = sf::Vector2f(camera->viewport_dimensions.x - 478.0f, camera->viewport_dimensions.y);
+	for (int i = 0; i < numberOfSouls; i++) {
+		souls.push_back(new sf::CircleShape(2.0f));
+		soulAlphas.push_back((float)(rand() % 100));
+		souls[i]->setFillColor(sf::Color(189, 243, 227, (int)soulAlphas[i]));
+		souls[i]->setPosition(soulOriginPoint);
+		soulVectors.push_back(new sf::Vector2f(0.0f + ((float)((rand() % 100) - 50) / 1000.0f), -0.51f + ((float)((rand() % 100) - 50) / 1000.0f)));
+	}
 
 	while (window->isOpen())
 	{
@@ -315,6 +330,7 @@ int main()
 				go_to_credits = Singleton<SmashWorld>::Get()->Update(current_frame, frame_delta / 1000);
 
 				if (go_to_credits) {
+					credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 					GameState = GAME_STATE_CREDITS;
 				} else if (Singleton<SmashWorld>::Get()->ShouldExitToMainMenu()) {
 					MainMenu->Open();
@@ -381,6 +397,26 @@ void UpdateGameStateStartMenu() {
 	bool apply_return_value = false;
 
 	window->clear();
+	window->draw(start_menu_background_sprite);
+
+	for (int i = 0; i < numberOfSouls; i++) {
+		soulAlphas[i] -= 0.25f;
+
+		if (soulAlphas[i] <= 0) {
+			soulAlphas[i] = (float)(rand() % 255);
+			souls[i]->setPosition(soulOriginPoint);
+			soulVectors[i] = new sf::Vector2f(0.0f + ((float)((rand() % 100) - 50) / 1000.0f), -0.51f + ((float)((rand() % 100) - 50) / 1000.0f));
+		}
+
+		souls[i]->setFillColor(sf::Color(189, 243, 227, (int)soulAlphas[i]));
+
+		sf::Vector2f old_position = souls[i]->getPosition(); 
+		soulVectors[i]->x = soulVectors[i]->x + ((float)((rand() % 100) - 50) / 10000.0f);
+		souls[i]->setPosition(old_position.x + soulVectors[i]->x, old_position.y + soulVectors[i]->y);
+
+		window->draw(*souls[i]);
+	}
+
 	window->draw(title_text);
 
 	if (MainMenu->IsOpen) {

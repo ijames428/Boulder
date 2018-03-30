@@ -128,6 +128,7 @@ protected:
 	StatusTimer* talking_animation_timer;
 	StatusTimer* jumpStartUpTimer;
 	StatusTimer* jumpInputBuffer;
+	StatusTimer* jumpAfterWalkingOffLedgeBuffer;
 
 	bool jumpInputBufferWasActiveLastFrame;
 	bool jumpStartUpTimerWasActiveLastFrame;
@@ -177,7 +178,7 @@ protected:
 	//float xVelocityWhenJumpHappened = 0.0f;
 	float maxAirSpeed = 0.0f;
 	float normalTerminalVelocity = 20.0f;
-	float fastFallingVelocity = 40.0f;
+	float fastFallingVelocity = 30.0f;
 	bool fastFalling = false;
 
 	float attackDistance = 0.0f;
@@ -218,6 +219,9 @@ public:
 	virtual void UpdateEffectsVolumes(float new_effects_volume);
 	virtual void AddAnger(int anger_amount);
 	bool IsInHitStun();
+	bool IsInteractable() {
+		return is_interactable;
+	};
 
 	string GetName() {
 		return name;

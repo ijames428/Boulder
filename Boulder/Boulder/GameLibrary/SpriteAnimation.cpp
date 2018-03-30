@@ -29,10 +29,8 @@ SpriteAnimation::SpriteAnimation(sf::RenderWindow* window, std::string file_path
 
 	//if (!shader.loadFromFile("Shaders/LightingShader.frag", sf::Shader::Fragment))
 	//{
-	//	cout << "Unable to find LightingShader.frag\n";
 	//}
 	//if (shader.isAvailable()) {
-	//	cout << "----shader loaded!!\n";
 	//}
 	
 	//shader.setUniform("lightLocation", sf::Glsl::Vec2(0.0f, 0.0f));

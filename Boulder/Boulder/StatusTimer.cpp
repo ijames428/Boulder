@@ -8,7 +8,7 @@ using namespace std;
 #include "GameLibrary\Singleton.h"  
 
 StatusTimer::StatusTimer(sf::Int32 dur_in_frames) {
-	starting_frame = 0;
+	starting_frame = -10000;
 	duration_in_frames = dur_in_frames;
 }
 

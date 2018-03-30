@@ -209,6 +209,7 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	health_cash_in_timer = new StatusTimer(360);
 	jumpStartUpTimer = new StatusTimer(6);
 	jumpInputBuffer = new StatusTimer(6); 
+	jumpAfterWalkingOffLedgeBuffer = new StatusTimer(6);
 	attack_input_buffer = new StatusTimer(6);
 	attack_buffer_attack_index = 0;
 	anAttackWasActiveLastFrame = false;
@@ -243,6 +244,7 @@ void BoulderCreature::ApplyObjectDataToSaveData(Json::Value& save_data) {
 void BoulderCreature::ApplySaveDataToObjectData(Json::Value& save_data) {
 	body->SetTransform(b2Vec2(save_data["PositionX"].asFloat(), save_data["PositionY"].asFloat()), body->GetAngle());
 	hit_points = save_data["CurrentHitPoints"].asInt();
+	cashinable_hit_point_value = hit_points;
 }
 
 void BoulderCreature::LoadAllAnimations(string unit_type, Json::Value jsonBestiariesData) {
@@ -799,6 +801,8 @@ void BoulderCreature::AddPlatformContact() {
 
 void BoulderCreature::RemovePlatformContact() {
 	if (platformContacts == 1) {
+		jumpAfterWalkingOffLedgeBuffer->Start();
+		maxAirSpeed = body->GetLinearVelocity().x;
 		SetInTheAir(true);
 	}
 
@@ -814,7 +818,11 @@ void BoulderCreature::Land() {
 	has_double_jump = true;
 	fastFalling = false;
 	if (IsAnAttackActive()) {
-		GetActiveAttack()->StopAttack();
+		Attack* active_attack = GetActiveAttack();
+
+		if (active_attack != nullptr) {
+			active_attack->StopAttack();
+		}
 	}
 	if (jumpInputBuffer->IsActive()) {
 		StartJump();
@@ -885,7 +893,6 @@ void BoulderCreature::UseAttack(int move_type, bool activate_buffer) {
 
 void BoulderCreature::ReceiveHeal(int heal) {
 	if (hit_points > 0) {
-		cout << "got healed for " << heal << "!\n";
 		hit_points += heal;
 
 		if (hit_points > max_hit_points) {
@@ -921,7 +928,11 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 		if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
 			hit_stun_timer = new StatusTimer((int)((hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) * hitStunMultiplier));
 			hit_stun_timer->Start();
-			GetActiveAttack()->StopAttack();
+
+			Attack* active_attack = GetActiveAttack();
+			if (active_attack != nullptr) {
+				active_attack->StopAttack();
+			}
 		}
 
 		if (hit_points <= 0) {
@@ -940,6 +951,11 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			hit_points = 0;
 			cashinable_hit_point_value = 0;
 			dying_animation_timer->Start();
+
+			Attack* active_attack = GetActiveAttack();
+			if (active_attack != nullptr) {
+				active_attack->StopAttack();
+			}
 
 			int activities_size = (int)activities.size();
 			for (int a = 0; a < activities_size; a++) {
@@ -989,15 +1005,13 @@ int BoulderCreature::TakeDamageWithLifeSteal(int damage, sf::Vector2f knock_back
 }
 
 Attack* BoulderCreature::GetActiveAttack() {
-	Attack* active_attack = attacks[0];
-
 	for (int i = 0; i < attacks_size; i++) {
 		if (attacks[i]->IsAttacking()) {
-			active_attack = attacks[i];
+			return attacks[i];
 		}
 	}
 
-	return active_attack;
+	return nullptr;
 }
 
 int BoulderCreature::GetActiveAttackIndex() {
@@ -1025,7 +1039,13 @@ void BoulderCreature::StartTalking() {
 }
 
 int BoulderCreature::GetDamageOfCurrentAttack() {
-	return GetActiveAttack()->GetDamage();
+	Attack* active_attack = GetActiveAttack();
+
+	if (active_attack != nullptr) {
+		return active_attack->GetDamage();
+	}
+
+	return 0;
 }
 
 void BoulderCreature::UpdateEffectsVolumes(float new_effects_volume) {

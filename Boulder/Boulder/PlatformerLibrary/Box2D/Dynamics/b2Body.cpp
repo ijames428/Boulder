@@ -214,17 +214,17 @@ b2Fixture* b2Body::CreateFixture(const b2Shape* shape, float32 density)
 	return CreateFixture(&def);
 }
 
-void b2Body::DestroyFixture(b2Fixture* fixture)
+bool b2Body::DestroyFixture(b2Fixture* fixture)
 {
 	if (fixture == NULL)
 	{
-		return;
+		return false;
 	}
 
 	b2Assert(m_world->IsLocked() == false);
 	if (m_world->IsLocked() == true)
 	{
-		return;
+		return false;
 	}
 
 	b2Assert(fixture->m_body == this);
@@ -284,6 +284,8 @@ void b2Body::DestroyFixture(b2Fixture* fixture)
 
 	// Reset the mass data.
 	ResetMassData();
+
+	return true;
 }
 
 void b2Body::ResetMassData()

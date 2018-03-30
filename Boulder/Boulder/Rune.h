@@ -12,6 +12,7 @@ public:
 	string Name;
 	string Description;
 	bool Active;
+	bool Equipped;
 	sf::Texture* Texture;
 	sf::Sprite* UiSprite;
 	sf::Sprite* InGameSprite;

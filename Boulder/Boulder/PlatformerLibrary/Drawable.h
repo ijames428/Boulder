@@ -65,18 +65,15 @@ public:
 
 	/// Draw a line segment.
 	virtual void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color) {
-		//cout << "DrawSegment\n";
 	}
 
 	/// Draw a transform. Choose your own length scale.
 	/// @param xf a transform.
 	virtual void DrawTransform(const b2Transform& xf) {
-		//cout << "DrawTransform\n";
 	}
 
 	/// Draw a point.
 	virtual void DrawPoint(const b2Vec2& p, float32 size, const b2Color& color) {
-		//cout << "DrawPoint\n";
 	}
 };
 

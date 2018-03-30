@@ -24,6 +24,7 @@ using namespace std;
 #include "BossOne.h"
 #include "Utilities.h"
 #include "CharacterScreen.h"
+#include <thread>
 
 class MyContactListener : public b2ContactListener
 {
@@ -178,7 +179,6 @@ class MyContactListener : public b2ContactListener
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
 			if (fixtureB->GetFilterData().categoryBits == 0x0040) {
-				cout << "hit that door!\n";
 				Door* entity = static_cast<Door*>(fixtureB->GetBody()->GetUserData());
 				entity->TryToActivate("Player 0", true);
 			} else {
@@ -186,7 +186,7 @@ class MyContactListener : public b2ContactListener
 				Attack* active_attack = entityA->GetActiveAttack();
 				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
-				if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
+				if (active_attack != nullptr && active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
 					bool entity_was_alive = entityB->GetHitPoints() > 0;
 					bool entity_was_in_hit_stun = entityB->IsInHitStun();
 
@@ -194,7 +194,7 @@ class MyContactListener : public b2ContactListener
 
 					bool entity_died_with_this_hit = entity_was_alive && entityB->GetHitPoints() <= 0;
 
-					if (entity_was_alive && Utilities::Contains(entityA->GetName(), "Player")) {
+					if (entity_was_alive && Utilities::Contains(entityA->GetName(), "Player") && !entityB->IsInteractable()) {
 						if (entity_was_in_hit_stun && entity_died_with_this_hit) {
 							entityA->AddAnger(650);
 						} else if (entity_was_in_hit_stun) {
@@ -216,7 +216,6 @@ class MyContactListener : public b2ContactListener
 		
 		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
 			if (fixtureB->GetFilterData().categoryBits == 0x0040) {
-				cout << "hit that door!!\n";
 				Door* entity = static_cast<Door*>(fixtureB->GetBody()->GetUserData());
 				entity->TryToActivate("Player 0", true);
 			} else {
@@ -224,7 +223,7 @@ class MyContactListener : public b2ContactListener
 				Attack* active_attack = entityA->GetActiveAttack();
 				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
 
-				if (active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
+				if (active_attack != nullptr && active_attack->CanHitTarget(std::to_string(fixtureB->GetFilterData().categoryBits) + std::to_string(entityB->GetID()))) {
 					bool entity_was_alive = entityB->GetHitPoints() > 0;
 					bool entity_was_in_hit_stun = entityB->IsInHitStun();
 
@@ -232,7 +231,7 @@ class MyContactListener : public b2ContactListener
 
 					bool entity_died_with_this_hit = entity_was_alive && entityB->GetHitPoints() <= 0;
 
-					if (entity_was_alive && Utilities::Contains(entityA->GetName(), "Player")) {
+					if (entity_was_alive && Utilities::Contains(entityA->GetName(), "Player") && !entityB->IsInteractable()) {
 						if (entity_was_in_hit_stun && entity_died_with_this_hit) {
 							entityA->AddAnger(650);
 						} else if (entity_was_in_hit_stun) {
@@ -349,7 +348,7 @@ private:
 	DialogueLine* RootDialogueLine;
 	DialogueLine* CurrentDialogueLine;
 #ifdef _DEBUG
-	sfe::Movie intro_cutscene;
+	//sfe::Movie intro_cutscene;
 #else
 #endif
 	bool past_setup = false;
@@ -377,6 +376,14 @@ private:
 	CharacterScreen* CharScreen;
 
 	bool IsAMenuOpen();
+
+	sf::Texture* ButtonsTexture;
+	sf::Sprite* ButtonsSprite;
+
+	std::thread setupThread;
+
+	sf::Text savedText;
+	StatusTimer* savedTextVisibleTimer;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second);
@@ -390,7 +397,8 @@ public:
 	void ProgressDialogueText();
 	string GetCurrentPointInGame();
 	void UpdateVideo();
-	void Setup(float frames_per_second);
+	void UpdateLoadingScreen();
+	void Setup();
 	void ExportSaveData();
 	void ImportSaveData();
 	void ExitGame();

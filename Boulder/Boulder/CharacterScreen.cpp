@@ -24,24 +24,24 @@ CharacterScreen::CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_
 	HitPointsText = sf::Text("", ringbearerFont, 45);
 	CharacterLevelText = sf::Text("", ringbearerFont, 45);
 	CharacterExperiencePointsText = sf::Text("", ringbearerFont, 45);
-	WeaponLevelText = sf::Text("", ringbearerFont, 45);
-	WeaponExperiencePointsText = sf::Text("", ringbearerFont, 45);
+	//WeaponLevelText = sf::Text("", ringbearerFont, 45);
+	//WeaponExperiencePointsText = sf::Text("", ringbearerFont, 45);
 	//BonusesFromLevelsText = sf::Text("", ringbearerFont, 45);
 	RunesSectionText = sf::Text("", ringbearerFont, 45);
 
 	HitPointsText.setFillColor(sf::Color::White);
 	CharacterLevelText.setFillColor(sf::Color::White);
 	CharacterExperiencePointsText.setFillColor(sf::Color::White);
-	WeaponLevelText.setFillColor(sf::Color::White);
-	WeaponExperiencePointsText.setFillColor(sf::Color::White);
+	//WeaponLevelText.setFillColor(sf::Color::White);
+	//WeaponExperiencePointsText.setFillColor(sf::Color::White);
 	//BonusesFromLevelsText.setFillColor(sf::Color::White);
 	RunesSectionText.setFillColor(sf::Color::Black);
 
 	HitPointsText.setPosition(10.0f, 100.0f);
 	CharacterLevelText.setPosition(10.0f, 150.0f);
 	CharacterExperiencePointsText.setPosition(500.0f, 150.0f);
-	WeaponLevelText.setPosition(10.0f, 200.0f);
-	WeaponExperiencePointsText.setPosition(500.0f, 200.0f);
+	//WeaponLevelText.setPosition(10.0f, 200.0f);
+	//WeaponExperiencePointsText.setPosition(500.0f, 200.0f);
 	//BonusesFromLevelsText.setPosition(800.0f, 100.0f);
 	RunesSectionText.setPosition(800.0f, 400.0f);
 	RunesSectionText.setString("Runes");
@@ -63,11 +63,11 @@ CharacterScreen::CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_
 
 	int runesListSize = (int)Player->RunesList.size();
 	for (int i = 0; i < runesListSize; i++) {
-		RuneTextsList.push_back(new sf::Text(Player->RunesList[i]->Name, ringbearerFont, 45));
+		RuneTextsList.push_back(new sf::Text("(" + to_string(i + 1) + "/" + to_string(runesListSize) + ") " + Player->RunesList[i]->Name, ringbearerFont, 45));
 		RuneTextsList[i]->setFillColor(sf::Color::White);
 	}
 
-	cursorRectangle = new sf::RectangleShape(sf::Vector2f(500.0f, 50.0f));
+	cursorRectangle = new sf::RectangleShape(sf::Vector2f(500.0f, 55.0f));
 	cursorRectangle->setOutlineThickness(5.0f);
 	cursorRectangle->setFillColor(sf::Color::Black);
 	cursorRectangle->setOutlineColor(sf::Color::White);
@@ -80,6 +80,26 @@ CharacterScreen::CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_
 	RuneDescriptionText.setFillColor(sf::Color::White);
 	RuneDescriptionText.setPosition(700.0f, 100.0f);
 	RuneDescriptionText.setString(Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+
+	scrollBarLengthRectangle = new sf::RectangleShape(sf::Vector2f(4.0f, 50.0f * numberOfRunesToDisplayInList));
+	scrollBarLengthRectangle->setPosition(10.0f, 50.0f);
+	scrollBarLengthRectangle->setFillColor(sf::Color::White);
+
+	scrollBarCursorRectangle = new sf::RectangleShape(sf::Vector2f(10.0f, 40.0f));
+	scrollBarCursorRectangle->setPosition(10.0f - 3.0f, 50.0f);
+	scrollBarCursorRectangle->setFillColor(sf::Color::White);
+
+	GoToAssignRunesPageText = sf::Text("Press A to go to the Assign Runes page.\nPress B to resume game.", ringbearerFont, 15);
+	GoToAssignRunesPageText.setFillColor(sf::Color::Yellow);
+	GoToAssignRunesPageText.setPosition(900.0f, 5.0f);
+
+	GoBackToCharacterStatsPageText = sf::Text("Press B to go back to the Character\nStats page.", ringbearerFont, 15);
+	GoBackToCharacterStatsPageText.setFillColor(sf::Color::Yellow);
+	GoBackToCharacterStatsPageText.setPosition(900.0f, 5.0f);
+
+	InstructionsText = sf::Text("Hit Left, Up, or Right on the Dpad\nto assign the currently hovered\nrune to that direction.", ringbearerFont, 15);
+	InstructionsText.setFillColor(sf::Color::Cyan);
+	InstructionsText.setPosition(600.0f, 5.0f);
 }
 
 void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
@@ -90,6 +110,10 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 		render_window->draw(*runeAreaBackgroundRect);
 		render_window->draw(*cursorRectangle);
 		render_window->draw(RuneDescriptionText);
+		render_window->draw(*scrollBarLengthRectangle);
+		render_window->draw(*scrollBarCursorRectangle);
+		render_window->draw(InstructionsText);
+		render_window->draw(GoBackToCharacterStatsPageText);
 
 		int runeTextsListSize = (int)RuneTextsList.size();
 		for (int i = firstRuneBeingDisplayedInUiInternalRuneListIndex; i < firstRuneBeingDisplayedInUiInternalRuneListIndex + numberOfRunesToDisplayInList; i++) {
@@ -101,7 +125,7 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 			render_window->draw(*RuneTextsList[i]);
 		}
 
-		cursorRectangle->setPosition(sf::Vector2f(30.0f, 50.0f + 50.0f * indexOfRuneBeingHoveredInUi));
+		cursorRectangle->setPosition(sf::Vector2f(30.0f, 55.0f + 50.0f * indexOfRuneBeingHoveredInUi));
 
 		render_window->draw(RunesSectionText);
 		render_window->draw(*DpadSprite);
@@ -115,8 +139,8 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 		render_window->draw(HitPointsText);
 		render_window->draw(CharacterLevelText);
 		render_window->draw(CharacterExperiencePointsText);
-		render_window->draw(WeaponLevelText);
-		render_window->draw(WeaponExperiencePointsText);
+		//render_window->draw(WeaponLevelText);
+		//render_window->draw(WeaponExperiencePointsText);
 		//render_window->draw(BonusesFromLevelsText);
 		render_window->draw(RunesSectionText);
 		render_window->draw(*DpadSprite);
@@ -126,6 +150,8 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 		render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
 
 		render_window->draw(*AButtonSprite);
+
+		render_window->draw(GoToAssignRunesPageText);
 	}
 }
 
@@ -137,8 +163,8 @@ void CharacterScreen::Open() {
 	HitPointsText.setString("Hit Points: " + to_string(Player->GetHitPoints()) + "/" + to_string(Player->GetMaxHitPoints()));
 	CharacterLevelText.setString("Character Level: " + to_string(Player->GetCharacterLevel()));
 	CharacterExperiencePointsText.setString("Character XP: " + to_string(Player->GetExperienceTowardsNextCharacterLevel()) + "/" + to_string(Player->CharacterExperienceNeededForNextLevel(Player->GetCharacterLevel())));
-	WeaponLevelText.setString("Weapon Level: " + to_string(Player->GetWeaponLevel()));
-	WeaponExperiencePointsText.setString("Weapon XP: " + to_string(Player->GetExperienceTowardsNextWeaponLevel()) + "/" + to_string(Player->WeaponExperienceNeededForNextLevel(Player->GetWeaponLevel())));
+	//WeaponLevelText.setString("Weapon Level: " + to_string(Player->GetWeaponLevel()));
+	//WeaponExperiencePointsText.setString("Weapon XP: " + to_string(Player->GetExperienceTowardsNextWeaponLevel()) + "/" + to_string(Player->WeaponExperienceNeededForNextLevel(Player->GetWeaponLevel())));
 }
 
 void CharacterScreen::Close() {
@@ -180,6 +206,8 @@ void CharacterScreen::MoveCursorDown() {
 	}
 
 	RuneDescriptionText.setString(Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+
+	scrollBarCursorRectangle->setPosition(10.0f - 3.0f, 50.0f + (((50.0f * numberOfRunesToDisplayInList)/* - 40.0f*/) * indexOfRuneBeingHoveredInInternalRuneList / (int)Player->RunesList.size()));
 }
 
 void CharacterScreen::MoveCursorUp() {
@@ -203,6 +231,8 @@ void CharacterScreen::MoveCursorUp() {
 	}
 
 	RuneDescriptionText.setString(Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+
+	scrollBarCursorRectangle->setPosition(10.0f - 3.0f, 50.0f + (((50.0f * numberOfRunesToDisplayInList)/* - 40.0f*/) * indexOfRuneBeingHoveredInInternalRuneList / (int)Player->RunesList.size()));
 }
 
 void CharacterScreen::HandleDpadRightPress() {
@@ -220,6 +250,7 @@ void CharacterScreen::HandleDpadRightPress() {
 		}
 
 		Player->DpadRightRune = rune_being_assigned;
+		ResetEquippedValuesOnRunes();
 		ResetPositionOfRuneImagesAroundDpad();
 	}
 }
@@ -243,6 +274,7 @@ void CharacterScreen::HandleDpadLeftPress() {
 		}
 
 		Player->DpadLeftRune = rune_being_assigned;
+		ResetEquippedValuesOnRunes();
 		ResetPositionOfRuneImagesAroundDpad();
 	}
 }
@@ -266,6 +298,7 @@ void CharacterScreen::HandleDpadUpPress() {
 		}
 
 		Player->DpadUpRune = rune_being_assigned;
+		ResetEquippedValuesOnRunes();
 		ResetPositionOfRuneImagesAroundDpad();
 	}
 }
@@ -287,6 +320,23 @@ void CharacterScreen::ResetPositionOfRuneImagesAroundDpad() {
 	Player->DpadLeftRune->CharacterScreenSprite->setPosition(Player->DpadLeftRune->CharScreenPosition);
 	Player->DpadUpRune->CharacterScreenSprite->setPosition(Player->DpadUpRune->CharScreenPosition);
 	Player->DpadRightRune->CharacterScreenSprite->setPosition(Player->DpadRightRune->CharScreenPosition);
+}
+
+void CharacterScreen::ResetEquippedValuesOnRunes() {
+	int runesListSize = (int)Player->RunesList.size();
+	for (int i = 0; i < runesListSize; i++) {
+		Player->RunesList[i]->Equipped = false;
+	}
+
+	Player->DpadLeftRune->Equipped = true;
+
+	if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 3) {
+		Player->DpadUpRune->Equipped = true;
+		Player->DpadRightRune->Equipped = true;
+	}
+	else if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 2) {
+		Player->DpadUpRune->Equipped = true;
+	}
 }
 
 bool CharacterScreen::AreAnyEquippedRunesActive() {

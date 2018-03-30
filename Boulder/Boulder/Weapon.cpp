@@ -136,9 +136,11 @@ void Weapon::ForcedRecall() {
 }
 
 void Weapon::Recall() {
-	stuck = false;
-	recalling = true;
-	weaponBody->SetGravityScale(0.0f);
+	if (!held_by_owner) {
+		stuck = false;
+		recalling = true;
+		weaponBody->SetGravityScale(0.0f);
+	}
 }
 
 void Weapon::TeleportedToWeapon() {

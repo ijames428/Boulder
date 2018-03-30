@@ -19,7 +19,6 @@ void AdvancedInput::AddStickInput(float x, float y) {
 	//}
 
 	pastStickInputAngles.push_back(new_angle);
-	//cout << pastStickInputAngles[pastStickInputAngles.size() - 1] << "\n";
 
 	if ((int)pastStickInputAngles.size() > numberOfFramesInQueue) {
 		pastStickInputAngles.erase(pastStickInputAngles.begin());
@@ -67,9 +66,5 @@ bool AdvancedInput::DidPlayerDoQuarterCircleForward(bool facing_right) {
 		}
 	}
 
-	for (int i = (int)pastStickInputAngles.size() - 1; i >= (int)pastStickInputAngles.size() - number_of_eligible_inputs; i--) {
-		cout << pastStickInputAngles[i] << "\n";
-	}
-	cout << did_qcf << " " << pastStickInputAngles.size() << "---------------------\n";
 	return did_qcf;
 }

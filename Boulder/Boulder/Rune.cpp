@@ -8,6 +8,7 @@ Rune::Rune(string name, string description, string image_relative_file_path_and_
 	Name = name;
 	Description = description;
 	Active = false;
+	Equipped = false;
 
 	Texture = Singleton<AssetManager>().Get()->GetTexture(image_relative_file_path_and_name);
 	UiSprite = new sf::Sprite(*Texture);

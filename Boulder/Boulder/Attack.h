@@ -28,6 +28,7 @@ public:
 	bool IsFacingRight();
 	bool IsActive();
 	bool IsPopUpMove();
+	void SetFacingRight(bool new_facing_right);
 	string BoxInfo;
 };
 
@@ -57,6 +58,7 @@ public:
 	static HitBox* GetExistingHitBox(string box_info);
 	static std::vector<HitBox*> ExistingHitBoxes;
 	bool IsPopUpMove();
+	void SetFacingRight(bool new_facing_right);
 };
 
 class Attack {
@@ -76,11 +78,13 @@ public:
 	void InitiateAttack();
 	int GetDamage();
 	bool IsAttacking();
+	bool IsThereAnActiveFixture();
 	sf::Vector2f GetKnockBack();
 	int GetHitStunFrames();
 	bool CanHitTarget(string);
 	void StopAttack();
 	bool IsPopUpMove();
+	void SetFacingRight(bool new_facing_right);
 
 	enum Moves {
 		JAB = 0,

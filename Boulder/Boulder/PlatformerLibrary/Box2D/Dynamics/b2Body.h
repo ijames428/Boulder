@@ -153,7 +153,7 @@ public:
 	/// All fixtures attached to a body are implicitly destroyed when the body is destroyed.
 	/// @param fixture the fixture to be removed.
 	/// @warning This function is locked during callbacks.
-	void DestroyFixture(b2Fixture* fixture);
+	bool DestroyFixture(b2Fixture* fixture);
 
 	/// Set the position of the body's origin and rotation.
 	/// Manipulating a body's transform may cause non-physical behavior.

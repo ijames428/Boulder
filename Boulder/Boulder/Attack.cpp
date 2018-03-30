@@ -97,7 +97,6 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 
 void Attack::Update(sf::Uint64 curr_frame, bool facing_right) {
 	current_frame = curr_frame;
-	current_frame_in_attack = current_frame - starting_attack_frame;
 
 	if (IsAttacking()) {
 		//if (current_frame_in_attack > 0) {
@@ -121,27 +120,62 @@ void Attack::Update(sf::Uint64 curr_frame, bool facing_right) {
 		//		attack_frames[current_frame_in_attack][box]->Activate();
 		//	}
 		//}
-		for (int i = 0; i < attack_frames_size; i++) {
-			int this_attack_frames_size = (int)attack_frames[i].size();
-			if (i == current_frame_in_attack) {
-				for (int box = 0; box < this_attack_frames_size; box++) {
-					attack_frames[i][box]->Update(facing_right);
-					attack_frames[i][box]->Activate();
-		
-					if (attack_frames[i][box]->IsClearingFrame()) {
-						enemies_hit.clear();
-					}
-				}
-			} else {
-				for (int box = 0; box < this_attack_frames_size; box++) {
-					attack_frames[i][box]->Deactivate();
+		current_frame_in_attack = current_frame - starting_attack_frame;
+		int attack_frames_size = (int)attack_frames.size();
+
+		if (attack_frames_size > 0 && current_frame_in_attack < attack_frames_size) {
+			int this_attack_frames_size = (int)attack_frames[(int)current_frame_in_attack].size();
+			for (int box = 0; box < this_attack_frames_size; box++) {
+				//attack_frames[i][box]->Update(facing_right);
+				attack_frames[(int)current_frame_in_attack][box]->Activate();
+
+				if (attack_frames[(int)current_frame_in_attack][box]->IsClearingFrame()) {
+					enemies_hit.clear();
 				}
 			}
 		}
+
+		if (attack_frames_size > 0 && current_frame_in_attack > 0) {
+			int last_attack_frames_size = (int)attack_frames[(int)current_frame_in_attack - 1].size();
+			for (int box = 0; box < last_attack_frames_size; box++) {
+				attack_frames[(int)current_frame_in_attack - 1][box]->Deactivate();
+			}
+		}
+
+		//for (int i = 0; i < attack_frames_size; i++) {
+		//	int this_attack_frames_size = (int)attack_frames[i].size();
+		//	if (i == current_frame_in_attack) {
+		//		for (int box = 0; box < this_attack_frames_size; box++) {
+		//			//attack_frames[i][box]->Update(facing_right);
+		//			attack_frames[i][box]->Activate();
+		//
+		//			if (attack_frames[i][box]->IsClearingFrame()) {
+		//				enemies_hit.clear();
+		//			}
+		//		}
+		//
+		//		if (i > 0) {
+		//			int last_attack_frames_size = (int)attack_frames[i - 1].size();
+		//			for (int box = 0; box < last_attack_frames_size; box++) {
+		//				attack_frames[i - 1][box]->Deactivate();
+		//			}
+		//		}
+		//
+		//		break;
+		//	} //else {
+		//	//	for (int box = 0; box < this_attack_frames_size; box++) {
+		//	//		attack_frames[i][box]->Deactivate();
+		//	//	}
+		//	//}
+		//}
 	} else {
 		for (int i = 0; i < attack_frames_size; i++) {
 			int this_attack_frames_size = (int)attack_frames[i].size();
 			for (int box = 0; box < this_attack_frames_size; box++) {
+				if (attack_frames[i][box]->IsActive()) {
+					attack_frames[i][box]->Deactivate();
+				}
+
 				attack_frames[i][box]->Update(facing_right);
 			}
 		}
@@ -162,13 +196,16 @@ void Attack::InitiateAttack() {
 }
 
 void Attack::StopAttack() {
-	attack_timer->Stop();
-	for (int i = 0; i < attack_frames_size; i++) {
-		for (int box = 0; box < (int)attack_frames[i].size(); box++) {
-			attack_frames[i][box]->ScheduleDeactivate();
+	if (attack_timer->IsActive()) {
+		attack_timer->Stop();
+		for (int i = 0; i < attack_frames_size; i++) {
+			int attack_frames_boxes_size = (int)attack_frames[i].size();
+			for (int box = 0; box < attack_frames_boxes_size; box++) {
+				attack_frames[i][box]->ScheduleDeactivate();
+			}
 		}
+		enemies_hit.clear();
 	}
-	enemies_hit.clear();
 }
 
 int Attack::GetDamage() {
@@ -182,6 +219,17 @@ int Attack::GetDamage() {
 
 bool Attack::IsAttacking() {
 	return attack_timer->IsActive();
+}
+
+bool Attack::IsThereAnActiveFixture() {
+	for (int i = 0; i < attack_frames_size; i++) {
+		int attack_frames_boxes_size = (int)attack_frames[i].size();
+		for (int box = 0; box < attack_frames_boxes_size; box++) {
+			attack_frames[i][box]->IsActive();
+		}
+	}
+
+	return false;
 }
 
 sf::Vector2f Attack::GetKnockBack() {
@@ -219,6 +267,15 @@ bool Attack::CanHitTarget(string identifier) {
 	}
 }
 
+void Attack::SetFacingRight(bool new_facing_right) {
+	for (int i = 0; i < attack_frames_size; i++) {
+		int attack_frames_boxes_size = (int)attack_frames[i].size();
+		for (int box = 0; box < attack_frames_boxes_size; box++) {
+			attack_frames[i][box]->SetFacingRight(new_facing_right);
+		}
+	}
+}
+
 
 AttackFrame::AttackFrame(b2Body* body, int player_index, int frame_in_attack, int dmg, sf::Int64 stun_frames, sf::Vector2f kfr, sf::Vector2f hit_box_dimensions, sf::Vector2f hit_box_relative_central_position, bool has_hb, string box_info, bool pop_up_grounded_enemies, bool clear_hit_enemies) {
 	has_hit_box = has_hb;
@@ -238,6 +295,12 @@ AttackFrame::AttackFrame(b2Body* body, int player_index, int frame_in_attack, in
 	knockback_facing_right = kfr;
 	knockback_facing_left = sf::Vector2f(-kfr.x, kfr.y);
 	number_of_hit_stun_frames = (int)stun_frames;
+}
+
+void AttackFrame::SetFacingRight(bool new_facing_right) {
+	if (HasHitBox()) {
+		hitbox->SetFacingRight(new_facing_right);
+	}
 }
 
 void AttackFrame::Update(bool facing_right) {
@@ -355,6 +418,10 @@ HitBox::HitBox(b2Body* bod, int player_index, int frame_in_attack, sf::Vector2f 
 void HitBox::Update(bool new_facing_right) {
 	if (deactivateOnUpdate) {
 		Deactivate();
+
+		if (!IsActive()) {
+			deactivateOnUpdate = false;
+		}
 	}
 	facing_right = new_facing_right;
 }
@@ -364,7 +431,7 @@ bool HitBox::IsFacingRight() {
 }
 
 void HitBox::Activate() {
-	if (facing_right) {
+	if (facing_right && myFixtureRight == nullptr) {
 		myFixtureRight = body->CreateFixture(&myFixtureDefRight);
 		myFixtureRight->SetActive(true);
 	} else {
@@ -375,13 +442,17 @@ void HitBox::Activate() {
 
 void HitBox::Deactivate() {
 	if (myFixtureRight != nullptr) {
-		body->DestroyFixture(myFixtureRight);
-		myFixtureRight = nullptr;
+		bool successfully_destroyed_fixture = body->DestroyFixture(myFixtureRight);
+		if (successfully_destroyed_fixture) {
+			myFixtureRight = nullptr;
+		}
 	}
 
 	if (myFixtureLeft != nullptr) {
-		body->DestroyFixture(myFixtureLeft);
-		myFixtureLeft = nullptr;
+		bool successfully_destroyed_fixture = body->DestroyFixture(myFixtureLeft);
+		if (successfully_destroyed_fixture) {
+			myFixtureLeft = nullptr;
+		}
 	}
 }
 
@@ -390,11 +461,12 @@ void HitBox::ScheduleDeactivate() {
 }
 
 bool HitBox::IsActive() {
-	if (facing_right) {
-		return myFixtureRight != nullptr;
-	} else {
-		return myFixtureLeft != nullptr;
-	}
+	return myFixtureRight != nullptr || myFixtureLeft != nullptr;
+	//if (facing_right) {
+	//	return myFixtureRight != nullptr;
+	//} else {
+	//	return myFixtureLeft != nullptr;
+	//}
 }
 
 bool HitBox::IsPopUpMove() {
@@ -416,4 +488,8 @@ bool Attack::IsPopUpMove() {
 
 	// TODO: Separate out the boxes so we can get the damage of an individual one.
 	return attack_frames[(int)current_frame_in_attack][0]->IsPopUpMove();
+}
+
+void HitBox::SetFacingRight(bool new_facing_right) {
+	facing_right = new_facing_right;
 }
