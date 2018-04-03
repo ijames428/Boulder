@@ -17,9 +17,16 @@ private:
 	int TotalSliderValues = 0;
 	sf::RectangleShape* SliderLine;
 	sf::RectangleShape* SliderCursor;
+	bool CheckBox;
+	bool Checked;
+	sf::RectangleShape* CheckBoxRect;
+	sf::RectangleShape* CheckBoxCheckedRect;
+	callback_function OnChecked;
+	callback_function OnUnchecked;
 public:
 	MenuItem(string text, callback_function pFunc);
 	MenuItem(string text, int current_value, int number_of_possible_values);
+	MenuItem(string text, bool checked, callback_function on_checked_action, callback_function on_unchecked_action);
 	string GetString();
 	void ExecutionAction();
 	sf::Text GetMenuItemText();
@@ -33,9 +40,10 @@ public:
 
 class Menu {
 public:
-	Menu(sf::RenderWindow* window, sf::Vector2f dimensions);
+	Menu(sf::RenderWindow* window, sf::Vector2f dimensions, string background_file_name = "");
 	void AddItem(string text, callback_function pFunc);
 	void AddItem(string text, int current_value, int number_of_possible_values);
+	void AddItem(string text, bool current_value, callback_function on_checked_action, callback_function on_unchecked_action);
 	void Draw(sf::Int64 curr_frame);
 	void MoveCursorDown();
 	void MoveCursorUp();
@@ -48,6 +56,8 @@ public:
 	string GetCurrentSelectionText();
 	void SetCurrentSliderValueByText(string menu_item_text, int new_value);
 	int GetCurrentSliderValueByText(string menu_item_text);
+	sf::Texture* BackgroundTexture;
+	sf::Sprite* BackgroundSprite;
 private:
 	sf::RectangleShape cursor;
 	int cursor_position;

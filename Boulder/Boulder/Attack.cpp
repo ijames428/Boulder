@@ -18,6 +18,7 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 	player_body = body;
 	player_index = index;
 	float boxScale = 40.0f;
+	Poise = jsonData["Poise"].asInt();
 
 	if (!jsonData["HitBoxPerFrame"].empty())
 	{
@@ -80,6 +81,8 @@ Attack::Attack(b2Body* body, int index, int move_type, Json::Value jsonData) {
 															   sf::Vector2f(knockback_x, knockback_y), sf::Vector2f(hit_box_width, hit_box_height), sf::Vector2f(hit_box_relative_x, hit_box_relative_y),
 															   true, strHitBoxValues, pop_up_move));
 				}
+
+				lastFrameWithAHitBox = i;
 			}
 			else
 			{
@@ -187,6 +190,10 @@ void Attack::Update(sf::Uint64 curr_frame, bool facing_right) {
 	//		attack_frames[i][box]->Update(facing_right);
 	//	}
 	//}
+}
+
+bool Attack::IsInRecoveryFrames() {
+	return current_frame_in_attack > lastFrameWithAHitBox;
 }
 
 void Attack::InitiateAttack() {

@@ -72,6 +72,7 @@ private:
 	int player_index;
 	std::vector<string> enemies_hit;
 	int attack_frames_size;
+	int lastFrameWithAHitBox;
 public:
 	Attack(b2Body* body, int index, int move_type, Json::Value jsonData);
 	void Update(sf::Uint64 curr_frame, bool facing_right);
@@ -85,6 +86,8 @@ public:
 	void StopAttack();
 	bool IsPopUpMove();
 	void SetFacingRight(bool new_facing_right);
+	int Poise;
+	bool IsInRecoveryFrames();
 
 	enum Moves {
 		JAB = 0,

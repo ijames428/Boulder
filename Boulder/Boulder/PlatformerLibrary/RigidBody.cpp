@@ -3,7 +3,7 @@
 #include "stdafx.h"
 #include <iostream>
 #include "RigidBody.h"
-#include "GridHandler.h"
+//#include "GridHandler.h"
 #include "..\GameLibrary\Singleton.h"
 #include "..\Constants.h"
 
@@ -29,7 +29,7 @@ RigidBody::RigidBody(sf::Vector2f position, sf::Vector2f dimensions, bool subjec
 	velocity.y = 0.0f;
 
 	entities_excluded_from_collision = std::vector<int>();
-	Singleton<GridHandler>::Get()->AddRigidBodyToGrid(this);
+	//Singleton<GridHandler>::Get()->AddRigidBodyToGrid(this);
 }
 
 void RigidBody::Update(sf::Int64 curr_time, sf::Int64 delta_time) {
@@ -102,7 +102,7 @@ void RigidBody::Update(sf::Int64 curr_time, sf::Int64 delta_time) {
 
 	if (past_position.x != future_position.x || past_position.y != future_position.y || past_dimensions.x != future_dimensions.x || past_dimensions.y != future_dimensions.y)
 	{
-		Singleton<GridHandler>::Get()->MoveRigidBodyInGrid(this);
+		//Singleton<GridHandler>::Get()->MoveRigidBodyInGrid(this);
 
 		if (collision_enabled) {
 			ChangeFutureValuesAndVelocityBasedOnCollisions();
@@ -123,7 +123,7 @@ void RigidBody::Update(sf::Int64 curr_time, sf::Int64 delta_time) {
 void RigidBody::ChangeFutureValuesAndVelocityBasedOnCollisions() {
 	for (int w = grid_top_left.x; w <= grid_bot_right.x; w++) {
 		for (int h = grid_top_left.y; h <= grid_bot_right.y; h++) {
-			std::vector<RigidBody*> colliders = Singleton<GridHandler>::Get()->GetObjectsInGridLocation(w, h);
+			std::vector<RigidBody*> colliders = std::vector<RigidBody*>();//Singleton<GridHandler>::Get()->GetObjectsInGridLocation(w, h);
 
 			if (colliders.size() > 1) {
 				for (int c = 0; c < (int)colliders.size(); c++) {
@@ -210,7 +210,7 @@ std::vector<RigidBody*> RigidBody::GetCollidersRigidBodyIsCollidingWith() {
 
 	for (int w = grid_top_left.x; w <= grid_bot_right.x; w++) {
 		for (int h = grid_top_left.y; h <= grid_bot_right.y; h++) {
-			std::vector<RigidBody*> colliders = Singleton<GridHandler>::Get()->GetObjectsInGridLocation(w, h);
+			std::vector<RigidBody*> colliders = std::vector<RigidBody*>();// Singleton<GridHandler>::Get()->GetObjectsInGridLocation(w, h);
 
 			if (colliders.size() > 1) {
 				for (int c = 0; c < (int)colliders.size(); c++) {

@@ -368,10 +368,11 @@ private:
 	sf::Music audioCommentary;
 	bool goToCredits = false;
 
-	std::vector<sf::Texture*> platformTextures;
-	std::vector<sf::Sprite*> platformSprites;
-	std::vector<float> platformXs;
-	std::vector<float> platformYs;
+	std::vector<sf::Texture*> imageTextures;
+	std::vector<sf::Sprite*> imageSprites;
+	std::vector<float> imageXs;
+	std::vector<float> imageYs;
+	std::vector<string> imageNames;
 
 	CharacterScreen* CharScreen;
 
@@ -384,6 +385,11 @@ private:
 
 	sf::Text savedText;
 	StatusTimer* savedTextVisibleTimer;
+
+	float original_viewport_width;
+	float original_viewport_height;
+	float original_window_width;
+	float original_window_height;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second);
@@ -435,6 +441,9 @@ public:
 	void CloseOptionsMenu();
 	void SaveSettings(); 
 	void UpdateEffectsSoundsThroughoutGame();
+	void CloseDialogue();
+	void EnableFullscreen();
+	void DisableFullscreen();
 
 	bool Contains(string string_being_searched, string string_being_searched_for) {
 		std::size_t found = string_being_searched.find(string_being_searched_for);

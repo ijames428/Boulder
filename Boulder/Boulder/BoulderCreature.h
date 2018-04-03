@@ -193,6 +193,8 @@ protected:
 	bool attacksAreInterruptible;
 
 	int platformContacts = 0;
+
+	int damageTakenSinceAttackStarted = 0;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	void Draw(sf::Vector2f camera_position);

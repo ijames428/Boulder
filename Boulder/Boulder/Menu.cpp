@@ -7,12 +7,17 @@ using namespace std;
 #include "SmashWorld.h"
 #include <fstream>
 
-Menu::Menu(sf::RenderWindow* window, sf::Vector2f dimensions) {
+Menu::Menu(sf::RenderWindow* window, sf::Vector2f dimensions, string background_file_name) {
 	render_window = window;
 	viewport_dimensions = dimensions;
 	cursor_position = 0;
 	cursor = sf::RectangleShape(sf::Vector2f(10.0f, 10.0f));
 	IsOpen = false;
+
+	if (background_file_name != "") {
+		BackgroundTexture = Singleton<AssetManager>().Get()->GetTexture(background_file_name);
+		BackgroundSprite = new sf::Sprite(*BackgroundTexture);
+	}
 }
 
 void Menu::Open() {
@@ -40,7 +45,17 @@ void Menu::AddItem(string text, int current_value, int number_of_possible_values
 	int item_in_list = (int)menu_items.size() - 1;
 }
 
+void Menu::AddItem(string text, bool checked, callback_function on_checked_action, callback_function on_unchecked_action) {
+	menu_items.push_back(MenuItem(text, checked, on_checked_action, on_unchecked_action));
+
+	int item_in_list = (int)menu_items.size() - 1;
+}
+
 void Menu::Draw(sf::Int64 curr_frame) {
+	if (BackgroundSprite != nullptr) {
+		render_window->draw(*BackgroundSprite);
+	}
+
 	for (int i = 0; i < (int)menu_items.size(); i++) {
 		menu_items[i].Draw(render_window, sf::Vector2f(50.0f, 50.0f + 50.0f * i));
 	}
@@ -105,6 +120,9 @@ MenuItem::MenuItem(string text, callback_function action) {
 	Action = action;
 	Font.loadFromFile("Images/RingbearerFont.ttf");
 	MenuItemText = sf::Text(text, Font, 45);
+
+	CheckBox = false;
+	Checked = false;
 }
 
 MenuItem::MenuItem(string text, int current_value, int number_of_possible_values) {
@@ -118,6 +136,30 @@ MenuItem::MenuItem(string text, int current_value, int number_of_possible_values
 
 	Font.loadFromFile("Images/RingbearerFont.ttf");
 	MenuItemText = sf::Text(text, Font, 45);
+
+	CheckBox = false;
+	Checked = false;
+}
+
+MenuItem::MenuItem(string text, bool checked, callback_function on_checked_action, callback_function on_unchecked_action) {
+	Text = text;
+	Checked = checked;
+	Action = nullptr;
+	Font.loadFromFile("Images/RingbearerFont.ttf");
+	MenuItemText = sf::Text(text, Font, 45);
+
+	CheckBox = true;
+
+	CheckBoxRect = new sf::RectangleShape(sf::Vector2f(30, 30));
+	CheckBoxRect->setFillColor(sf::Color::Black);
+	CheckBoxRect->setOutlineThickness(3.0f);
+	CheckBoxRect->setOutlineColor(sf::Color::White);
+
+	CheckBoxCheckedRect = new sf::RectangleShape(sf::Vector2f(20, 20));
+	CheckBoxCheckedRect->setFillColor(sf::Color::White);
+
+	OnChecked = on_checked_action;
+	OnUnchecked = on_unchecked_action;
 }
 
 string MenuItem::GetString() {
@@ -130,7 +172,17 @@ sf::Text MenuItem::GetMenuItemText() {
 
 void MenuItem::ExecutionAction() {
 	if (Enabled()) {
-		Action();
+		if (CheckBox) {
+			Checked = !Checked;
+
+			if (Checked) {
+				OnChecked();
+			} else {
+				OnUnchecked();
+			}
+		} else {
+			Action();
+		}
 	}
 }
 
@@ -179,6 +231,16 @@ void MenuItem::Draw(sf::RenderWindow* window, sf::Vector2f position) {
 
 		window->draw(*SliderLine);
 		window->draw(*SliderCursor);
+	}
+
+	if (CheckBox) {
+		CheckBoxRect->setPosition(sf::Vector2f(position.x + 395.0f, position.y + 15.0f));
+		window->draw(*CheckBoxRect);
+
+		if (Checked) {
+			CheckBoxCheckedRect->setPosition(sf::Vector2f(position.x + 400.0f, position.y + 20.0f));
+			window->draw(*CheckBoxCheckedRect);
+		}
 	}
 
 	window->draw(MenuItemText);

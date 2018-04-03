@@ -192,6 +192,34 @@ void ExternalSaveSettings() {
 	Singleton<SmashWorld>::Get()->SaveSettings();
 }
 
+void ExternalEnableFullscreen() {
+	Singleton<SmashWorld>::Get()->EnableFullscreen();
+}
+
+void ExternalDisableFullscreen() {
+	Singleton<SmashWorld>::Get()->DisableFullscreen();
+}
+
+void SmashWorld::EnableFullscreen() {
+	render_window->setActive(false);
+
+	Singleton<Settings>::Get()->fullscreen = true;
+	render_window->create(sf::VideoMode::getFullscreenModes()[0], "Project Boulder", sf::Style::Fullscreen);
+	camera->viewport_dimensions = sf::Vector2f((float)render_window->getViewport(render_window->getView()).width, (float)render_window->getViewport(render_window->getView()).height);
+
+	render_window->setActive(true);
+}
+
+void SmashWorld::DisableFullscreen() {
+	render_window->setActive(false);
+
+	Singleton<Settings>::Get()->fullscreen = false;
+	render_window->create(sf::VideoMode::VideoMode((int)1280.0f, (int)720.0f), "Project Boulder");
+	camera->viewport_dimensions = sf::Vector2f(1280.0f, 720.0f);
+
+	render_window->setActive(true);
+}
+
 void SmashWorld::SaveSettings() {
 	ofstream ofs("settings_data.txt", ios::binary | ios::out);
 
@@ -302,7 +330,7 @@ void SmashWorld::Setup() {
 	CurrentDialogueLine = nullptr;
 	RootDialogueLine = new DialogueLine("1", nullptr, jsonDialogueData);
 
-	PauseMenu = new Menu(render_window, camera->viewport_dimensions);
+	PauseMenu = new Menu(render_window, camera->viewport_dimensions, "Images/parallax_background_old.jpg");
 	PauseMenu->AddItem("Resume Game", &ExternalResumeGame);
 	PauseMenu->AddItem("Save Game", &ExternalExportSaveData);
 	PauseMenu->AddItem("Load Game", &ExternalImportSaveData);
@@ -310,14 +338,15 @@ void SmashWorld::Setup() {
 	PauseMenu->AddItem("Go To Main Menu", &ExternalExitToMainMenu);
 	PauseMenu->AddItem("Exit Game", &ExternalExitGame);
 
-	DeadMenu = new Menu(render_window, camera->viewport_dimensions);
+	DeadMenu = new Menu(render_window, camera->viewport_dimensions, "Images/parallax_background.jpg");
 	DeadMenu->AddItem("Load Game", &ExternalImportSaveData);
 	DeadMenu->AddItem("Go To Main Menu", &ExternalExitToMainMenu);
 	DeadMenu->AddItem("Exit Game", &ExternalExitGame);
 
-	OptionsMenu = new Menu(render_window, camera->viewport_dimensions);
+	OptionsMenu = new Menu(render_window, camera->viewport_dimensions, "Images/parallax_background0.jpg");
 	OptionsMenu->AddItem("Music Volume", (int)Singleton<Settings>::Get()->music_volume, 100);
 	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
+	OptionsMenu->AddItem("Fullscreen", false, &ExternalEnableFullscreen, &ExternalDisableFullscreen);
 	OptionsMenu->AddItem("Save Settings", &ExternalSaveSettings);
 	OptionsMenu->AddItem("Back", &ExternalCloseOptionsMenu);
 
@@ -488,19 +517,22 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 			}
 		}
 
-		int platform_sprites_size = (int)platformSprites.size();
+		int platform_sprites_size = (int)imageSprites.size();
 		for (int i = 0; i < platform_sprites_size; i++) {
-			platformSprites[i]->setPosition(sf::Vector2f((platformXs[i] - camera->viewport_position.x) * 40.0f + 0.0f, (platformYs[i] - camera->viewport_position.y) * 40.0f + 0.0f));
+			imageSprites[i]->setPosition(sf::Vector2f((imageXs[i] - camera->viewport_position.x) * 40.0f + 0.0f, (imageYs[i] - camera->viewport_position.y) * 40.0f + 0.0f));
 
-			if (abs(player_screen_pos.x - platformSprites[i]->getPosition().x) > camera->viewport_position.x * 1.25f) {
+			float delta_x = abs(player_screen_pos.x - imageSprites[i]->getPosition().x);
+			float delta_y = abs(player_screen_pos.y - imageSprites[i]->getPosition().y);
+
+			if (delta_x > camera->viewport_dimensions.x * 40.00f) {
 				continue;
 			}
 
-			if (abs(player_screen_pos.y - platformSprites[i]->getPosition().y) > camera->viewport_position.y * 1.25f) {
+			if (delta_y > camera->viewport_dimensions.y * 40.00f) {
 				continue;
 			}
 
-			render_window->draw(*platformSprites[i]);
+			render_window->draw(*imageSprites[i]);
 		}
 
 		render_window->draw(*ButtonsSprite);
@@ -722,10 +754,11 @@ void SmashWorld::BuildWorld() {
 		}
 	}
 
-	platformTextures.clear();
-	platformSprites.clear();
-	platformXs.clear();
-	platformYs.clear();
+	imageTextures.clear();
+	imageSprites.clear();
+	imageXs.clear();
+	imageYs.clear();
+	imageNames.clear();
 	Json::Value image_data;
 	int images_data_size = (int)images_data.size();
 	for (int i = 0; i < images_data_size; i++) {
@@ -738,11 +771,12 @@ void SmashWorld::BuildWorld() {
 		x = std::stof(image_data["x"].asString(), &sz) / scalingRatio;
 		y = std::stof(image_data["y"].asString(), &sz) / scalingRatio;
 
-		platformTextures.push_back(Singleton<AssetManager>().Get()->GetTexture(relativeFilePath));
-		platformSprites.push_back(new sf::Sprite(*platformTextures[i]));
-		platformSprites[i]->setScale(0.666667f, 0.68f);
-		platformXs.push_back(x);
-		platformYs.push_back(y);
+		imageTextures.push_back(Singleton<AssetManager>().Get()->GetTexture(relativeFilePath));
+		imageSprites.push_back(new sf::Sprite(*imageTextures[i]));
+		imageSprites[i]->setScale(0.666667f, 0.68f);
+		imageXs.push_back(x);
+		imageYs.push_back(y);
+		imageNames.push_back(image_data["name"].asString());
 	}
 
 	parallax_background_textures.clear();
@@ -819,6 +853,8 @@ void SmashWorld::ProgressDialogueText() {
 		CurrentDialogueLine = RootDialogueLine->GetFirstRelevantDialogueLine(StageOfTheGame);
 	} else if (CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame) != nullptr) {
 		CurrentDialogueLine = CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame);
+	} else {
+		CloseDialogue();
 	}
 
 	player_menu_input->EatInputsForNumberOfFrames(1);
@@ -873,7 +909,24 @@ void SmashWorld::ExecuteAction(string action_call) {
 		goToCredits = true;
 	} else if (Utilities::Contains(call, "ForcedRecall")) {
 		PlayerOne->ForcedRecall();
+	} else if (Utilities::Contains(call, "PickUpRune")) {
+		PlayerOne->PickUpRune(argument);
+	} else if (Utilities::Contains(call, "RemoveImage")) {
+		int image_names_size = (int)imageNames.size();
+		for (int i = 0; i < image_names_size; i++) {
+			if (imageNames[i] == argument) {
+				imageNames.erase(imageNames.begin() + i);
+				imageTextures.erase(imageTextures.begin() + i);
+				imageSprites.erase(imageSprites.begin() + i);
+				imageXs.erase(imageXs.begin() + i);
+				imageYs.erase(imageYs.begin() + i);
+
+				break;
+			}
+		}
 	}
+	
+	//LockDoor(Door 147); PickUpRune(Damage); RemoveImage(Image 163)
 }
 
 void SmashWorld::ExitToMainMenu() {
@@ -941,9 +994,15 @@ void SmashWorld::HandleRightStickInput(float horizontal, float vertical) {
 }
 
 void SmashWorld::HandleButtonBPress() {
-	if (IsAMenuOpen()) {
+	if ((PauseMenu->IsOpen || OptionsMenu->IsOpen || CharScreen->IsOpen) && PlayerOne->hit_points > 0) {
 		CloseCurrentMenu();
 	} else if (unit_type_player_is_talking_to != "") {
+		CloseDialogue();
+	}
+}
+
+void SmashWorld::CloseDialogue() {
+	if (unit_type_player_is_talking_to != "") {
 		unit_type_player_is_talking_to = "";
 		CurrentDialogueLine = nullptr;
 		dialogue_text.setString("");

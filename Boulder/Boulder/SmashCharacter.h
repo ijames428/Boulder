@@ -18,7 +18,6 @@ using namespace std;
 #include "Attack.h"
 #include "Weapon.h"
 #include "StatusTimer.h"
-#include "AdvancedInput.h"
 #include "Rune.h"
 #include "GameLibrary\Json\json.h"
 
@@ -88,6 +87,11 @@ private:
 	std::vector<SpriteAnimation*> rageTierAuraAnimations;
 
 	int baseMaxHitPoints;
+
+	sf::SoundBuffer RageAscensionSoundBuffer;
+	sf::Sound RageAscensionSound;
+	float RageAscensionStartingVolume;
+	float RageAscensionFadeVolume;
 protected:
 	virtual void ActuallyJump(bool short_hop = false);
 public:
@@ -114,12 +118,14 @@ public:
 	float GetDamageMultiplierFromLevel(int char_level);
 	int GetNumberOfRuneSlotsFromLevel(int char_level);
 	int GetMaximumHitPointsFromLevel(int char_level);
+	void PickUpRune(string rune_name);
 
 	Rune* DpadLeftRune;
 	Rune* DpadUpRune;
 	Rune* DpadRightRune;
 
-	std::vector<Rune*> RunesList;
+	std::vector<Rune*> OwnedRunesList;
+	std::vector<Rune*> MasterRunesList;
 
 	virtual int GetPlayerIndex() {
 		return player_index;

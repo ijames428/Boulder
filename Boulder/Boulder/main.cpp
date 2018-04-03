@@ -166,6 +166,7 @@ void LoadSettings() {
 
 		Singleton<Settings>::Get()->music_volume = save_data["MusicVolume"].asFloat();
 		Singleton<Settings>::Get()->effects_volume = save_data["EffectsVolume"].asFloat();
+		Singleton<Settings>::Get()->fullscreen = save_data["Fullscreen"].asBool();
 
 		myfile.close();
 	}
@@ -178,6 +179,7 @@ void SaveSettings() {
 
 	save_data["MusicVolume"] = Singleton<Settings>::Get()->music_volume;
 	save_data["EffectsVolume"] = Singleton<Settings>::Get()->effects_volume;
+	save_data["Fullscreen"] = Singleton<Settings>::Get()->fullscreen;
 
 	Json::StreamWriterBuilder wbuilder;
 	std::string document = Json::writeString(wbuilder, save_data);
@@ -185,6 +187,26 @@ void SaveSettings() {
 	ofs << document;
 
 	ofs.close();
+}
+
+void EnableFullscreen() {
+	window->setActive(false);
+
+	Singleton<Settings>::Get()->fullscreen = true;
+	window->create(sf::VideoMode::getFullscreenModes()[0], "Project Boulder", sf::Style::Fullscreen);
+	camera->viewport_dimensions = sf::Vector2f((float)window->getViewport(window->getView()).width, (float)window->getViewport(window->getView()).height);
+
+	window->setActive(true);
+}
+
+void DisableFullscreen() {
+	window->setActive(false);
+
+	Singleton<Settings>::Get()->fullscreen = false;
+	window->create(sf::VideoMode::VideoMode((int)window_width, (int)window_height), "Project Boulder");
+	camera->viewport_dimensions = sf::Vector2f(viewport_width, viewport_height);
+
+	window->setActive(true);
 }
 
 int main()
@@ -225,7 +247,12 @@ int main()
 	combat_music.setLoop(true);
 
 	camera = new Camera(sf::Vector2f(0, 0), sf::Vector2f(viewport_width, viewport_height));
-	window = new sf::RenderWindow(sf::VideoMode::VideoMode((int)window_width, (int)window_height), "Project Boulder");// , sf::Style::Fullscreen);
+	if (Singleton<Settings>::Get()->fullscreen) {
+		window = new sf::RenderWindow(sf::VideoMode::getFullscreenModes()[0], "Project Boulder", sf::Style::Fullscreen);
+		camera->viewport_dimensions = sf::Vector2f((float)window->getViewport(window->getView()).width, (float)window->getViewport(window->getView()).height);
+	} else {
+		window = new sf::RenderWindow(sf::VideoMode::VideoMode((int)window_width, (int)window_height), "Project Boulder");// , sf::Style::Fullscreen);
+	}
 	window->setVerticalSyncEnabled(false);
 	//sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode::getDesktopMode(), "Project Boulder");// , sf::Style::Fullscreen);
 	//main_character = new PlayerCharacter(window, sf::Vector2f(0.0f, 0.0f), sf::Vector2f(40.0f, 80.0f), true);
@@ -235,7 +262,7 @@ int main()
 		return -1;
 
 	logo_screen_sprite = sf::Sprite(logo_screen_texture);
-	logo_screen_sprite.setScale(viewport_width / logo_screen_texture.getSize().x, viewport_height / logo_screen_texture.getSize().y);
+	logo_screen_sprite.setScale(camera->viewport_dimensions.x / logo_screen_texture.getSize().x, camera->viewport_dimensions.y / logo_screen_texture.getSize().y);
 	logo_screen_sprite_transparency = 0;
 
 	if (!start_menu_background_texture.loadFromFile("Images/MainMenuBackground.jpg"))
@@ -257,7 +284,7 @@ int main()
 
 	MainMenu = new Menu(window, camera->viewport_dimensions);
 	MainMenu->AddItem("New Game", &NewGame);
-	MainMenu->AddItem("Play Game With Audio Commentary", &NewGameWithCommentary);
+	//MainMenu->AddItem("Play Game With Audio Commentary", &NewGameWithCommentary);
 	MainMenu->AddItem("Load Game", &LoadGame);
 	MainMenu->AddItem("Options", &OpenOptionsMenu);
 	MainMenu->AddItem("Exit", &Exit);
@@ -265,10 +292,11 @@ int main()
 	OptionsMenu = new Menu(window, camera->viewport_dimensions);
 	OptionsMenu->AddItem("Music Volume", (int)Singleton<Settings>::Get()->music_volume, 100);
 	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
+	OptionsMenu->AddItem("Fullscreen", Singleton<Settings>::Get()->fullscreen, &EnableFullscreen, &DisableFullscreen);
 	OptionsMenu->AddItem("Save Settings", &SaveSettings);
 	OptionsMenu->AddItem("Back", &ExitOptionsMenu);
 
-	soulOriginPoint = sf::Vector2f(camera->viewport_dimensions.x - 478.0f, camera->viewport_dimensions.y);
+	soulOriginPoint = sf::Vector2f(viewport_width - 478.0f, viewport_height);
 	for (int i = 0; i < numberOfSouls; i++) {
 		souls.push_back(new sf::CircleShape(2.0f));
 		soulAlphas.push_back((float)(rand() % 100));
@@ -290,9 +318,9 @@ int main()
 		left_stick_horizontal = 0.0f;
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-			left_stick_vertical = 100.0f;
-		} else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
 			left_stick_vertical = -100.0f;
+		} else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+			left_stick_vertical = 100.0f;
 		} else {
 			left_stick_vertical = sf::Joystick::getAxisPosition(0, sf::Joystick::Y);
 		}

@@ -61,9 +61,9 @@ CharacterScreen::CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_
 	AButtonSprite = new sf::Sprite(*AButtonTexture);
 	AButtonSprite->setPosition(790.0f, 400.0f);
 
-	int runesListSize = (int)Player->RunesList.size();
+	int runesListSize = (int)Player->OwnedRunesList.size();
 	for (int i = 0; i < runesListSize; i++) {
-		RuneTextsList.push_back(new sf::Text("(" + to_string(i + 1) + "/" + to_string(runesListSize) + ") " + Player->RunesList[i]->Name, ringbearerFont, 45));
+		RuneTextsList.push_back(new sf::Text("(" + to_string(i + 1) + "/" + to_string(runesListSize) + ") " + Player->OwnedRunesList[i]->Name, ringbearerFont, 45));
 		RuneTextsList[i]->setFillColor(sf::Color::White);
 	}
 
@@ -79,7 +79,12 @@ CharacterScreen::CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_
 	RuneDescriptionText = sf::Text("", ringbearerFont, 25);
 	RuneDescriptionText.setFillColor(sf::Color::White);
 	RuneDescriptionText.setPosition(700.0f, 100.0f);
-	RuneDescriptionText.setString(Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+
+	if (runesListSize > indexOfRuneBeingHoveredInInternalRuneList) {
+		RuneDescriptionText.setString(Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+	} else {
+		RuneDescriptionText.setString("");
+	}
 
 	scrollBarLengthRectangle = new sf::RectangleShape(sf::Vector2f(4.0f, 50.0f * numberOfRunesToDisplayInList));
 	scrollBarLengthRectangle->setPosition(10.0f, 50.0f);
@@ -129,9 +134,16 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 
 		render_window->draw(RunesSectionText);
 		render_window->draw(*DpadSprite);
-		render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
-		render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
-		render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
+
+		if (Player->DpadLeftRune != nullptr) {
+			render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
+		}
+		if (Player->DpadUpRune != nullptr) {
+			render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
+		}
+		if (Player->DpadRightRune != nullptr) {
+			render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
+		}
 	} else {
 		render_window->draw(*WindowSprite);
 		render_window->draw(*runeAreaBackgroundRect);
@@ -145,9 +157,15 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 		render_window->draw(RunesSectionText);
 		render_window->draw(*DpadSprite);
 
-		render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
-		render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
-		render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
+		if (Player->DpadLeftRune != nullptr) {
+			render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
+		}
+		if (Player->DpadUpRune != nullptr) {
+			render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
+		}
+		if (Player->DpadRightRune != nullptr) {
+			render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
+		}
 
 		render_window->draw(*AButtonSprite);
 
@@ -179,6 +197,18 @@ void CharacterScreen::SwitchToAssigningRunes() {
 	IsOnAssigningRunesPage = true;
 	indexOfRuneBeingHoveredInInternalRuneList = 0;
 	indexOfRuneBeingHoveredInUi = 0;
+
+	int runesListSize = (int)Player->OwnedRunesList.size();
+	for (int i = 0; i < runesListSize; i++) {
+		RuneTextsList.push_back(new sf::Text("(" + to_string(i + 1) + "/" + to_string(runesListSize) + ") " + Player->OwnedRunesList[i]->Name, ringbearerFont, 45));
+		RuneTextsList[i]->setFillColor(sf::Color::White);
+	}
+
+	if (runesListSize > indexOfRuneBeingHoveredInInternalRuneList) {
+		RuneDescriptionText.setString(Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+	} else {
+		RuneDescriptionText.setString("");
+	}
 }
 
 void CharacterScreen::SwitchToCharacterStats() {
@@ -188,8 +218,9 @@ void CharacterScreen::SwitchToCharacterStats() {
 void CharacterScreen::MoveCursorDown() {
 	indexOfRuneBeingHoveredInInternalRuneList++;
 	bool cycle_to_top_of_list = false;
+	int runesListSize = (int)Player->OwnedRunesList.size();
 
-	if (indexOfRuneBeingHoveredInInternalRuneList >= (int)Player->RunesList.size()) {
+	if (indexOfRuneBeingHoveredInInternalRuneList >= runesListSize) {
 		indexOfRuneBeingHoveredInInternalRuneList = 0;
 		cycle_to_top_of_list = true;
 	}
@@ -205,24 +236,29 @@ void CharacterScreen::MoveCursorDown() {
 		indexOfRuneBeingHoveredInUi++;
 	}
 
-	RuneDescriptionText.setString(Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+	if (runesListSize > indexOfRuneBeingHoveredInInternalRuneList) {
+		RuneDescriptionText.setString(Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+	} else {
+		RuneDescriptionText.setString("");
+	}
 
-	scrollBarCursorRectangle->setPosition(10.0f - 3.0f, 50.0f + (((50.0f * numberOfRunesToDisplayInList)/* - 40.0f*/) * indexOfRuneBeingHoveredInInternalRuneList / (int)Player->RunesList.size()));
+	scrollBarCursorRectangle->setPosition(10.0f - 3.0f, 50.0f + (((50.0f * numberOfRunesToDisplayInList)/* - 40.0f*/) * indexOfRuneBeingHoveredInInternalRuneList / (runesListSize > 0 ? runesListSize : 1)));
 }
 
 void CharacterScreen::MoveCursorUp() {
 	indexOfRuneBeingHoveredInInternalRuneList--;
 	bool cycle_to_bottom_of_list = false;
+	int runesListSize = (int)Player->OwnedRunesList.size();
 
 	if (indexOfRuneBeingHoveredInInternalRuneList < 0) {
-		indexOfRuneBeingHoveredInInternalRuneList = (int)Player->RunesList.size() - 1;
+		indexOfRuneBeingHoveredInInternalRuneList = (int)Player->OwnedRunesList.size() - 1;
 		cycle_to_bottom_of_list = true;
 	}
 
 	if (indexOfRuneBeingHoveredInUi <= 0) {
 		if (cycle_to_bottom_of_list) {
 			indexOfRuneBeingHoveredInUi = numberOfRunesToDisplayInList - 1;
-			firstRuneBeingDisplayedInUiInternalRuneListIndex = (int)Player->RunesList.size() - numberOfRunesToDisplayInList;
+			firstRuneBeingDisplayedInUiInternalRuneListIndex = (int)Player->OwnedRunesList.size() - numberOfRunesToDisplayInList;
 		} else {
 			firstRuneBeingDisplayedInUiInternalRuneListIndex--;
 		}
@@ -230,9 +266,13 @@ void CharacterScreen::MoveCursorUp() {
 		indexOfRuneBeingHoveredInUi--;
 	}
 
-	RuneDescriptionText.setString(Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+	if (runesListSize > indexOfRuneBeingHoveredInInternalRuneList) {
+		RuneDescriptionText.setString(Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+	} else {
+		RuneDescriptionText.setString("");
+	}
 
-	scrollBarCursorRectangle->setPosition(10.0f - 3.0f, 50.0f + (((50.0f * numberOfRunesToDisplayInList)/* - 40.0f*/) * indexOfRuneBeingHoveredInInternalRuneList / (int)Player->RunesList.size()));
+	scrollBarCursorRectangle->setPosition(10.0f - 3.0f, 50.0f + (((50.0f * numberOfRunesToDisplayInList)/* - 40.0f*/) * indexOfRuneBeingHoveredInInternalRuneList / (runesListSize > 0 ? runesListSize : 1)));
 }
 
 void CharacterScreen::HandleDpadRightPress() {
@@ -240,8 +280,8 @@ void CharacterScreen::HandleDpadRightPress() {
 		return;
 	}
 
-	if (IsOnAssigningRunesPage) {
-		Rune* rune_being_assigned = Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList];
+	if (IsOnAssigningRunesPage && (int)Player->OwnedRunesList.size() > indexOfRuneBeingHoveredInInternalRuneList) {
+		Rune* rune_being_assigned = Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList];
 
 		if (rune_being_assigned->Name == Player->DpadLeftRune->Name) {
 			Player->DpadLeftRune = Player->DpadRightRune;
@@ -263,8 +303,8 @@ void CharacterScreen::HandleDpadLeftPress() {
 		return;
 	}
 
-	if (IsOnAssigningRunesPage) {
-		Rune* rune_being_assigned = Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList];
+	if (IsOnAssigningRunesPage && (int)Player->OwnedRunesList.size() > indexOfRuneBeingHoveredInInternalRuneList) {
+		Rune* rune_being_assigned = Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList];
 
 		if (rune_being_assigned->Name == Player->DpadRightRune->Name) {
 			Player->DpadRightRune = Player->DpadLeftRune;
@@ -287,8 +327,8 @@ void CharacterScreen::HandleDpadUpPress() {
 		return;
 	}
 
-	if (IsOnAssigningRunesPage) {
-		Rune* rune_being_assigned = Player->RunesList[indexOfRuneBeingHoveredInInternalRuneList];
+	if (IsOnAssigningRunesPage && (int)Player->OwnedRunesList.size() > indexOfRuneBeingHoveredInInternalRuneList) {
+		Rune* rune_being_assigned = Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList];
 
 		if (rune_being_assigned->Name == Player->DpadRightRune->Name) {
 			Player->DpadRightRune = Player->DpadUpRune;
@@ -313,32 +353,49 @@ void CharacterScreen::HandleDpadDownRelease() {
 }
 
 void CharacterScreen::ResetPositionOfRuneImagesAroundDpad() {
-	Player->DpadLeftRune->CharScreenPosition = sf::Vector2f(camera->viewport_dimensions.x - 410.0f, camera->viewport_dimensions.y - 115.0f);
-	Player->DpadUpRune->CharScreenPosition = sf::Vector2f(camera->viewport_dimensions.x - 335.0f, camera->viewport_dimensions.y - 190.0f);
-	Player->DpadRightRune->CharScreenPosition = sf::Vector2f(camera->viewport_dimensions.x - 260.0f, camera->viewport_dimensions.y - 115.0f);
+	if (Player->DpadLeftRune != nullptr) {
+		Player->DpadLeftRune->CharScreenPosition = sf::Vector2f(camera->viewport_dimensions.x - 410.0f, camera->viewport_dimensions.y - 115.0f);
+		Player->DpadLeftRune->CharacterScreenSprite->setPosition(Player->DpadLeftRune->CharScreenPosition);
+	}
 
-	Player->DpadLeftRune->CharacterScreenSprite->setPosition(Player->DpadLeftRune->CharScreenPosition);
-	Player->DpadUpRune->CharacterScreenSprite->setPosition(Player->DpadUpRune->CharScreenPosition);
-	Player->DpadRightRune->CharacterScreenSprite->setPosition(Player->DpadRightRune->CharScreenPosition);
+	if (Player->DpadUpRune != nullptr) {
+		Player->DpadUpRune->CharScreenPosition = sf::Vector2f(camera->viewport_dimensions.x - 335.0f, camera->viewport_dimensions.y - 190.0f);
+		Player->DpadUpRune->CharacterScreenSprite->setPosition(Player->DpadUpRune->CharScreenPosition);
+	}
+
+	if (Player->DpadRightRune != nullptr) {
+		Player->DpadRightRune->CharScreenPosition = sf::Vector2f(camera->viewport_dimensions.x - 260.0f, camera->viewport_dimensions.y - 115.0f);
+		Player->DpadRightRune->CharacterScreenSprite->setPosition(Player->DpadRightRune->CharScreenPosition);
+	}
 }
 
 void CharacterScreen::ResetEquippedValuesOnRunes() {
-	int runesListSize = (int)Player->RunesList.size();
+	int runesListSize = (int)Player->OwnedRunesList.size();
 	for (int i = 0; i < runesListSize; i++) {
-		Player->RunesList[i]->Equipped = false;
+		Player->OwnedRunesList[i]->Equipped = false;
 	}
 
-	Player->DpadLeftRune->Equipped = true;
+	if (Player->DpadLeftRune != nullptr) {
+		Player->DpadLeftRune->Equipped = true;
+	}
 
 	if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 3) {
-		Player->DpadUpRune->Equipped = true;
-		Player->DpadRightRune->Equipped = true;
+		if (Player->DpadUpRune != nullptr) {
+			Player->DpadUpRune->Equipped = true;
+		}
+		if (Player->DpadRightRune != nullptr) {
+			Player->DpadRightRune->Equipped = true;
+		}
 	}
 	else if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 2) {
-		Player->DpadUpRune->Equipped = true;
+		if (Player->DpadUpRune != nullptr) {
+			Player->DpadUpRune->Equipped = true;
+		}
 	}
 }
 
 bool CharacterScreen::AreAnyEquippedRunesActive() {
-	return Player->DpadLeftRune->Active || Player->DpadUpRune->Active || Player->DpadRightRune->Active;
+	return (Player->DpadLeftRune != nullptr && Player->DpadLeftRune->Active) ||
+			(Player->DpadUpRune != nullptr && Player->DpadUpRune->Active) ||
+			(Player->DpadRightRune != nullptr && Player->DpadRightRune->Active);
 }

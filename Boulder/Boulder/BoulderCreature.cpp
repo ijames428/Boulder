@@ -480,6 +480,13 @@ void BoulderCreature::UpdateBehavior() {
 
 		if (distance < attackDistance) {
 			if (!IsAnAttackActive()) {
+				if (target->GetBody()->GetPosition().x < body->GetPosition().x && IsFacingRight()) {
+					SetFacingRight(false);
+				}
+				else if (target->GetBody()->GetPosition().x > body->GetPosition().x && !IsFacingRight()) {
+					SetFacingRight(true);
+				}
+
 				UseAttack(0);
 			}
 		} else {
@@ -883,6 +890,8 @@ void BoulderCreature::UseAttack(int move_type, bool activate_buffer) {
 	if (can_take_input && hit_points > 0 && !landing_animation_timer->IsActive() && !hit_stun_timer->IsActive() && !IsAnAttackActive()) {
 		attacks[move_type]->InitiateAttack();
 
+		damageTakenSinceAttackStarted = 0;
+
 		if (move_type < (int)attacking_animations.size()) {
 			attacking_animations[move_type]->Play();
 		} else {
@@ -922,24 +931,24 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			knockBackMultiplier = 1.0f;
 			hitStunMultiplier = 1.0f;
 		}
-		
-		bool is_an_attack_active = IsAnAttackActive();
 
-		if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
-			hit_stun_timer = new StatusTimer((int)((hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) * hitStunMultiplier));
-			hit_stun_timer->Start();
+		damageTakenSinceAttackStarted += damage;
 
-			Attack* active_attack = GetActiveAttack();
-			if (active_attack != nullptr) {
-				active_attack->StopAttack();
-			}
-		}
+		Attack* active_attack = GetActiveAttack();
+		bool interrupt_attack = active_attack == nullptr || (active_attack != nullptr && (damageTakenSinceAttackStarted > active_attack->Poise || active_attack->IsInRecoveryFrames()));
 
 		if (hit_points <= 0) {
 			knockBackMultiplier = 1.0f;
 		}
 
-		if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
+		if (interrupt_attack) {
+			hit_stun_timer = new StatusTimer((int)((hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) * hitStunMultiplier));
+			hit_stun_timer->Start();
+
+			if (active_attack != nullptr) {
+				active_attack->StopAttack();
+			}
+
 			if (pop_up_grounded_enemies && !IsInTheAir()) {
 				body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, -knock_back.y * knockBackMultiplier));
 			} else {
@@ -967,18 +976,8 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			if (player_index != 0) {
 				Singleton<SmashWorld>::Get()->EnemyDied(50);
 			}
-			//if (!IsInTheAir()) {
-			//	body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
-			//}
 		} else {
 			hit_points -= damage;
-			//if (!is_an_attack_active || (is_an_attack_active && attacksAreInterruptible)) {
-			//	if (pop_up_grounded_enemies && !IsInTheAir()) {
-			//		body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, -knock_back.y * knockBackMultiplier));
-			//	} else {
-			//		body->SetLinearVelocity(b2Vec2(knock_back.x * knockBackMultiplier, knock_back.y * knockBackMultiplier));
-			//	}
-			//}
 
 			if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
 				health_cash_in_timer->Start();

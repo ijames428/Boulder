@@ -15,7 +15,7 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	player_index = player_idx;
 	is_interactable = false;
 
-	hit_points = baseMaxHitPoints = playerBestiaryData["DictOfUnits"]["Player"]["HitPoints"].asInt();
+	baseMaxHitPoints = playerBestiaryData["DictOfUnits"]["Player"]["HitPoints"].asInt();
 	can_take_input = true;
 
 	characterLevel = 1;
@@ -27,7 +27,7 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	characterExperienceTowardsNextLevelForAnimatedBar = 0;
 	//weaponExperienceTowardsNextLevelForAnimatedBar = 0;
 
-	max_hit_points = GetMaximumHitPointsFromLevel(characterLevel);
+	hit_points = max_hit_points = GetMaximumHitPointsFromLevel(characterLevel);
 
 	speed = 5.0f;
 	running_speed_multiplier = 2.0f;
@@ -173,27 +173,27 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	DefenseRune = new Rune("Defense", "Reduces the amount of damage taken", "Images/Runes/ShieldRune.png");
 	BerserkerRune = new Rune("Berserker", "More damage at low health, less damage \nat high health", "Images/Runes/BerserkerRune.png");
 
-	RunesList.push_back(DamageRune);
-	RunesList.push_back(LifestealRune);
-	RunesList.push_back(SuperJumpRune);
-	RunesList.push_back(DefenseRune);
-	RunesList.push_back(BerserkerRune);
+	MasterRunesList.push_back(DamageRune);
+	MasterRunesList.push_back(LifestealRune);
+	MasterRunesList.push_back(SuperJumpRune);
+	MasterRunesList.push_back(DefenseRune);
+	MasterRunesList.push_back(BerserkerRune);
 
-	DpadLeftRune = DamageRune;
-	DpadLeftRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 200.0f, viewport_dimensions.y - 125.0f);
-	DpadLeftRune->UiSprite->setPosition(DpadLeftRune->UiPosition);
-	DpadLeftRune->UiSprite->setScale(rune_scale);
-	DpadLeftRune->Equipped = true;
-
-	DpadUpRune = LifestealRune;
-	DpadUpRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 125.0f, viewport_dimensions.y - 200.0f);
-	DpadUpRune->UiSprite->setPosition(DpadUpRune->UiPosition);
-	DpadUpRune->UiSprite->setScale(rune_scale);
-
-	DpadRightRune = SuperJumpRune;
-	DpadRightRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 50.0f, viewport_dimensions.y - 125.0f);
-	DpadRightRune->UiSprite->setPosition(DpadRightRune->UiPosition);
-	DpadRightRune->UiSprite->setScale(rune_scale);
+	//DpadLeftRune = DamageRune;
+	//DpadLeftRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 200.0f, viewport_dimensions.y - 125.0f);
+	//DpadLeftRune->UiSprite->setPosition(DpadLeftRune->UiPosition);
+	//DpadLeftRune->UiSprite->setScale(rune_scale);
+	//DpadLeftRune->Equipped = true;
+	//
+	//DpadUpRune = LifestealRune;
+	//DpadUpRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 125.0f, viewport_dimensions.y - 200.0f);
+	//DpadUpRune->UiSprite->setPosition(DpadUpRune->UiPosition);
+	//DpadUpRune->UiSprite->setScale(rune_scale);
+	//
+	//DpadRightRune = SuperJumpRune;
+	//DpadRightRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 50.0f, viewport_dimensions.y - 125.0f);
+	//DpadRightRune->UiSprite->setPosition(DpadRightRune->UiPosition);
+	//DpadRightRune->UiSprite->setScale(rune_scale);
 
 	rageTierAuraAnimations.push_back(new SpriteAnimation(render_window, "Units/Player/RageTier1Sheet.png", 64, 64, 8, 4, 2, 1.0f, sf::Color::White, true));
 	rageTierAuraAnimations[0]->Play();
@@ -201,6 +201,12 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	rageTierAuraAnimations[1]->Play();
 	rageTierAuraAnimations.push_back(new SpriteAnimation(render_window, "Units/Player/RageTier3Sheet.png", 64, 64, 4, 2, 2, 1.0f, sf::Color::White, true));
 	rageTierAuraAnimations[2]->Play();
+
+	RageAscensionSoundBuffer.loadFromFile("Sound/DbzSoundEffectsAura.wav");
+	RageAscensionSound.setBuffer(RageAscensionSoundBuffer);
+	RageAscensionSound.setLoop(false);
+
+	body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
 }
 
 void SmashCharacter::ReceiveHeal(int heal) {
@@ -375,6 +381,9 @@ void SmashCharacter::IncreaseRageLevel() {
 	rageLevelProgressBarRect->setFillColor(tierRageColors[rageLevel]);
 	rageLevelText->setString(to_string(rageLevel));
 	angerTowardsNextRageLevel = (int)(angerNeededForNextRageLevel * 0.25f);
+
+	RageAscensionFadeVolume = RageAscensionStartingVolume;
+	RageAscensionSound.play();
 	//numberOfRunesYouCanActivate++;
 }
 
@@ -397,13 +406,20 @@ void SmashCharacter::DecreaseRageLevel() {
 }
 
 void SmashCharacter::ResetRuneUiPositions(sf::Vector2f viewport_dimensions) {
-	DpadLeftRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 200.0f, viewport_dimensions.y - 125.0f);
-	DpadUpRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 125.0f, viewport_dimensions.y - 200.0f);
-	DpadRightRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 50.0f, viewport_dimensions.y - 125.0f);
+	if (DpadLeftRune != nullptr) {
+		DpadLeftRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 200.0f, viewport_dimensions.y - 125.0f);
+		DpadLeftRune->UiSprite->setPosition(DpadLeftRune->UiPosition);
+	}
 
-	DpadLeftRune->UiSprite->setPosition(DpadLeftRune->UiPosition);
-	DpadUpRune->UiSprite->setPosition(DpadUpRune->UiPosition);
-	DpadRightRune->UiSprite->setPosition(DpadRightRune->UiPosition);
+	if (DpadUpRune != nullptr) {
+		DpadUpRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 125.0f, viewport_dimensions.y - 200.0f);
+		DpadUpRune->UiSprite->setPosition(DpadUpRune->UiPosition);
+	}
+
+	if (DpadRightRune != nullptr) {
+		DpadRightRune->UiPosition = sf::Vector2f(viewport_dimensions.x - 50.0f, viewport_dimensions.y - 125.0f);
+		DpadRightRune->UiSprite->setPosition(DpadRightRune->UiPosition);
+	}
 }
 
 void SmashCharacter::UpdateRuneUiItems() {
@@ -421,22 +437,31 @@ void SmashCharacter::UpdateRuneUiItems() {
 	//	}
 	//}
 
-	if (DpadLeftRune->Equipped) {
-		DpadLeftRune->UiSprite->setScale(0.8f, 0.8f);
-	} else {
-		DpadLeftRune->UiSprite->setScale(0.3f, 0.3f);
+	if (DpadLeftRune != nullptr) {
+		if (DpadLeftRune->Equipped) {
+			DpadLeftRune->UiSprite->setScale(0.8f, 0.8f);
+		}
+		else {
+			DpadLeftRune->UiSprite->setScale(0.3f, 0.3f);
+		}
 	}
 
-	if (DpadUpRune->Equipped) {
-		DpadUpRune->UiSprite->setScale(0.8f, 0.8f);
-	} else {
-		DpadUpRune->UiSprite->setScale(0.3f, 0.3f);
+	if (DpadUpRune != nullptr) {
+		if (DpadUpRune->Equipped) {
+			DpadUpRune->UiSprite->setScale(0.8f, 0.8f);
+		}
+		else {
+			DpadUpRune->UiSprite->setScale(0.3f, 0.3f);
+		}
 	}
 
-	if (DpadRightRune->Equipped) {
-		DpadRightRune->UiSprite->setScale(0.8f, 0.8f);
-	} else {
-		DpadRightRune->UiSprite->setScale(0.3f, 0.3f);
+	if (DpadRightRune != nullptr) {
+		if (DpadRightRune->Equipped) {
+			DpadRightRune->UiSprite->setScale(0.8f, 0.8f);
+		}
+		else {
+			DpadRightRune->UiSprite->setScale(0.3f, 0.3f);
+		}
 	}
 }
 
@@ -463,9 +488,9 @@ void SmashCharacter::ApplyObjectDataToSaveData(Json::Value& save_data) {
 	save_data["Player"]["CharacterExperienceTowardsNextLevel"] = characterExperienceTowardsNextLevel;
 	save_data["Player"]["RageLevel"] = rageLevel;
 	save_data["Player"]["AngerTowardsNextRageLevel"] = angerTowardsNextRageLevel;
-	save_data["Player"]["DpadLeftRuneName"] = DpadLeftRune->Name;
-	save_data["Player"]["DpadUpRuneName"] = DpadUpRune->Name;
-	save_data["Player"]["DpadRightRuneName"] = DpadRightRune->Name;
+	save_data["Player"]["DpadLeftRuneName"] = DpadLeftRune != nullptr ? DpadLeftRune->Name : "";
+	save_data["Player"]["DpadUpRuneName"] = DpadUpRune != nullptr ? DpadUpRune->Name : "";
+	save_data["Player"]["DpadRightRuneName"] = DpadRightRune != nullptr ? DpadRightRune->Name : "";
 	//save_data["Player"]["WeaponLevel"] = weaponLevel;
 	//save_data["Player"]["WeaponExperienceTowardsNextLevel"] = weaponExperienceTowardsNextLevel;
 }
@@ -485,14 +510,14 @@ void SmashCharacter::ApplySaveDataToObjectData(Json::Value& save_data) {
 	string dpad_up_rune_name = save_data["Player"]["DpadUpRuneName"].asString();
 	string dpad_right_rune_name = save_data["Player"]["DpadRightRuneName"].asString();
 
-	int runes_list_size = (int)RunesList.size();
+	int runes_list_size = (int)OwnedRunesList.size();
 	for (int i = 0; i < runes_list_size; i++) {
-		if (RunesList[i]->Name == dpad_left_rune_name) {
-			DpadLeftRune = RunesList[i];
-		} else if (RunesList[i]->Name == dpad_up_rune_name) {
-			DpadUpRune = RunesList[i];
-		} else if (RunesList[i]->Name == dpad_right_rune_name) {
-			DpadRightRune = RunesList[i];
+		if (OwnedRunesList[i]->Name == dpad_left_rune_name) {
+			DpadLeftRune = OwnedRunesList[i];
+		} else if (OwnedRunesList[i]->Name == dpad_up_rune_name) {
+			DpadUpRune = OwnedRunesList[i];
+		} else if (OwnedRunesList[i]->Name == dpad_right_rune_name) {
+			DpadRightRune = OwnedRunesList[i];
 		}
 	}
 	//weaponExperienceTowardsNextLevel = save_data["Player"]["WeaponExperienceTowardsNextLevel"].asInt();
@@ -501,15 +526,27 @@ void SmashCharacter::ApplySaveDataToObjectData(Json::Value& save_data) {
 	UpdateHealthBar();
 	UpdateCharacterExperienceBar();
 
-	DpadLeftRune->Equipped = true;
-	DpadUpRune->Equipped = false;
-	DpadRightRune->Equipped = false;
+	if (DpadLeftRune != nullptr) {
+		DpadLeftRune->Equipped = true;
+	}
+	if (DpadUpRune != nullptr) {
+		DpadUpRune->Equipped = false;
+	}
+	if (DpadRightRune != nullptr) {
+		DpadRightRune->Equipped = false;
+	}
 
 	if (GetNumberOfRuneSlotsFromLevel(characterLevel) >= 3) {
-		DpadUpRune->Equipped = true;
-		DpadRightRune->Equipped = true;
+		if (DpadUpRune != nullptr) {
+			DpadUpRune->Equipped = true;
+		}
+		if (DpadRightRune != nullptr) {
+			DpadRightRune->Equipped = true;
+		}
 	} else if (GetNumberOfRuneSlotsFromLevel(characterLevel) >= 2) {
-		DpadUpRune->Equipped = true;
+		if (DpadUpRune != nullptr) {
+			DpadUpRune->Equipped = true;
+		}
 	}
 
 	ResetRuneUiPositions(Singleton<SmashWorld>().Get()->GetCamera()->viewport_dimensions);
@@ -523,6 +560,16 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	//UpdateWeaponExperienceBar();
 	UpdateRageLevelBar();
 	UpdateRuneUiItems();
+
+	if (RageAscensionSound.getStatus() == sf::Sound::Playing) {
+		RageAscensionFadeVolume -= 0.01f * RageAscensionStartingVolume;
+
+		if (RageAscensionFadeVolume < 0.0f) {
+			RageAscensionSound.stop();
+		} else {
+			RageAscensionSound.setVolume(RageAscensionFadeVolume);
+		}
+	}
 
 	if (IsInTheAir()) {
 		b2Vec2 vel = body->GetLinearVelocity();
@@ -615,18 +662,14 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 
 	if (State == STATE_WALKING) {
 		if (walking_animations[0]->GetCurrentFrame() == RightFootStepSoundFrameWalk) {
-			//RightFootStepSound.setVolume(25);
 			RightFootStepSound.play();
 		} else if (walking_animations[0]->GetCurrentFrame() == LeftFootStepSoundFrameWalk) {
-			//LeftFootStepSound.setVolume(25);
 			LeftFootStepSound.play();
 		}
 	} else if (State == STATE_RUNNING) {
 		if (running_animations[0]->GetCurrentFrame() == RightFootStepSoundFrameRun) {
-			//RightFootStepSound.setVolume(60);
 			RightFootStepSound.play();
 		} else if (running_animations[0]->GetCurrentFrame() == LeftFootStepSoundFrameRun) {
-			//LeftFootStepSound.setVolume(60);
 			LeftFootStepSound.play();
 		}
 	} else if (State == STATE_ATTACKING) {
@@ -707,11 +750,17 @@ void SmashCharacter::Draw(sf::Vector2f camera_position) {
 
 	render_window->draw(*DpadSprite);
 
-	render_window->draw(*DpadLeftRune->UiSprite);
+	if (DpadLeftRune != nullptr) {
+		render_window->draw(*DpadLeftRune->UiSprite);
+	}
 
 	if (GetNumberOfRuneSlotsFromLevel(characterLevel) >= 3) {
-		render_window->draw(*DpadUpRune->UiSprite);
-		render_window->draw(*DpadRightRune->UiSprite);
+		if (DpadUpRune != nullptr) {
+			render_window->draw(*DpadUpRune->UiSprite);
+		}
+		if (DpadRightRune != nullptr) {
+			render_window->draw(*DpadRightRune->UiSprite);
+		}
 	}
 	else if (GetNumberOfRuneSlotsFromLevel(characterLevel) >= 2) {
 		render_window->draw(*DpadUpRune->UiSprite);
@@ -768,6 +817,10 @@ void SmashCharacter::ThrowWeapon() {
 
 void SmashCharacter::TeleportToWeapon() {
 	if (weapon->CanTeleportToWeapon() && !teleportedSinceLastLanding) {
+		if (IsInTheAir()) {
+			teleportedSinceLastLanding = true;
+		}
+
 		b2Vec2 original_position = body->GetPosition();
 		b2Vec2 new_position = weapon->GetBody()->GetPosition();
 
@@ -777,8 +830,6 @@ void SmashCharacter::TeleportToWeapon() {
 
 		body->SetTransform(weapon->GetBody()->GetPosition(), body->GetAngle());
 		body->SetLinearVelocity(b2Vec2(travel_vector.x * speed, travel_vector.y * speed));
-
-		teleportedSinceLastLanding = true;
 
 		weapon->TeleportedToWeapon();
 	}
@@ -922,6 +973,8 @@ void SmashCharacter::UpdateEffectsVolumes(float new_effects_volume) {
 	for (int i = 0; i < (int)AttackAnimationSounds.size(); i++) {
 		AttackAnimationSounds[i]->setVolume(new_effects_volume);
 	}
+
+	RageAscensionStartingVolume = new_effects_volume;
 }
 
 void SmashCharacter::AddAnger(int anger_amount) {
@@ -999,4 +1052,52 @@ void SmashCharacter::ActuallyJump(bool short_hop) {
 			SetInTheAir(true);
 		}
 	}
+}
+
+void SmashCharacter::PickUpRune(string rune_name) {
+	int owned_runes_list_size = (int)OwnedRunesList.size();
+	for (int i = 0; i < owned_runes_list_size; i++) {
+		if (OwnedRunesList[i]->Name == rune_name) {
+			return;
+		}
+	}
+
+	int master_rune_list_size = (int)MasterRunesList.size();
+	for (int i = 0; i < master_rune_list_size; i++) {
+		if (MasterRunesList[i]->Name == rune_name) {
+			OwnedRunesList.push_back(MasterRunesList[i]);
+
+			int number_of_rune_slots_by_level = GetNumberOfRuneSlotsFromLevel(characterLevel);
+
+			if (number_of_rune_slots_by_level == 1) {
+				if (DpadLeftRune == nullptr) {
+					DpadLeftRune = MasterRunesList[i];
+					DpadLeftRune->Equipped = true;
+				}
+			} else if (number_of_rune_slots_by_level == 2) {
+				if (DpadLeftRune == nullptr) {
+					DpadLeftRune = MasterRunesList[i];
+					DpadLeftRune->Equipped = true;
+				} else if(DpadUpRune == nullptr) {
+					DpadUpRune = MasterRunesList[i];
+					DpadUpRune->Equipped = true;
+				}
+			} else if (number_of_rune_slots_by_level >= 3) {
+				if (DpadLeftRune == nullptr) {
+					DpadLeftRune = MasterRunesList[i];
+					DpadLeftRune->Equipped = true;
+				} else if (DpadUpRune == nullptr) {
+					DpadUpRune = MasterRunesList[i];
+					DpadUpRune->Equipped = true;
+				} else if (DpadRightRune == nullptr) {
+					DpadRightRune = MasterRunesList[i];
+					DpadRightRune->Equipped = true;
+				}
+			}
+
+			break;
+		}
+	}
+
+	ResetRuneUiPositions(Singleton<SmashWorld>::Get()->GetCamera()->viewport_dimensions);
 }

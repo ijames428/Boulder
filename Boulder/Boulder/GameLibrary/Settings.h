@@ -8,6 +8,7 @@ class Settings {
 public:
 	float music_volume;
 	float effects_volume;
+	bool fullscreen;
 	Settings();
 };
 
