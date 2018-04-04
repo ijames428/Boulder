@@ -6,4 +6,5 @@ using namespace std;
 #include "Settings.h"  
 
 Settings::Settings() {
+	fullscreen = true;
 }

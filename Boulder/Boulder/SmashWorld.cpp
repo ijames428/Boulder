@@ -13,11 +13,12 @@ typedef void(*callback_function)(void); // type for conciseness
 SmashWorld::SmashWorld() {
 }
 
-void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_second) {
+void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_second, int save_slot, bool load_game) {
 	render_window = window;
 	camera = cam;
 	timeStep = 1.0f / frames_per_second;
 	past_setup = false;
+	saveSlot = save_slot;
 
 	//if (!shader.loadFromFile("Shaders/colorShading.vert", "Shaders/colorShading.frag"))
 	//{
@@ -69,7 +70,13 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_se
 
 	setupThread = std::thread(&SmashWorld::UpdateLoadingScreen, this);
 
-	Setup();
+	Setup(); 
+	
+	if (load_game) {
+		ImportSaveData(saveSlot);
+	} else {
+		ExportSaveData();
+	}
 
 	setupThread.join();
 
@@ -83,7 +90,7 @@ void SmashWorld::ExportSaveData() {
 	//
 	//}
 
-	ofstream ofs("save_data.txt", ios::binary | ios::out);
+	ofstream ofs("save" + to_string(saveSlot) + ".sav", ios::binary | ios::out);
 
 	Json::Value save_data;
 
@@ -115,13 +122,16 @@ void SmashWorld::ExportSaveData() {
 	savedTextVisibleTimer->Start();
 }
 
-void SmashWorld::ImportSaveData() {
-	string file_path = "save_data.txt";
+void SmashWorld::ImportSaveData(int save_slot) {
+	if (save_slot != -1) {
+		saveSlot = save_slot;
+	}
 
+	string file_name = "save" + to_string(saveSlot) + ".sav";
 	Json::Value save_data;
 	string rawData = "";
 	string line;
-	ifstream myfile(file_path, ios::binary);
+	ifstream myfile(file_name, ios::binary);
 	
 	if (myfile.is_open()) {
 		while (getline(myfile, line)) {
@@ -130,7 +140,7 @@ void SmashWorld::ImportSaveData() {
 	
 		myfile.close();
 	} else {
-		cout << "Unable to open file " << file_path << "\n";
+		cout << "Unable to open file " << file_name << "\n";
 	}
 
 	Json::Reader reader;

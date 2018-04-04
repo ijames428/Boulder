@@ -27,9 +27,17 @@ bool WasButtonAPressed();
 bool WasButtonAReleased();
 bool WasButtonBPressed();
 bool WasButtonBReleased();
+bool WasButtonYPressed();
+bool WasButtonYReleased();
 bool WasButtonStartPressed();
 bool WasButtonStartReleased();
 void SetFramesPerSecond(int new_fps);
+void ExtractSavedGameDisplayInformation(string file_path, string* stage_of_game, string* character_level);
+void BuildMainMenu();
+void BuildLoadMenu();
+void SaveSettings();
+
+typedef void(*callback_function_with_param)(int); // type for conciseness
 
 enum GameStates
 {
@@ -64,21 +72,24 @@ sf::Sprite start_menu_background_sprite;
 sf::Font ringbearer_font;
 sf::Text title_text;
 sf::Text start_text;
-
+sf::Text how_to_delete_save_text;
 sf::Text credits_text;
 
 int a_button = 0;
-int b_button = 1;
+int b_button = 1; 
+int y_button = 3;
 int start_button = 7;
 
 bool a_button_current;
 bool b_button_current;
+bool y_button_current;
 bool start_button_current;
 float left_stick_vertical = 0.0f;
 float left_stick_horizontal = 0.0f;
 
 bool a_button_previous = false;
 bool b_button_previous = false;
+bool y_button_previous = false;
 bool start_button_previous = false;
 
 sf::Event event;
@@ -90,8 +101,13 @@ sf::Int64 current_frame = 0;
 
 Menu* MainMenu;
 Menu* OptionsMenu;
+Menu* LoadGameMenu;
+Menu* ConfirmDeleteSaveMenu;
 bool can_take_another_left_stick_input_from_menu_controller = true;
 bool load_game = false;
+int selected_save_slot = -1;
+int first_empty_save_slot_found = -1;
+int last_used_save_slot = 99;
 
 int good_frames = 0;
 int bad_frames = 0;
@@ -108,6 +124,7 @@ void NewGame() {
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
 	load_game = false;
 	playGameWithCommentary = false;
+	selected_save_slot = last_used_save_slot = first_empty_save_slot_found;
 }
 
 void NewGameWithCommentary() {
@@ -117,10 +134,53 @@ void NewGameWithCommentary() {
 	playGameWithCommentary = true;
 }
 
-void LoadGame() {
+void LoadGameOfLastUsedSavedSlot() {
 	MainMenu->Close();
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
 	load_game = true;
+	selected_save_slot = last_used_save_slot;
+}
+
+void LoadGame(int save_slot) {
+	MainMenu->Close();
+	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+	load_game = true;
+	selected_save_slot = save_slot;
+	last_used_save_slot = selected_save_slot;
+}
+
+void ExitConfirmDeleteSaveMenu() {
+	BuildLoadMenu();
+	ConfirmDeleteSaveMenu->Close();
+	LoadGameMenu->Open();
+}
+
+void DeleteSave() {
+	string save_data_file_name = "save" + to_string(selected_save_slot) + ".sav";
+	if (remove(save_data_file_name.c_str()) != 0) {
+		cout << "Error deleting file " << save_data_file_name << "\n";
+	} else {
+		if (last_used_save_slot == selected_save_slot) {
+			last_used_save_slot = 99;
+			SaveSettings();
+			BuildMainMenu();
+		}
+	}
+
+	ExitConfirmDeleteSaveMenu();
+}
+
+void Nothing() {
+}
+
+void OpenLoadGameMenu() {
+	MainMenu->Close();
+	LoadGameMenu->Open();
+}
+
+void ExitLoadGameMenu() {
+	LoadGameMenu->Close();
+	MainMenu->Open();
 }
 
 void Exit() {
@@ -139,6 +199,11 @@ void OpenOptionsMenu() {
 void ExitOptionsMenu() {
 	OptionsMenu->Close();
 	MainMenu->Open();
+}
+
+void OpenConfirmDeleteSaveMenu() {
+	LoadGameMenu->Close();
+	ConfirmDeleteSaveMenu->Open();
 }
 
 void LoadSettings() {
@@ -167,6 +232,7 @@ void LoadSettings() {
 		Singleton<Settings>::Get()->music_volume = save_data["MusicVolume"].asFloat();
 		Singleton<Settings>::Get()->effects_volume = save_data["EffectsVolume"].asFloat();
 		Singleton<Settings>::Get()->fullscreen = save_data["Fullscreen"].asBool();
+		last_used_save_slot = save_data["LastUsedSaveSlot"].asInt();
 
 		myfile.close();
 	}
@@ -180,6 +246,7 @@ void SaveSettings() {
 	save_data["MusicVolume"] = Singleton<Settings>::Get()->music_volume;
 	save_data["EffectsVolume"] = Singleton<Settings>::Get()->effects_volume;
 	save_data["Fullscreen"] = Singleton<Settings>::Get()->fullscreen;
+	save_data["LastUsedSaveSlot"] = last_used_save_slot;
 
 	Json::StreamWriterBuilder wbuilder;
 	std::string document = Json::writeString(wbuilder, save_data);
@@ -279,15 +346,14 @@ int main()
 	start_text = sf::Text("Press A/Start to Begin", ringbearer_font);
 	start_text.setPosition(viewport_width / 2.0f - 120.0f, viewport_height / 2.0f - 60.0f);
 
+	how_to_delete_save_text = sf::Text("Press Y to Delete Current Selection", ringbearer_font, 25);
+	how_to_delete_save_text.setPosition(100.0f, 10.0f);
+	how_to_delete_save_text.setFillColor(sf::Color::Red);
+
 	credits_text = sf::Text("Made by Ian James\n\n\n\n\nThank you for playing Project Boulder", ringbearer_font);
 	credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 
-	MainMenu = new Menu(window, camera->viewport_dimensions);
-	MainMenu->AddItem("New Game", &NewGame);
-	//MainMenu->AddItem("Play Game With Audio Commentary", &NewGameWithCommentary);
-	MainMenu->AddItem("Load Game", &LoadGame);
-	MainMenu->AddItem("Options", &OpenOptionsMenu);
-	MainMenu->AddItem("Exit", &Exit);
+	BuildMainMenu();
 
 	OptionsMenu = new Menu(window, camera->viewport_dimensions);
 	OptionsMenu->AddItem("Music Volume", (int)Singleton<Settings>::Get()->music_volume, 100);
@@ -295,6 +361,13 @@ int main()
 	OptionsMenu->AddItem("Fullscreen", Singleton<Settings>::Get()->fullscreen, &EnableFullscreen, &DisableFullscreen);
 	OptionsMenu->AddItem("Save Settings", &SaveSettings);
 	OptionsMenu->AddItem("Back", &ExitOptionsMenu);
+
+	ConfirmDeleteSaveMenu = new Menu(window, camera->viewport_dimensions);
+	ConfirmDeleteSaveMenu->AddItem("Do you wish to delete this save, permanently?", &Nothing);
+	ConfirmDeleteSaveMenu->AddItem("Yes", &DeleteSave);
+	ConfirmDeleteSaveMenu->AddItem("No", &ExitConfirmDeleteSaveMenu);
+
+	BuildLoadMenu();
 
 	soulOriginPoint = sf::Vector2f(viewport_width - 478.0f, viewport_height);
 	for (int i = 0; i < numberOfSouls; i++) {
@@ -312,6 +385,7 @@ int main()
 
 		a_button_current = sf::Joystick::isButtonPressed(0, a_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
 		b_button_current = sf::Joystick::isButtonPressed(0, b_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::W);
+		y_button_current = sf::Joystick::isButtonPressed(0, y_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::A);
 		start_button_current = sf::Joystick::isButtonPressed(0, start_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
 
 		left_stick_vertical = 0.0f;
@@ -345,11 +419,9 @@ int main()
 				GameState = GAME_STATE_INIT_SINGLE_PLAYER;
 			} else if (GameState == GAME_STATE_INIT_SINGLE_PLAYER) {
 				window->clear();
-				UpdateGameStateLoadingScreen();
-				Singleton<SmashWorld>::Get()->Init(window, camera, (float)frames_per_second);
-				if (load_game) {
-					Singleton<SmashWorld>::Get()->ImportSaveData();
-				}
+				UpdateGameStateLoadingScreen(); 
+				SaveSettings();
+				Singleton<SmashWorld>::Get()->Init(window, camera, (float)frames_per_second, selected_save_slot, load_game);
 				if (playGameWithCommentary) {
 					Singleton<SmashWorld>::Get()->StartAudioCommentary();
 				}
@@ -361,7 +433,9 @@ int main()
 					credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 					GameState = GAME_STATE_CREDITS;
 				} else if (Singleton<SmashWorld>::Get()->ShouldExitToMainMenu()) {
+					BuildMainMenu();
 					MainMenu->Open();
+					BuildLoadMenu();
 					GameState = GAME_STATE_START_MENU;
 				}
 
@@ -487,6 +561,31 @@ void UpdateGameStateStartMenu() {
 		}
 
 		OptionsMenu->Draw(current_frame);
+	} else if(LoadGameMenu->IsOpen) {
+		if (left_stick_vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			LoadGameMenu->MoveCursorDown();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (left_stick_vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			LoadGameMenu->MoveCursorUp();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (left_stick_vertical >= -90.0f && left_stick_vertical <= 90.0f) {
+			can_take_another_left_stick_input_from_menu_controller = true;
+		}
+
+		window->draw(how_to_delete_save_text);
+		LoadGameMenu->Draw(current_frame);
+	} else if (ConfirmDeleteSaveMenu->IsOpen) {
+		if (left_stick_vertical > 90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			ConfirmDeleteSaveMenu->MoveCursorDown();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (left_stick_vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
+			ConfirmDeleteSaveMenu->MoveCursorUp();
+			can_take_another_left_stick_input_from_menu_controller = false;
+		} else if (left_stick_vertical >= -90.0f && left_stick_vertical <= 90.0f) {
+			can_take_another_left_stick_input_from_menu_controller = true;
+		}
+
+		ConfirmDeleteSaveMenu->Draw(current_frame);
 	}
 
 	if (WasButtonAPressed() || WasButtonStartPressed()) {
@@ -494,6 +593,10 @@ void UpdateGameStateStartMenu() {
 			MainMenu->ExecuteCurrentSelection();
 		} else if (OptionsMenu->IsOpen) {
 			OptionsMenu->ExecuteCurrentSelection();
+		} else if (LoadGameMenu->IsOpen) {
+			LoadGameMenu->ExecuteCurrentSelection();
+		} else if (ConfirmDeleteSaveMenu->IsOpen) {
+			ConfirmDeleteSaveMenu->ExecuteCurrentSelection();
 		}
 	}
 
@@ -503,7 +606,16 @@ void UpdateGameStateStartMenu() {
 			GameState = GAME_STATE_LOGOS;
 		} else if (OptionsMenu->IsOpen) {
 			ExitOptionsMenu();
+		} else if (LoadGameMenu->IsOpen) {
+			ExitLoadGameMenu();
+		} else if (ConfirmDeleteSaveMenu->IsOpen) {
+			ExitConfirmDeleteSaveMenu();
 		}
+	}
+
+	if (LoadGameMenu->IsOpen && WasButtonYPressed()) {
+		selected_save_slot = LoadGameMenu->GetCurrentSelectionIndex();
+		OpenConfirmDeleteSaveMenu();
 	}
 
 	HandleClosingEvent();
@@ -529,6 +641,7 @@ void UpdateGameStateCredits() {
 
 	if (credits_text.getPosition().y < - 350.0f) {
 		MainMenu->Open();
+		BuildLoadMenu();
 		GameState = GAME_STATE_START_MENU;
 	}
 
@@ -551,6 +664,7 @@ int IncrementTransparency(int transparency) {
 void SetPreviousButtonValues() {
 	a_button_previous = a_button_current;
 	b_button_previous = b_button_current;
+	y_button_previous = y_button_current;
 	start_button_previous = start_button_current;
 }
 
@@ -570,6 +684,14 @@ bool WasButtonAReleased() {
 	return !a_button_current && a_button_previous;
 }
 
+bool WasButtonYPressed() {
+	return y_button_current && !y_button_previous;
+}
+
+bool WasButtonYReleased() {
+	return !y_button_current && y_button_previous;
+}
+
 bool WasButtonBPressed() {
 	return b_button_current && !b_button_previous;
 }
@@ -584,4 +706,71 @@ bool WasButtonStartPressed() {
 
 bool WasButtonStartReleased() {
 	return !start_button_current && start_button_previous;
+}
+
+void BuildMainMenu() {
+	MainMenu = new Menu(window, camera->viewport_dimensions);
+
+	if (last_used_save_slot != 99) {
+		MainMenu->AddItem("Continue", &LoadGameOfLastUsedSavedSlot);
+	}
+
+	MainMenu->AddItem("New Game", &NewGame);
+	//MainMenu->AddItem("Play Game With Audio Commentary", &NewGameWithCommentary);
+	MainMenu->AddItem("Load Saved Game", &OpenLoadGameMenu);
+	MainMenu->AddItem("Options", &OpenOptionsMenu);
+	MainMenu->AddItem("Exit", &Exit);
+}
+
+void BuildLoadMenu() {
+	LoadGameMenu = new Menu(window, camera->viewport_dimensions);
+
+	for (int i = 0; i < 10; i++) {
+		string save_data_file_name = "save" + to_string(i) + ".sav";
+		ifstream f(save_data_file_name.c_str());
+		if (f.good()) {
+			string stage_of_game = "";
+			string character_level = "";
+
+			ExtractSavedGameDisplayInformation(save_data_file_name, &stage_of_game, &character_level);
+
+			string display = "Save #" + to_string(i + 1) + " | Stage of Game: ";
+			display.append(stage_of_game);
+			display.append(" | Character Level: ");
+			display.append(character_level);
+
+			callback_function_with_param fn_load_game = &LoadGame;
+			LoadGameMenu->AddItem(display, *fn_load_game, i);
+			//LoadGameMenu->AddItem(*stage_of_game + " " + *character_level, std::bind(LoadGame, save_data_file_name));
+		} else {
+			if (first_empty_save_slot_found == -1) {
+				first_empty_save_slot_found = i;
+			}
+			LoadGameMenu->AddItem("Empty Slot", &Nothing);
+		}
+	}
+}
+
+void ExtractSavedGameDisplayInformation(string file_path, string* stage_of_game, string* character_level) {
+	Json::Value save_data;
+	string rawData = "";
+	string line;
+	ifstream myfile(file_path, ios::binary);
+
+	if (myfile.is_open()) {
+		while (getline(myfile, line)) {
+			rawData += line;
+		}
+
+		myfile.close();
+	}
+	else {
+		cout << "Unable to open file " << file_path << "\n";
+	}
+
+	Json::Reader reader;
+	reader.parse(rawData, save_data);
+
+	*stage_of_game = save_data["WorldData"]["StageOfTheGame"].asString();
+	*character_level = to_string(save_data["Player"]["CharacterLevel"].asInt());
 }

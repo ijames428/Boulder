@@ -390,9 +390,11 @@ private:
 	float original_viewport_height;
 	float original_window_width;
 	float original_window_height;
+
+	int saveSlot;
 public:
 	SmashWorld();
-	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second);
+	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second, int save_slot, bool load_game);
 	bool Update(sf::Int64 curr_frame, sf::Int64 frame_delta);
 	bool ShouldExitToMainMenu();
 	Camera* GetCamera() { return camera; };
@@ -406,7 +408,7 @@ public:
 	void UpdateLoadingScreen();
 	void Setup();
 	void ExportSaveData();
-	void ImportSaveData();
+	void ImportSaveData(int save_slot = -1);
 	void ExitGame();
 	void ExitToMainMenu(); 
 	void CloseCurrentMenu();

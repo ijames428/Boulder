@@ -33,8 +33,18 @@ void Menu::ExecuteCurrentSelection() {
 	menu_items[cursor_position].ExecutionAction();
 }
 
+int Menu::GetCurrentSelectionIndex() {
+	return cursor_position;
+}
+
 void Menu::AddItem(string text, callback_function pFunc) {
 	menu_items.push_back(MenuItem(text, pFunc));
+
+	int item_in_list = (int)menu_items.size() - 1;
+}
+
+void Menu::AddItem(string text, callback_function_with_param pFunc, int callback_int_param) {
+	menu_items.push_back(MenuItem(text, pFunc, callback_int_param));
 
 	int item_in_list = (int)menu_items.size() - 1;
 }
@@ -118,6 +128,19 @@ int Menu::GetCurrentSliderValueByText(string menu_item_text) {
 MenuItem::MenuItem(string text, callback_function action) {
 	Text = text;
 	Action = action;
+	UseCallBackWithIntParam = false;
+	Font.loadFromFile("Images/RingbearerFont.ttf");
+	MenuItemText = sf::Text(text, Font, 45);
+
+	CheckBox = false;
+	Checked = false;
+}
+
+MenuItem::MenuItem(string text, callback_function_with_param pFunc, int callback_int_param) {
+	Text = text;
+	UseCallBackWithIntParam = true;
+	ActionWithParameter = pFunc;
+	CallBackIntParam = callback_int_param;
 	Font.loadFromFile("Images/RingbearerFont.ttf");
 	MenuItemText = sf::Text(text, Font, 45);
 
@@ -137,6 +160,7 @@ MenuItem::MenuItem(string text, int current_value, int number_of_possible_values
 	Font.loadFromFile("Images/RingbearerFont.ttf");
 	MenuItemText = sf::Text(text, Font, 45);
 
+	UseCallBackWithIntParam = false;
 	CheckBox = false;
 	Checked = false;
 }
@@ -144,6 +168,7 @@ MenuItem::MenuItem(string text, int current_value, int number_of_possible_values
 MenuItem::MenuItem(string text, bool checked, callback_function on_checked_action, callback_function on_unchecked_action) {
 	Text = text;
 	Checked = checked;
+	UseCallBackWithIntParam = false;
 	Action = nullptr;
 	Font.loadFromFile("Images/RingbearerFont.ttf");
 	MenuItemText = sf::Text(text, Font, 45);
@@ -181,7 +206,11 @@ void MenuItem::ExecutionAction() {
 				OnUnchecked();
 			}
 		} else {
-			Action();
+			if (UseCallBackWithIntParam) {
+				ActionWithParameter(CallBackIntParam);
+			} else {
+				Action();
+			}
 		}
 	}
 }
@@ -247,12 +276,8 @@ void MenuItem::Draw(sf::RenderWindow* window, sf::Vector2f position) {
 }
 
 bool MenuItem::Enabled() {
-	if (Text == "Load Game") {
-		string save_data_file_name = "save_data.txt";
-		ifstream f(save_data_file_name.c_str());
-		if (!f.good()) {
-			return false;
-		}
+	if (Text == "Empty Slot") {
+		return false;
 	}
 
 	return true;
