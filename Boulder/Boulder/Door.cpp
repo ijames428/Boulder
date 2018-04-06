@@ -6,7 +6,7 @@ using namespace std;
 #include "Door.h"
 #include "SmashWorld.h"
 
-Door::Door(sf::RenderWindow *window, string name, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) : Box2DRigidBody(window, position, dimensions, subject_to_gravity) {
+Door::Door(sf::RenderWindow *window, string name, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) : Box2DRigidBody(window, name, position, dimensions, subject_to_gravity) {
 	opening = false;
 	closing = false;
 	percent_open = 0;

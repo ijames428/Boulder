@@ -306,7 +306,9 @@ void SmashWorld::Setup() {
 	world = new b2World(*gravity);
 
 	//ParseWorld("Maps\\DebugAttacking");
-	ParseWorld("Maps\\DemoLevel");
+	//ParseWorld("Maps\\DemoLevel");
+	//ParseWorld("Maps\\TestMovingPlatforms");
+	ParseWorld("Maps\\TestOneWayPlatforms");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
 	ParseDialogue("BoulderDialogue.txt");
@@ -519,6 +521,13 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 			}
 		}
 
+		int box_2d_rigid_bodies_size = (int)box2dRigidBodies.size();
+		for (int i = 0; i < box_2d_rigid_bodies_size; i++) {
+			if (box2dRigidBodies[i]->IfShouldUpdate(player_screen_pos, camera->viewport_dimensions)) {
+				box2dRigidBodies[i]->Update(current_frame, frame_delta);
+			}
+		}
+
 		int enemies_size = (int)enemies.size();
 		for (int i = 0; i < enemies_size; i++) {
 			if (enemies[i]->IfShouldUpdate(player_screen_pos, camera->viewport_dimensions)) {
@@ -628,6 +637,9 @@ void SmashWorld::BuildWorld() {
 	float y = 0.0f;
 	float width = 0.0f;
 	float height = 0.0f;
+	float vel_x = 0.0f;
+	float vel_y = 0.0f;
+	bool pass_through = false;
 	std::string::size_type sz;
 
 	float scalingRatio = 10.0f;
@@ -668,11 +680,20 @@ void SmashWorld::BuildWorld() {
 		y = std::stof(rectangle_data["y"].asString(), &sz) / scalingRatio;
 		width = std::stof(rectangle_data["width"].asString(), &sz) / (scalingRatio * 2.0f);
 		height = std::stof(rectangle_data["height"].asString(), &sz) / (scalingRatio * 2.0f);
+		vel_x = rectangle_data["vel_x"].asFloat();
+		vel_y = rectangle_data["vel_y"].asFloat();
+		vel_y = rectangle_data["vel_y"].asFloat();
+		pass_through = rectangle_data["pass_through"].asBool();
 
 		x += width;
 		y += height;
 
-		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
+		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, rectangle_data["name"].asString(), sf::Vector2f(x, y), sf::Vector2f(width, height)));
+		box2dRigidBodies[i]->SetPassThrough(pass_through);
+
+		if (vel_x != 0.0f || vel_y != 0.0f) {
+			box2dRigidBodies[i]->ConvertToMovingPlatform(vel_x, vel_y);
+		}
 	}
 
 	Json::Value triangle_data;
@@ -685,7 +706,7 @@ void SmashWorld::BuildWorld() {
 		vects.push_back(triangle_data["points"][1].asString());
 		vects.push_back(triangle_data["points"][2].asString());
 
-		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, vects));
+		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, triangle_data["name"].asString(), vects));
 	}
 
 	doors.clear();
@@ -878,40 +899,42 @@ void SmashWorld::ExecuteAction(string action_call) {
 	std::vector<string> vstrings = Utilities::Split(action_call, '(');
 
 	string call = vstrings[0];
-	string argument = vstrings[1].substr(0, vstrings[1].size() - 1);
+	string argumentString = vstrings[1].substr(0, vstrings[1].size() - 1);
+
+	std::vector<string> arguments = Utilities::Split(argumentString, ',');
 
 	if (Utilities::Contains(call, "LockDoor")) {
 		int doors_size = (int)doors.size();
 		for (int i = 0; i < doors_size; i++) {
-			if (doors[i]->Name == argument) {
+			if (doors[i]->Name == arguments[0]) {
 				doors[i]->SetLocked(true);
 			}
 		}
 	} else if (Utilities::Contains(call, "UnlockDoor")) {
 		int doors_size = (int)doors.size();
 		for (int i = 0; i < doors_size; i++) {
-			if (doors[i]->Name == argument) {
+			if (doors[i]->Name == arguments[0]) {
 				doors[i]->SetLocked(false);
 			}
 		}
 	} else if (Utilities::Contains(call, "OpenDoor")) {
 		int doors_size = (int)doors.size();
 		for (int i = 0; i < doors_size; i++) {
-			if (doors[i]->Name == argument) {
+			if (doors[i]->Name == arguments[0]) {
 				doors[i]->OpenDoor();
 			}
 		}
 	} else if (Utilities::Contains(call, "CloseDoor")) {
 		int doors_size = (int)doors.size();
 		for (int i = 0; i < doors_size; i++) {
-			if (doors[i]->Name == argument) {
+			if (doors[i]->Name == arguments[0]) {
 				doors[i]->CloseDoor();
 			}
 		}
 	} else if (Utilities::Contains(call, "ChangeStage")) {
-		StageOfTheGame = argument;
+		StageOfTheGame = arguments[0];
 	} else if (Utilities::Contains(call, "Aggro")) {
-		if (boss_one->GetName() == argument) {
+		if (boss_one->GetName() == arguments[0]) {
 			boss_one->Aggro((BoulderCreature*)PlayerOne);
 			boss_one_fight_started = true;
 		}
@@ -920,11 +943,11 @@ void SmashWorld::ExecuteAction(string action_call) {
 	} else if (Utilities::Contains(call, "ForcedRecall")) {
 		PlayerOne->ForcedRecall();
 	} else if (Utilities::Contains(call, "PickUpRune")) {
-		PlayerOne->PickUpRune(argument);
+		PlayerOne->PickUpRune(arguments[0]);
 	} else if (Utilities::Contains(call, "RemoveImage")) {
 		int image_names_size = (int)imageNames.size();
 		for (int i = 0; i < image_names_size; i++) {
-			if (imageNames[i] == argument) {
+			if (imageNames[i] == arguments[0]) {
 				imageNames.erase(imageNames.begin() + i);
 				imageTextures.erase(imageTextures.begin() + i);
 				imageSprites.erase(imageSprites.begin() + i);
@@ -934,9 +957,20 @@ void SmashWorld::ExecuteAction(string action_call) {
 				break;
 			}
 		}
-	}
-	
-	//LockDoor(Door 147); PickUpRune(Damage); RemoveImage(Image 163)
+	} else if (Utilities::Contains(call, "ActivateElevator")) {
+		std::string::size_type sz;
+		int platforms_size = (int)box2dRigidBodies.size();
+		for (int i = 0; i < platforms_size; i++) {
+			if (box2dRigidBodies[i]->Name == arguments[0]) {
+				float vel_x = std::stof(arguments[1], &sz);
+				float vel_y = std::stof(arguments[2], &sz);
+
+				box2dRigidBodies[i]->StartMovingElevator(vel_x, vel_y);
+
+				break;
+			}
+		}
+	}	
 }
 
 void SmashWorld::ExitToMainMenu() {

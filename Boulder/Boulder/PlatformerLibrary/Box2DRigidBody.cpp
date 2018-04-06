@@ -12,13 +12,22 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, bool subject_to_gravity
 	entity_type = Constants::ENTITY_TYPE_RIGID_BODY;
 	in_the_air = true;
 	facing_right = true;
+	isMovingPlatform = false;
+	isElevator = false;
+	isElevatorStopped = true;
+	previousMovingVelocity = sf::Vector2f(0.0f, 0.0f);
+
+	Name = "";
 }
 
-Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, vector<string> json_points, bool subject_to_gravity, bool subject_to_collision) {
+Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, vector<string> json_points, bool subject_to_gravity, bool subject_to_collision) {
 	float x = 0.0f;
 	float y = 0.0f;
 	float width = 0.0f;
 	float height = 0.0f;
+
+	Name = name;
+
 	std::string::size_type sz;
 
 	float scalingRatio = 10.0f;
@@ -49,11 +58,12 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, vector<string> json_poi
 	bodyDef.type = b2_staticBody;
 
 	body = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
+	body->SetGravityScale(0.0f);
 	polygon.Set(points, 3);
 
 	fixtureDef.shape = &polygon;
 	fixtureDef.density = 0.0f;
-	fixtureDef.friction = 0.9f;
+	fixtureDef.friction = 1.0f;
 	fixtureDef.m_color = new b2Color(1.0f, 1.0f, 0.0f, 1.0f);
 	fixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLATFORM;
 
@@ -62,17 +72,28 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, vector<string> json_poi
 	entity_type = Constants::ENTITY_TYPE_RIGID_BODY;
 	in_the_air = true;
 	facing_right = true;
+	isMovingPlatform = false;
+	isElevator = false;
+	isElevatorStopped = true;
+	previousMovingVelocity = sf::Vector2f(0.0f, 0.0f);
+
+	body->SetUserData(this);
 }
 
-Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, bool subject_to_collision) {
+Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, bool subject_to_collision) {
 	bodyDef.position.Set(position.x, position.y);
 	bodyDef.type = b2_staticBody;
 	body = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
+	body->SetGravityScale(0.0f);
 	polygon.SetAsBox(dimensions.x, dimensions.y);
+
+	Name = name;
+
+	startingPosition = position;
 
 	fixtureDef.shape = &polygon;
 	fixtureDef.density = 0.0f;
-	fixtureDef.friction = 0.9f;
+	fixtureDef.friction = 1.0f;
 	fixtureDef.m_color = new b2Color(1.0f, 1.0f, 0.0f, 1.0f);
 	fixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLATFORM;
 
@@ -81,10 +102,55 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, sf::Vector2f position, 
 	entity_type = Constants::ENTITY_TYPE_RIGID_BODY;
 	in_the_air = true;
 	facing_right = true;
+	isMovingPlatform = false;
+	isElevator = false;
+	isElevatorStopped = true;
+	previousMovingVelocity = sf::Vector2f(0.0f, 0.0f);
+
+	body->SetUserData(this);
 }
 
 void Box2DRigidBody::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	current_frame = curr_frame;
+
+	if (!isElevator && (scheduledVelocity.x != 0.0f || scheduledVelocity.y != 0.0f)) {
+		isElevator = true;
+
+		body->SetType(b2BodyType::b2_dynamicBody);
+		fixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM;
+		body->SetUserData(this);
+	}
+
+	if (isElevator) {
+		if (scheduledVelocity.x != 0.0f || scheduledVelocity.y != 0.0f) {
+			isElevatorStopped = false;
+			velocity = sf::Vector2f(scheduledVelocity.x, scheduledVelocity.y);
+			body->SetLinearVelocity(b2Vec2(velocity.x, velocity.y));
+		}
+
+		body->SetLinearVelocity(b2Vec2(velocity.x, velocity.y));
+
+		if (isElevatorStopped) {
+			body->SetTransform(stoppedPosition, 0.0f);
+		} else {
+			if (velocity.x == 0.0f) {
+				body->SetTransform(b2Vec2(startingPosition.x, body->GetTransform().p.y), 0.0f);
+			}
+			else if (velocity.y == 0.0f) {
+				body->SetTransform(b2Vec2(body->GetTransform().p.x, startingPosition.y), 0.0f);
+			}
+		}
+	}
+
+	if (isMovingPlatform) {
+		body->SetLinearVelocity(b2Vec2(velocity.x, velocity.y));
+
+		if (velocity.x == 0.0f) {
+			body->SetTransform(b2Vec2(startingPosition.x, body->GetTransform().p.y), 0.0f);
+		} else if (velocity.y == 0.0f) {
+			body->SetTransform(b2Vec2(body->GetTransform().p.x, startingPosition.y), 0.0f);
+		}
+	}
 }
 
 float Box2DRigidBody::GetDistanceBetweenTwoPoints(sf::Vector2f point_a, sf::Vector2f point_b) {
@@ -151,4 +217,72 @@ void Box2DRigidBody::ApplyObjectDataToSaveData(Json::Value& save_data) {
 }
 
 void Box2DRigidBody::ApplySaveDataToObjectData(Json::Value& save_data) {
+}
+
+void Box2DRigidBody::SetPassThrough(bool pass_through) {
+	passThrough = pass_through;
+}
+
+bool Box2DRigidBody::IsPassThroughable() {
+	return passThrough;
+}
+
+void Box2DRigidBody::ConvertToMovingPlatform(float vel_x, float vel_y) {
+	isMovingPlatform = true;
+	velocity = sf::Vector2f(vel_x, vel_y);
+	body->SetLinearVelocity(b2Vec2(velocity.x, velocity.y));
+	body->SetType(b2BodyType::b2_dynamicBody);
+	fixtureDef.filter.maskBits = Singleton<SmashWorld>::Get()->PLATFORM;
+
+	body->SetUserData(this);
+}
+
+void Box2DRigidBody::StartMovingElevator(float vel_x, float vel_y) {
+	if (isElevatorStopped && 
+		((previousMovingVelocity.x == 0.0f && previousMovingVelocity.y == 0.0f) ||
+		(((previousMovingVelocity.x < 0.0f && vel_x > 0.0f) || (previousMovingVelocity.x > 0.0f && vel_x < 0.0f)) || 
+								((previousMovingVelocity.y < 0.0f && vel_y > 0.0f) || (previousMovingVelocity.y > 0.0f && vel_y < 0.0f))))) {
+		scheduledVelocity = sf::Vector2f(vel_x, vel_y);
+		previousMovingVelocity = scheduledVelocity;
+	}
+}
+
+void Box2DRigidBody::HandleCollision() {
+	if (isElevator) {
+		isElevatorStopped = true;
+
+		stoppedPosition = body->GetTransform().p;
+
+		scheduledVelocity = velocity = sf::Vector2f(0.0f, 0.0f);
+		body->SetLinearVelocity(b2Vec2(velocity.x, velocity.y));
+	} else if (isMovingPlatform) {
+		velocity = sf::Vector2f(velocity.x * -1.0f, velocity.y * -1.0f);
+		body->SetLinearVelocity(b2Vec2(velocity.x, velocity.y));
+	} 
+}
+
+bool Box2DRigidBody::IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions) {
+	sf::Vector2f body_screen_pos = GetScreenPosition();
+
+	if (abs(player_screen_pos.x - body_screen_pos.x) > viewport_dimensions.x * 1.25f) {
+		return false;
+	}
+
+	if (abs(player_screen_pos.y - body_screen_pos.y) > viewport_dimensions.y * 1.25f) {
+		return false;
+	}
+
+	return true;
+}
+
+void Box2DRigidBody::ChangeDirection(float vel_x, float vel_y) {
+	velocity = sf::Vector2f(vel_x, vel_y);
+}
+
+void Box2DRigidBody::ChangeDirection(sf::Vector2f vel) {
+	velocity = vel;
+}
+
+sf::Vector2f Box2DRigidBody::GetVelocity() {
+	return velocity;
 }

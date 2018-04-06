@@ -192,7 +192,7 @@ protected:
 
 	bool attacksAreInterruptible;
 
-	int platformContacts = 0;
+	std::vector<Box2DRigidBody*> platformContacts;
 
 	int damageTakenSinceAttackStarted = 0;
 public:
@@ -205,8 +205,8 @@ public:
 	Attack* GetActiveAttack();
 	bool IsAnAttackActive();
 	virtual void Land();
-	void AddPlatformContact();
-	void RemovePlatformContact();
+	void AddPlatformContact(Box2DRigidBody* platform);
+	void RemovePlatformContact(Box2DRigidBody* platform);
 	void Aggro(BoulderCreature* new_target);
 	virtual void Deaggro();
 	void SetInteractable(BoulderCreature* new_interactable);

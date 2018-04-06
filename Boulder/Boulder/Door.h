@@ -28,7 +28,6 @@ public:
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	void AddActivator(string activator_name);
 	void SetLocked(bool locked);
-	string Name;
 	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions);

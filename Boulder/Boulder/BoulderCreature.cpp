@@ -386,8 +386,16 @@ bool BoulderCreature::IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2
 void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
-	if (IsInTheAir() && body->GetLinearVelocity().y > maxVerticalVelocityReached) {
-		maxVerticalVelocityReached = body->GetLinearVelocity().y;
+	b2Vec2 body_lin_vel = body->GetLinearVelocity();
+
+	if ((int)platformContacts.size() > 0) {
+		b2Vec2 platform_lin_vel = body->GetLinearVelocity();
+
+		body->SetLinearVelocity(b2Vec2(body_lin_vel.x + platform_lin_vel.x, body_lin_vel.y + platform_lin_vel.y));
+	}
+
+	if (IsInTheAir() && body_lin_vel.y > maxVerticalVelocityReached) {
+		maxVerticalVelocityReached = body_lin_vel.y;
 	}
 
 	can_take_input = !hit_stun_timer->IsActive();
@@ -539,7 +547,7 @@ void BoulderCreature::UpdateBehavior() {
 		else if (IsAnAttackActive()) {
 			State = STATE_ATTACKING;
 		}
-		else if (body->GetLinearVelocity().x != 0) {
+		else if (movement != 0) {
 			if (running) {
 				State = STATE_RUNNING;
 			}
@@ -798,22 +806,26 @@ void BoulderCreature::ReverseHorizontalDirectionIfInHitStun() {
 	}
 }
 
-void BoulderCreature::AddPlatformContact() {
-	if (platformContacts == 0) {
+void BoulderCreature::AddPlatformContact(Box2DRigidBody* platform) {
+	if ((int)platformContacts.size() == 0) {
 		Land();
 	}
 
-	platformContacts++;
+	platformContacts.push_back(platform);
 }
 
-void BoulderCreature::RemovePlatformContact() {
-	if (platformContacts == 1) {
+void BoulderCreature::RemovePlatformContact(Box2DRigidBody* platform) {
+	if ((int)platformContacts.size() == 1) {
 		jumpAfterWalkingOffLedgeBuffer->Start();
 		maxAirSpeed = body->GetLinearVelocity().x;
 		SetInTheAir(true);
 	}
 
-	platformContacts--;
+	std::vector<Box2DRigidBody*>::iterator found_item = std::find(platformContacts.begin(), platformContacts.end(), platform);
+	if (found_item != platformContacts.end())
+	{
+		platformContacts.erase(found_item);
+	}
 }
 
 void BoulderCreature::Land() {

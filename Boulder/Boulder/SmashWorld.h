@@ -39,7 +39,9 @@ class MyContactListener : public b2ContactListener
 	// DEAGGRO_CIRCLE = 0x0100,
 	// INTERACTION_CIRCLE = 0x0200,
 	// TRIGGER = 0x0400,
-	// PROJECTILE = 0x0800
+	// PROJECTILE = 0x0800,
+	// BOT_CIRCLE = 0x1000,
+	// OTHER_PLAYER_PARTS = 0x2000
 	int contact_count = 0;
 
 	void BeginContact(b2Contact* contact) {
@@ -72,13 +74,58 @@ class MyContactListener : public b2ContactListener
 		//	}
 		//}
 
+		if (fixture_b_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+			if (fixtureB->GetBody()->GetLinearVelocity().y > 0.0f) {
+				contact->SetEnabled(true);
+			} else if (entityA->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		} else if (fixture_a_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+			if (fixtureA->GetBody()->GetLinearVelocity().y > 0.0f) {
+				contact->SetEnabled(true);
+			} else if (entityB->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		}
+
+		if (fixture_b_category_bits == 0x2000 /* OTHER_PLAYER_PARTS */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+			if (entityA->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		} else if (fixture_a_category_bits == 0x2000 /* OTHER_PLAYER_PARTS */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+			if (entityB->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		}
+
+		if (fixture_b_category_bits == 0x0020 /* WEAPON */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+			if (fixtureB->GetBody()->GetLinearVelocity().y > 0.0f) {
+				contact->SetEnabled(true);
+			} else if (entityA->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		} else if (fixture_a_category_bits == 0x0020 /* WEAPON */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+			if (fixtureA->GetBody()->GetLinearVelocity().y > 0.0f) {
+				contact->SetEnabled(true);
+			} else if (entityB->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		}
+
 		if (fixture_b_category_bits == 0x0008) { // PLATFORM
 			if (fixture_a_category_bits == 0x0002) { // ENEMY
 				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
 				entityA->ReverseHorizontalDirectionIfInHitStun();
 			} else if (fixture_a_category_bits == 0x0004) {
 				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-				entityA->AddPlatformContact();
+				Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+				entityA->AddPlatformContact(entityB);
 			}
 		} else if (fixture_a_category_bits == 0x0008) { // PLATFORM
 			if (fixture_b_category_bits == 0x0002) { // ENEMY
@@ -86,7 +133,22 @@ class MyContactListener : public b2ContactListener
 				entityB->ReverseHorizontalDirectionIfInHitStun();
 			} else if (fixture_b_category_bits == 0x0004) {
 				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
-				entityB->AddPlatformContact();
+				Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+				entityB->AddPlatformContact(entityA);
+			}
+		}
+		
+		if (fixture_b_category_bits == 0x0008) { // PLATFORM
+			if (fixture_a_category_bits == 0x0008) {
+				Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+				entityB->HandleCollision();
+			}
+		} 
+		
+		if (fixture_a_category_bits == 0x0008) { // PLATFORM
+			if (fixture_b_category_bits == 0x0008) {
+				Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+				entityA->HandleCollision();
 			}
 		}
 
@@ -111,11 +173,15 @@ class MyContactListener : public b2ContactListener
 		}
 
 		if (fixture_a_category_bits == 0x0400) {
-			Trigger* entityA = static_cast<Trigger*>(fixtureA->GetBody()->GetUserData());
-			entityA->Triggered();
+			if (fixture_b_category_bits != 0x0008) {
+				Trigger* entityA = static_cast<Trigger*>(fixtureA->GetBody()->GetUserData());
+				entityA->Triggered();
+			}
 		} else if (fixture_b_category_bits == 0x0400) {
-			Trigger* entityB = static_cast<Trigger*>(fixtureB->GetBody()->GetUserData());
-			entityB->Triggered();
+			if (fixture_a_category_bits != 0x0008) {
+				Trigger* entityB = static_cast<Trigger*>(fixtureB->GetBody()->GetUserData());
+				entityB->Triggered();
+			}
 		}
 
 		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
@@ -135,8 +201,12 @@ class MyContactListener : public b2ContactListener
 		uint16 fixture_a_category_bits = fixtureA->GetFilterData().categoryBits;
 		uint16 fixture_b_category_bits = fixtureB->GetFilterData().categoryBits;
 
-		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
-		}
+		//if (fixture_a_category_bits == 0x0001 /* PLAYER_CHARACTER */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+		//	BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+		//	if (entityA->GetBody()->GetLinearVelocity().y < 0.0f) {
+		//		contact->SetEnabled(false);
+		//	}
+		//}
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0100) {
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
@@ -161,12 +231,14 @@ class MyContactListener : public b2ContactListener
 		if (fixture_b_category_bits == 0x0008) { // PLATFORM
 			if (fixture_a_category_bits == 0x0004) {
 				BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-				entityA->RemovePlatformContact();
+				Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+				entityA->RemovePlatformContact(entityB);
 			}
 		} else if (fixture_a_category_bits == 0x0008) { // PLATFORM
 			if (fixture_b_category_bits == 0x0004) {
 				BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
-				entityB->RemovePlatformContact();
+				Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+				entityB->RemovePlatformContact(entityA);
 			}
 		}
 	}
@@ -464,6 +536,8 @@ public:
 		DEAGGRO_CIRCLE = 0x0100,
 		INTERACTION_CIRCLE = 0x0200,
 		TRIGGER = 0x0400,
-		PROJECTILE = 0x0800
+		PROJECTILE = 0x0800,
+		BOT_CIRCLE = 0x1000,
+		OTHER_PLAYER_PARTS = 0x2000
 	};
 }; 

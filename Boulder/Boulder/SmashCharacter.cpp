@@ -63,12 +63,12 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	topCircleFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
 	botCircleFixtureDef.shape = &botCircleShape;
 	botCircleFixtureDef.density = 1.0f;
-	botCircleFixtureDef.friction = 0.3f;
+	botCircleFixtureDef.friction = 1.0f;
 	botCircleFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
 
-	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
-	botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
-	centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
+	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->OTHER_PLAYER_PARTS;
+	botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->BOT_CIRCLE;
+	centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->OTHER_PLAYER_PARTS;
 
 	topCircleFixture = body->CreateFixture(&topCircleFixtureDef);
 	botCircleFixture = body->CreateFixture(&botCircleFixtureDef);
@@ -556,6 +556,14 @@ void SmashCharacter::ApplySaveDataToObjectData(Json::Value& save_data) {
 void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
+	b2Vec2 body_lin_vel = body->GetLinearVelocity();
+
+	if ((int)platformContacts.size() > 0) {
+		b2Vec2 platform_lin_vel = platformContacts[0]->GetBody()->GetLinearVelocity();
+
+		body->SetLinearVelocity(b2Vec2(body_lin_vel.x + platform_lin_vel.x, body_lin_vel.y));
+	}
+
 	UpdateCharacterExperienceBar();
 	//UpdateWeaponExperienceBar();
 	UpdateRageLevelBar();
@@ -650,7 +658,7 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		}
 	} else if (landing_animation_timer->IsActive()) {
 		State = STATE_LANDING;
-	} else if (body->GetLinearVelocity().x != 0) {
+	} else if (leftStickInputs.x != 0) {
 		if (running) {
 			State = STATE_RUNNING;
 		} else {
