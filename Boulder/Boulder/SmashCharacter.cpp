@@ -66,13 +66,15 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	botCircleFixtureDef.friction = 1.0f;
 	botCircleFixtureDef.m_color = new b2Color(0.0f, 1.0f, 0.0f, 1.0f);
 
-	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->OTHER_PLAYER_PARTS;
+	topCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 	botCircleFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->BOT_CIRCLE;
-	centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->OTHER_PLAYER_PARTS;
+	centerBoxFixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLAYER_CHARACTER;
 
 	topCircleFixture = body->CreateFixture(&topCircleFixtureDef);
 	botCircleFixture = body->CreateFixture(&botCircleFixtureDef);
 	centerBoxFixture = body->CreateFixture(&centerBoxFixtureDef);
+
+	halfBodyHeight = ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y + botCircleShape.m_radius + topCircleShape.m_radius;
 
 	hurt_box = new HurtBox(body, player_index, playerBestiaryData["DictOfUnits"]["Player"]["IdleAnimations"][0]["HurtBoxPerFrame"][0][0]);
 
@@ -735,11 +737,8 @@ void SmashCharacter::DetermineWhichAttackToUseAndActivateIt(float x_input, float
 }
 
 void SmashCharacter::Draw(sf::Vector2f camera_position) {
-
-	float half_height = ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y + botCircleShape.m_radius;// - ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y;
-
 	if (rageLevel > 0) {
-		rageTierAuraAnimations[rageLevel - 1]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
+		rageTierAuraAnimations[rageLevel - 1]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), halfBodyHeight);
 	}
 
 	render_window->draw(*healthBarBackgroundRect);

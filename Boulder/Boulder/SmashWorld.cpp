@@ -305,10 +305,9 @@ void SmashWorld::Setup() {
 	gravity = new b2Vec2(0.0f, 30.0f);
 	world = new b2World(*gravity);
 
-	//ParseWorld("Maps\\DebugAttacking");
-	//ParseWorld("Maps\\DemoLevel");
-	//ParseWorld("Maps\\TestMovingPlatforms");
-	ParseWorld("Maps\\TestOneWayPlatforms");
+	//ParseWorld("Maps\\ChangingPlayersRectHeightAndWidth");
+	//ParseWorld("Maps\\DemoLevelWithRootDir");
+	ParseWorld("Maps\\TestingImageOnMovingObjects");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
 	ParseDialogue("BoulderDialogue.txt");
@@ -511,6 +510,7 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		for (int i = 0; i < doors_size; i++) {
 			if (doors[i]->IfShouldUpdate(player_screen_pos, camera->viewport_dimensions)) {
 				doors[i]->Update(current_frame, frame_delta);
+				doors[i]->Draw(camera->viewport_position);
 			}
 		}
 
@@ -525,6 +525,7 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		for (int i = 0; i < box_2d_rigid_bodies_size; i++) {
 			if (box2dRigidBodies[i]->IfShouldUpdate(player_screen_pos, camera->viewport_dimensions)) {
 				box2dRigidBodies[i]->Update(current_frame, frame_delta);
+				box2dRigidBodies[i]->Draw(camera->viewport_position);
 			}
 		}
 
@@ -640,6 +641,7 @@ void SmashWorld::BuildWorld() {
 	float vel_x = 0.0f;
 	float vel_y = 0.0f;
 	bool pass_through = false;
+	string tied_art_image_file_name = "";
 	std::string::size_type sz;
 
 	float scalingRatio = 10.0f;
@@ -684,12 +686,14 @@ void SmashWorld::BuildWorld() {
 		vel_y = rectangle_data["vel_y"].asFloat();
 		vel_y = rectangle_data["vel_y"].asFloat();
 		pass_through = rectangle_data["pass_through"].asBool();
+		tied_art_image_file_name = rectangle_data["TiedArtImageFileName"].asString();
 
 		x += width;
 		y += height;
 
 		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, rectangle_data["name"].asString(), sf::Vector2f(x, y), sf::Vector2f(width, height)));
 		box2dRigidBodies[i]->SetPassThrough(pass_through);
+		box2dRigidBodies[i]->TiedArtImageFileName = tied_art_image_file_name;
 
 		if (vel_x != 0.0f || vel_y != 0.0f) {
 			box2dRigidBodies[i]->ConvertToMovingPlatform(vel_x, vel_y);
@@ -719,12 +723,14 @@ void SmashWorld::BuildWorld() {
 		y = std::stof(door_data["y"].asString(), &sz) / scalingRatio;
 		width = std::stof(door_data["width"].asString(), &sz) / (scalingRatio * 2.0f);
 		height = std::stof(door_data["height"].asString(), &sz) / (scalingRatio * 2.0f);
+		tied_art_image_file_name = door_data["TiedArtImageFileName"].asString();
 
 		x += width;
 		y += height;
 
 		doors.push_back(new Door(render_window, door_data["name"].asString(), sf::Vector2f(x, y), sf::Vector2f(width, height)));
 		doors[i]->AddActivator(jsonWorldData["doors"][i]["activator"].asString());
+		doors[i]->TiedArtImageFileName = tied_art_image_file_name;
 	}
 
 	triggers.clear();
@@ -790,6 +796,9 @@ void SmashWorld::BuildWorld() {
 	imageXs.clear();
 	imageYs.clear();
 	imageNames.clear();
+	sf::Sprite* current_sprite;
+	bool is_standalone = true;
+	int standalone_images = 0;
 	Json::Value image_data;
 	int images_data_size = (int)images_data.size();
 	for (int i = 0; i < images_data_size; i++) {
@@ -799,15 +808,35 @@ void SmashWorld::BuildWorld() {
 		size_t findResult = file_path_and_name.find("Images\\");
 		string relativeFilePath = file_path_and_name.substr(findResult);
 
+		is_standalone = image_data["IsStandalone"].asBool();
+
 		x = std::stof(image_data["x"].asString(), &sz) / scalingRatio;
 		y = std::stof(image_data["y"].asString(), &sz) / scalingRatio;
 
 		imageTextures.push_back(Singleton<AssetManager>().Get()->GetTexture(relativeFilePath));
-		imageSprites.push_back(new sf::Sprite(*imageTextures[i]));
-		imageSprites[i]->setScale(0.666667f, 0.68f);
-		imageXs.push_back(x);
-		imageYs.push_back(y);
-		imageNames.push_back(image_data["name"].asString());
+		current_sprite = new sf::Sprite(*imageTextures[i]);
+
+		if (is_standalone) {
+			imageSprites.push_back(current_sprite);
+			imageSprites[standalone_images]->setScale(0.666667f, 0.68f);
+			imageXs.push_back(x);
+			imageYs.push_back(y);
+			imageNames.push_back(image_data["name"].asString());
+
+			standalone_images++;
+		} else {
+			for (int rect = 0; rect < rectangles_data_size; rect++) {
+				if (Utilities::Contains(box2dRigidBodies[rect]->TiedArtImageFileName, relativeFilePath)) {
+					box2dRigidBodies[rect]->LoadArtImage(relativeFilePath);
+				}
+			}
+
+			for (int door = 0; door < doors_data_size; door++) {
+				if (Utilities::Contains(doors[door]->TiedArtImageFileName, relativeFilePath)) {
+					doors[door]->LoadArtImage(relativeFilePath);
+				}
+			}
+		}
 	}
 
 	parallax_background_textures.clear();

@@ -38,7 +38,13 @@ private:
 	b2Vec2 stoppedPosition;
 	sf::Vector2f previousMovingVelocity;
 	bool passThrough;
+	sf::Texture* TiedArtImageTexture;
+	sf::Sprite* TiedArtImageSprite;
+	sf::Vector2u TiedArtImageTextureSize;
+	float halfBodyHeight;
+	b2Vec2 bodyPosition;
 public:
+	sf::RenderWindow *render_window;
 	bool IsFacingRight();
 	bool WasFacingRightWhenHit();
 	void SetFacingRightWhenHit(bool facing_right_when_hit);
@@ -54,6 +60,7 @@ public:
 	Box2DRigidBody(sf::RenderWindow *window, string name, vector<string> json_points, bool subject_to_gravity = false, bool subject_to_collision = true);
 	Box2DRigidBody(sf::RenderWindow *window, string name, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity = false, bool subject_to_collision = true);
 	virtual void Update(sf::Int64 curr_time, sf::Int64 delta_time);
+	virtual void Draw(sf::Vector2f camera_position);
 	static float GetDistanceBetweenTwoPoints(sf::Vector2f point_a, sf::Vector2f point_b);
 	void SetFacingRight(bool new_facing_right);
 	void SetInTheAir(bool in_the_air_now);
@@ -68,6 +75,8 @@ public:
 	string Name;
 	void SetPassThrough(bool pass_through);
 	bool IsPassThroughable();
+	string TiedArtImageFileName;
+	void LoadArtImage(string file_name);
 	bool IsElevator() {
 		return isElevator;
 	}

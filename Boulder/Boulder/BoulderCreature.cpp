@@ -389,9 +389,9 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	b2Vec2 body_lin_vel = body->GetLinearVelocity();
 
 	if ((int)platformContacts.size() > 0) {
-		b2Vec2 platform_lin_vel = body->GetLinearVelocity();
+		b2Vec2 platform_lin_vel = platformContacts[0]->GetBody()->GetLinearVelocity();
 
-		body->SetLinearVelocity(b2Vec2(body_lin_vel.x + platform_lin_vel.x, body_lin_vel.y + platform_lin_vel.y));
+		body->SetLinearVelocity(b2Vec2(body_lin_vel.x + platform_lin_vel.x, body_lin_vel.y));
 	}
 
 	if (IsInTheAir() && body_lin_vel.y > maxVerticalVelocityReached) {

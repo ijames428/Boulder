@@ -90,12 +90,12 @@ class MyContactListener : public b2ContactListener
 			}
 		}
 
-		if (fixture_b_category_bits == 0x2000 /* OTHER_PLAYER_PARTS */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+		if (fixture_b_category_bits == 0x0001 /* PLAYER_CHARACTER */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
 			if (entityA->IsPassThroughable()) {
 				contact->SetEnabled(false);
 			}
-		} else if (fixture_a_category_bits == 0x2000 /* OTHER_PLAYER_PARTS */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+		} else if (fixture_a_category_bits == 0x0001 /* PLAYER_CHARACTER */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
 			if (entityB->IsPassThroughable()) {
 				contact->SetEnabled(false);

@@ -92,11 +92,13 @@ private:
 	sf::Sound RageAscensionSound;
 	float RageAscensionStartingVolume;
 	float RageAscensionFadeVolume;
+
+	float halfBodyHeight;
 protected:
 	virtual void ActuallyJump(bool short_hop = false);
 public:
 	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
-	void Draw(sf::Vector2f camera_position);
+	virtual void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);

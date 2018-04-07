@@ -9,6 +9,8 @@
 #include "..\SmashWorld.h"
 
 Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, bool subject_to_gravity, bool subject_to_collision) {
+	render_window = window;
+
 	entity_type = Constants::ENTITY_TYPE_RIGID_BODY;
 	in_the_air = true;
 	facing_right = true;
@@ -16,17 +18,17 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, bool subject_to_gravity
 	isElevator = false;
 	isElevatorStopped = true;
 	previousMovingVelocity = sf::Vector2f(0.0f, 0.0f);
+	TiedArtImageFileName = "";
+	halfBodyHeight = 0.0f;
 
 	Name = "";
 }
 
 Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, vector<string> json_points, bool subject_to_gravity, bool subject_to_collision) {
-	float x = 0.0f;
-	float y = 0.0f;
-	float width = 0.0f;
-	float height = 0.0f;
+	render_window = window;
 
 	Name = name;
+	halfBodyHeight = 0.0f;
 
 	std::string::size_type sz;
 
@@ -76,16 +78,20 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, vector<str
 	isElevator = false;
 	isElevatorStopped = true;
 	previousMovingVelocity = sf::Vector2f(0.0f, 0.0f);
+	TiedArtImageFileName = "";
 
 	body->SetUserData(this);
 }
 
 Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, bool subject_to_collision) {
+	render_window = window;
+
 	bodyDef.position.Set(position.x, position.y);
 	bodyDef.type = b2_staticBody;
 	body = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
 	body->SetGravityScale(0.0f);
 	polygon.SetAsBox(dimensions.x, dimensions.y);
+	halfBodyHeight = dimensions.y / 2.0f;
 
 	Name = name;
 
@@ -106,6 +112,7 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, sf::Vector
 	isElevator = false;
 	isElevatorStopped = true;
 	previousMovingVelocity = sf::Vector2f(0.0f, 0.0f);
+	TiedArtImageFileName = "";
 
 	body->SetUserData(this);
 }
@@ -151,6 +158,26 @@ void Box2DRigidBody::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			body->SetTransform(b2Vec2(body->GetTransform().p.x, startingPosition.y), 0.0f);
 		}
 	}
+}
+
+void Box2DRigidBody::Draw(sf::Vector2f camera_position) {
+	if (TiedArtImageSprite != nullptr) {
+		bodyPosition = body->GetPosition();
+
+		//TiedArtImageSprite->setPosition(sf::Vector2f((position.x - camera_position.x) * 40.0f + 0.0f, (position.y - camera_position.y) * 40.0f + 0.0f));
+		TiedArtImageSprite->setPosition(sf::Vector2f((bodyPosition.x - (TiedArtImageTextureSize.x / 2.0f * TiedArtImageSprite->getScale().x / 40.0f) - camera_position.x) * 40.0f,
+													 (bodyPosition.y - (TiedArtImageTextureSize.y / 2.0f * TiedArtImageSprite->getScale().y / 40.0f) - camera_position.y) * 40.0f));
+
+		render_window->draw(*TiedArtImageSprite);
+	}
+}
+
+void Box2DRigidBody::LoadArtImage(string file_name) {
+	TiedArtImageTexture = Singleton<AssetManager>().Get()->GetTexture(file_name);
+	TiedArtImageTextureSize = TiedArtImageTexture->getSize();
+
+	TiedArtImageSprite = new sf::Sprite(*TiedArtImageTexture);
+	TiedArtImageSprite->setScale(0.666667f, 0.68f);
 }
 
 float Box2DRigidBody::GetDistanceBetweenTwoPoints(sf::Vector2f point_a, sf::Vector2f point_b) {
