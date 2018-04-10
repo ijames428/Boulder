@@ -74,22 +74,6 @@ class MyContactListener : public b2ContactListener
 		//	}
 		//}
 
-		if (fixture_b_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
-			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
-			if (fixtureB->GetBody()->GetLinearVelocity().y > 0.0f) {
-				contact->SetEnabled(true);
-			} else if (entityA->IsPassThroughable()) {
-				contact->SetEnabled(false);
-			}
-		} else if (fixture_a_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
-			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
-			if (fixtureA->GetBody()->GetLinearVelocity().y > 0.0f) {
-				contact->SetEnabled(true);
-			} else if (entityB->IsPassThroughable()) {
-				contact->SetEnabled(false);
-			}
-		}
-
 		if (fixture_b_category_bits == 0x0001 /* PLAYER_CHARACTER */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
 			if (entityA->IsPassThroughable()) {
@@ -112,6 +96,24 @@ class MyContactListener : public b2ContactListener
 		} else if (fixture_a_category_bits == 0x0020 /* WEAPON */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
 			if (fixtureA->GetBody()->GetLinearVelocity().y > 0.0f) {
+				contact->SetEnabled(true);
+			} else if (entityB->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		}
+
+		if (fixture_b_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			if (fixtureB->GetBody()->GetLinearVelocity().y > 0.0f && !entityB->DropThroughPassThroughPlatforms) {
+				contact->SetEnabled(true);
+			} else if (entityA->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		} else if (fixture_a_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+			if (fixtureA->GetBody()->GetLinearVelocity().y > 0.0f && !entityA->DropThroughPassThroughPlatforms) {
 				contact->SetEnabled(true);
 			} else if (entityB->IsPassThroughable()) {
 				contact->SetEnabled(false);
@@ -249,6 +251,20 @@ class MyContactListener : public b2ContactListener
 		uint16 fixture_a_category_bits = fixtureA->GetFilterData().categoryBits;
 		uint16 fixture_b_category_bits = fixtureB->GetFilterData().categoryBits;
 
+		if (fixture_b_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			if (entityB->DropThroughPassThroughPlatforms && entityA->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		} else if (fixture_a_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+			if (entityA->DropThroughPassThroughPlatforms && entityB->IsPassThroughable()) {
+				contact->SetEnabled(false);
+			}
+		}
+
 		if (fixtureA->GetFilterData().categoryBits == 0x0010) {
 			if (fixtureB->GetFilterData().categoryBits == 0x0040) {
 				Door* entity = static_cast<Door*>(fixtureB->GetBody()->GetUserData());
@@ -369,6 +385,20 @@ class MyContactListener : public b2ContactListener
 	}
 };
 
+class Zone {
+public:
+	Zone() {
+		parallax_background_sprites_size = 0;
+		parallax_background_viewport_position = sf::Vector2f(0.0f, 0.0f);
+	}
+	float x;
+	float y;
+	int parallax_background_sprites_size;
+	sf::Vector2f parallax_background_viewport_position;
+	std::vector<sf::Texture*> parallax_background_textures;
+	std::vector<sf::Sprite*> parallax_background_sprites;
+};
+
 class SmashWorld {
 private:
 	struct DeserializedRectangle {
@@ -424,10 +454,6 @@ private:
 #else
 #endif
 	bool past_setup = false;
-	int parallax_background_sprites_size;
-	sf::Vector2f parallax_background_viewport_position;
-	std::vector<sf::Texture*> parallax_background_textures;
-	std::vector<sf::Sprite*> parallax_background_sprites;
 
 	Menu* DeadMenu;
 	Menu* PauseMenu;
@@ -464,6 +490,9 @@ private:
 	float original_window_height;
 
 	int saveSlot;
+
+	int currentZone;
+	std::vector<Zone*> zones;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second, int save_slot, bool load_game);

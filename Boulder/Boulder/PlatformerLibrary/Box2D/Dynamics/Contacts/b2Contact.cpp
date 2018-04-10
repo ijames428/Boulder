@@ -173,6 +173,8 @@ void b2Contact::UpdateContact(b2ContactListener* listener)
 	bool sensorB = m_fixtureB->IsSensor();
 	bool sensor = sensorA || sensorB;
 
+	bool useConstantContactEvenIfNotSensor = m_fixtureA->GetUseConstantContactEvenIfNotSensor() || m_fixtureB->GetUseConstantContactEvenIfNotSensor();
+
 	b2Body* bodyA = m_fixtureA->GetBody();
 	b2Body* bodyB = m_fixtureB->GetBody();
 	const b2Transform& xfA = bodyA->GetTransform();
@@ -241,7 +243,7 @@ void b2Contact::UpdateContact(b2ContactListener* listener)
 		listener->EndContact(this);
 	}
 
-	if (sensor && touching && listener)
+	if ((useConstantContactEvenIfNotSensor || sensor) && touching && listener)
 	{
 		if (m_fixtureA->IsActive() && m_fixtureB->IsActive()) {
 			listener->ConstantContact(this);

@@ -220,6 +220,7 @@ public:
 	virtual int GetDamageOfCurrentAttack();
 	virtual void UpdateEffectsVolumes(float new_effects_volume);
 	virtual void AddAnger(int anger_amount);
+	bool DropThroughPassThroughPlatforms;
 	bool IsInHitStun();
 	bool IsInteractable() {
 		return is_interactable;

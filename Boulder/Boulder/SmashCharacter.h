@@ -185,6 +185,8 @@ public:
 
 		if (IsInTheAir() && !has_double_jump/* && IsAnAttackActive()*/) {
 			jumpInputBuffer->Start();
+		} else if (leftStickInputs.y > 90.0f) {
+			DropThroughPassThroughPlatforms = true;
 		} else {
 			StartJump();
 		}

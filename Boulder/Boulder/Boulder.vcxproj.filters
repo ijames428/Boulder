@@ -62,21 +62,6 @@
     </ClInclude>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="PlatformerLibrary\Checkpoint.h">
-      <Filter>PlatformerLib</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformerLibrary\EndOfTheGame.h">
-      <Filter>PlatformerLib</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformerLibrary\GridHandler.h">
-      <Filter>PlatformerLib</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformerLibrary\Platform.h">
-      <Filter>PlatformerLib</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformerLibrary\RigidBody.h">
-      <Filter>PlatformerLib</Filter>
-    </ClInclude>
     <ClInclude Include="PlatformerLibrary\Box2D\Box2D.h">
       <Filter>PlatformerLib\Box2D</Filter>
     </ClInclude>
@@ -218,16 +203,7 @@
     <ClInclude Include="PlatformerLibrary\Box2D\Dynamics\Joints\b2PulleyJoint.h">
       <Filter>PlatformerLib\Box2D\Dynamics\Joints</Filter>
     </ClInclude>
-    <ClInclude Include="Creature.h">
-      <Filter>Shadhorimn2</Filter>
-    </ClInclude>
     <ClInclude Include="Projectile.h">
-      <Filter>Shadhorimn2</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerCharacter.h">
-      <Filter>Shadhorimn2</Filter>
-    </ClInclude>
-    <ClInclude Include="World.h">
       <Filter>Shadhorimn2</Filter>
     </ClInclude>
     <ClInclude Include="Constants.h">
@@ -256,9 +232,6 @@
     </ClInclude>
     <ClInclude Include="Weapon.h">
       <Filter>Shadhorimn2</Filter>
-    </ClInclude>
-    <ClInclude Include="AdvancedInput.h">
-      <Filter>PlatformerLib</Filter>
     </ClInclude>
     <ClInclude Include="GameLibrary\Json\json.h">
       <Filter>GameLib\Json</Filter>
@@ -299,6 +272,41 @@
     <ClInclude Include="Door.h">
       <Filter>PlatformerLib</Filter>
     </ClInclude>
+    <ClInclude Include="BoulderCreature.h">
+      <Filter>Shadhorimn2</Filter>
+    </ClInclude>
+    <ClInclude Include="DialogueLine.h">
+      <Filter>GameLib</Filter>
+    </ClInclude>
+    <ClInclude Include="MenuController.h">
+      <Filter>Shadhorimn2</Filter>
+    </ClInclude>
+    <ClInclude Include="Trigger.h">
+      <Filter>PlatformerLib</Filter>
+    </ClInclude>
+    <ClInclude Include="Menu.h">
+      <Filter>GameLib</Filter>
+    </ClInclude>
+    <ClInclude Include="HurtBox.h">
+      <Filter>PlatformerLib</Filter>
+    </ClInclude>
+    <ClInclude Include="BossOne.h">
+      <Filter>Shadhorimn2</Filter>
+    </ClInclude>
+    <ClInclude Include="BoulderProjectile.h">
+      <Filter>Shadhorimn2</Filter>
+    </ClInclude>
+    <ClInclude Include="Utilities.h">
+      <Filter>Shadhorimn2</Filter>
+    </ClInclude>
+    <ClInclude Include="Rune.h">
+      <Filter>Shadhorimn2</Filter>
+    </ClInclude>
+    <ClInclude Include="CharacterScreen.h">
+      <Filter>Shadhorimn2</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformerLibrary\RigidBody.h" />
+    <ClInclude Include="Creature.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameLibrary\AssetManager.cpp">
@@ -317,21 +325,6 @@
       <Filter>GameLib</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="PlatformerLibrary\Checkpoint.cpp">
-      <Filter>PlatformerLib</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformerLibrary\EndOfTheGame.cpp">
-      <Filter>PlatformerLib</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformerLibrary\GridHandler.cpp">
-      <Filter>PlatformerLib</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformerLibrary\Platform.cpp">
-      <Filter>PlatformerLib</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformerLibrary\RigidBody.cpp">
-      <Filter>PlatformerLib</Filter>
-    </ClCompile>
     <ClCompile Include="PlatformerLibrary\Box2D\Collision\b2CollidePolygon.cpp">
       <Filter>PlatformerLib\Box2D\Collision</Filter>
     </ClCompile>
@@ -470,19 +463,10 @@
     <ClCompile Include="PlatformerLibrary\Box2D\Dynamics\Joints\b2RevoluteJoint.cpp">
       <Filter>PlatformerLib\Box2D\Dynamics\Joints</Filter>
     </ClCompile>
-    <ClCompile Include="Creature.cpp">
-      <Filter>Shadhorimn2</Filter>
-    </ClCompile>
     <ClCompile Include="Projectile.cpp">
       <Filter>Shadhorimn2</Filter>
     </ClCompile>
-    <ClCompile Include="PlayerCharacter.cpp">
-      <Filter>Shadhorimn2</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="World.cpp">
-      <Filter>Shadhorimn2</Filter>
-    </ClCompile>
     <ClCompile Include="SmashWorld.cpp">
       <Filter>Shadhorimn2</Filter>
     </ClCompile>
@@ -504,9 +488,6 @@
     <ClCompile Include="Weapon.cpp">
       <Filter>Shadhorimn2</Filter>
     </ClCompile>
-    <ClCompile Include="AdvancedInput.cpp">
-      <Filter>PlatformerLib</Filter>
-    </ClCompile>
     <ClCompile Include="GameLibrary\Json\json_reader.cpp">
       <Filter>GameLib\Json</Filter>
     </ClCompile>
@@ -519,5 +500,37 @@
     <ClCompile Include="Door.cpp">
       <Filter>PlatformerLib</Filter>
     </ClCompile>
+    <ClCompile Include="BoulderCreature.cpp">
+      <Filter>Shadhorimn2</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogueLine.cpp">
+      <Filter>GameLib</Filter>
+    </ClCompile>
+    <ClCompile Include="MenuController.cpp">
+      <Filter>Shadhorimn2</Filter>
+    </ClCompile>
+    <ClCompile Include="Trigger.cpp">
+      <Filter>PlatformerLib</Filter>
+    </ClCompile>
+    <ClCompile Include="Menu.cpp">
+      <Filter>GameLib</Filter>
+    </ClCompile>
+    <ClCompile Include="HurtBox.cpp">
+      <Filter>PlatformerLib</Filter>
+    </ClCompile>
+    <ClCompile Include="BossOne.cpp">
+      <Filter>Shadhorimn2</Filter>
+    </ClCompile>
+    <ClCompile Include="BoulderProjectile.cpp">
+      <Filter>Shadhorimn2</Filter>
+    </ClCompile>
+    <ClCompile Include="Rune.cpp">
+      <Filter>Shadhorimn2</Filter>
+    </ClCompile>
+    <ClCompile Include="CharacterScreen.cpp">
+      <Filter>Shadhorimn2</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformerLibrary\RigidBody.cpp" />
+    <ClCompile Include="Creature.cpp" />
   </ItemGroup>
 </Project>

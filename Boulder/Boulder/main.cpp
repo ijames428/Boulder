@@ -124,7 +124,7 @@ void NewGame() {
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
 	load_game = false;
 	playGameWithCommentary = false;
-	selected_save_slot = last_used_save_slot = first_empty_save_slot_found;
+	selected_save_slot = first_empty_save_slot_found;
 }
 
 void NewGameWithCommentary() {
@@ -146,7 +146,6 @@ void LoadGame(int save_slot) {
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
 	load_game = true;
 	selected_save_slot = save_slot;
-	last_used_save_slot = selected_save_slot;
 }
 
 void ExitConfirmDeleteSaveMenu() {
@@ -422,6 +421,7 @@ int main()
 				UpdateGameStateLoadingScreen(); 
 				SaveSettings();
 				Singleton<SmashWorld>::Get()->Init(window, camera, (float)frames_per_second, selected_save_slot, load_game);
+				last_used_save_slot = selected_save_slot;
 				if (playGameWithCommentary) {
 					Singleton<SmashWorld>::Get()->StartAudioCommentary();
 				}

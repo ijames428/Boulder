@@ -232,6 +232,8 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 		interaction_button_sprite = new sf::Sprite(*interaction_button_texture);
 		interaction_button_sprite->setScale(scale, scale);
 	}
+
+	DropThroughPassThroughPlatforms = false;
 }
 
 void BoulderCreature::ApplyObjectDataToSaveData(Json::Value& save_data) {

@@ -130,6 +130,8 @@ public:
 	/// Is this fixture a sensor (non-solid)?
 	/// @return the true if the shape is a sensor.
 	bool IsSensor() const;
+	bool GetUseConstantContactEvenIfNotSensor() const;
+	void SetUseConstantContactEvenIfNotSensor(bool new_value);
 
 	/// Set the contact filtering data. This will not update contacts until the next time
 	/// step when either parent body is active and awake.
@@ -255,6 +257,8 @@ protected:
 	b2Color* color;
 
 	bool active = true;
+
+	bool m_useConstantContactEvenIfNotSensor;
 };
 
 inline b2Shape::Type b2Fixture::GetType() const
@@ -280,6 +284,16 @@ inline void b2Fixture::SetShape(b2Shape* new_shape)
 inline bool b2Fixture::IsSensor() const
 {
 	return m_isSensor;
+}
+
+inline bool b2Fixture::GetUseConstantContactEvenIfNotSensor() const
+{
+	return m_useConstantContactEvenIfNotSensor;
+}
+
+inline void b2Fixture::SetUseConstantContactEvenIfNotSensor(bool new_value)
+{
+	m_useConstantContactEvenIfNotSensor = new_value;
 }
 
 inline const b2Filter& b2Fixture::GetFilterData() const

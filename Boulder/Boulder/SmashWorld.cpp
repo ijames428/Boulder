@@ -307,7 +307,8 @@ void SmashWorld::Setup() {
 
 	//ParseWorld("Maps\\ChangingPlayersRectHeightAndWidth");
 	//ParseWorld("Maps\\DemoLevelWithRootDir");
-	ParseWorld("Maps\\TestingImageOnMovingObjects");
+	//ParseWorld("Maps\\TestingImageOnMovingObjects");
+	ParseWorld("Maps\\TestZones");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
 	ParseDialogue("BoulderDialogue.txt");
@@ -373,6 +374,8 @@ void SmashWorld::Setup() {
 		return;
 	audioCommentary.setVolume(50.0f * (Singleton<Settings>::Get()->music_volume / 100.0f));
 	audioCommentary.setLoop(false);
+
+	currentZone = 1;
 
 	past_setup = true;
 }
@@ -487,17 +490,20 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 			player_character_input->Update();
 		}
 
-		for (int i = 0; i < parallax_background_sprites_size; i++) {
-			parallax_background_viewport_position = sf::Vector2f(-(camera->viewport_position.x * (i * 3.0f)), -(camera->viewport_position.y * (i * 3.0f)));
-			parallax_background_sprites[i]->setPosition(parallax_background_viewport_position);
+		//int zones_size = (int)zones.size();
+		//for (int z = 0; z < zones_size; z++) {
+		for (int i = 0; i < zones[currentZone - 1]->parallax_background_sprites_size; i++) {
+			zones[currentZone - 1]->parallax_background_viewport_position = sf::Vector2f(-(zones[currentZone - 1]->x + camera->viewport_position.x * (i * 3.0f)), -(zones[currentZone - 1]->y + camera->viewport_position.y * (i * 3.0f)));
+			zones[currentZone - 1]->parallax_background_sprites[i]->setPosition(zones[currentZone - 1]->parallax_background_viewport_position);
 
 			//shader.setUniform("timer", (float)curr_frame);
 			//shader.setUniform("x_magnitude", 0.0f);// 0.035f);
 			//shader.setUniform("y_magnitude", 0.0f);// 0.015f);
 
 			//lighting_shader.setUniform("lightPosition", sf::Glsl::Vec2((PlayerOne->GetBody()->GetPosition().x - camera->viewport_position.x) * 40.0f, (PlayerOne->GetBody()->GetPosition().y - camera->viewport_position.y) * 40.0f));
-			render_window->draw(*parallax_background_sprites[i]);// , &shader);
+			render_window->draw(*zones[currentZone - 1]->parallax_background_sprites[i]);// , &shader);
 		}
+		//}
 
 		world->DrawDebugData();
 
@@ -653,7 +659,7 @@ void SmashWorld::BuildWorld() {
 	Json::Value triggers_data = jsonWorldData["triggers"];
 	Json::Value units_data = jsonWorldData["units"];
 	Json::Value images_data = jsonWorldData["images"];
-	Json::Value parallaxing_backgrounds_data = jsonWorldData["parallaxingBackgrounds"];
+	Json::Value zones_data = jsonWorldData["zones"];
 
 	x = std::stof(player_data["x"].asString(), &sz) / scalingRatio;
 	y = std::stof(player_data["y"].asString(), &sz) / scalingRatio;
@@ -839,29 +845,37 @@ void SmashWorld::BuildWorld() {
 		}
 	}
 
-	parallax_background_textures.clear();
-	parallax_background_sprites.clear();
-	Json::Value parallaxing_background_data;
-	int parallaxing_backgrounds_data_size = (int)parallaxing_backgrounds_data.size();
-	parallax_background_sprites_size = parallaxing_backgrounds_data_size;
-	for (int i = 0; i < parallaxing_backgrounds_data_size; i++) {
-		parallaxing_background_data = parallaxing_backgrounds_data[i];
+	int zones_data_size = (int)zones_data.size();
+	for (int z = 0; z < zones_data_size; z++) {
+		zones.push_back(new Zone());
+		Json::Value parallaxing_backgrounds_data = jsonWorldData["zones"][z]["ParallaxingBackgrounds"];
 
-		string file_path_and_name = parallaxing_background_data["FilePath"].asString();
-		size_t findResult = file_path_and_name.find("Images\\");
-		string relativeFilePath = file_path_and_name.substr(findResult);
+		zones[z]->parallax_background_textures.clear();
+		zones[z]->parallax_background_sprites.clear();
+		Json::Value parallaxing_background_data;
+		int parallaxing_backgrounds_data_size = (int)parallaxing_backgrounds_data.size();
+		zones[z]->parallax_background_sprites_size = parallaxing_backgrounds_data_size;
+		for (int i = 0; i < parallaxing_backgrounds_data_size; i++) {
+			parallaxing_background_data = parallaxing_backgrounds_data[i];
 
-		x = std::stof(parallaxing_background_data["x"].asString(), &sz) / scalingRatio;
-		y = std::stof(parallaxing_background_data["y"].asString(), &sz) / scalingRatio;
+			string file_path_and_name = parallaxing_background_data["FilePath"].asString();
+			size_t findResult = file_path_and_name.find("Images\\");
+			string relativeFilePath = file_path_and_name.substr(findResult);
 
-		parallax_background_textures.insert(parallax_background_textures.begin(), Singleton<AssetManager>().Get()->GetTexture(relativeFilePath));//.loadFromFile("Images/parallax_background.jpg");
-		parallax_background_sprites.insert(parallax_background_sprites.begin(), new sf::Sprite(*parallax_background_textures[0]));
-		parallax_background_sprites[0]->setPosition(0.0f, 0.0f);
-		parallax_background_sprites[0]->setScale(1.0f + 0.2f * (parallaxing_backgrounds_data_size - i), 1.0f + 0.2f * (parallaxing_backgrounds_data_size - i));
+			x = std::stof(parallaxing_background_data["x"].asString(), &sz) / scalingRatio;
+			y = std::stof(parallaxing_background_data["y"].asString(), &sz) / scalingRatio;
 
-		//parallax_background_texture.loadFromFile("Images/parallax_background.jpg");
-		//parallax_background_sprite = sf::Sprite(parallax_background_texture);
-		//parallax_background_sprite.setPosition(0.0f, 0.0f);
+			zones[z]->x = x;
+			zones[z]->y = y;
+			zones[z]->parallax_background_textures.insert(zones[z]->parallax_background_textures.begin(), Singleton<AssetManager>().Get()->GetTexture(relativeFilePath));//.loadFromFile("Images/parallax_background.jpg");
+			zones[z]->parallax_background_sprites.insert(zones[z]->parallax_background_sprites.begin(), new sf::Sprite(*zones[z]->parallax_background_textures[0]));
+			zones[z]->parallax_background_sprites[0]->setPosition(0.0f, 0.0f);
+			zones[z]->parallax_background_sprites[0]->setScale(1.0f + 0.2f * (parallaxing_backgrounds_data_size - i), 1.0f + 0.2f * (parallaxing_backgrounds_data_size - i));
+
+			//parallax_background_texture.loadFromFile("Images/parallax_background.jpg");
+			//parallax_background_sprite = sf::Sprite(parallax_background_texture);
+			//parallax_background_sprite.setPosition(0.0f, 0.0f);
+		}
 	}
 }
 
@@ -999,7 +1013,14 @@ void SmashWorld::ExecuteAction(string action_call) {
 				break;
 			}
 		}
-	}	
+	} else if (Utilities::Contains(call, "SwitchToZone")) {
+		if (to_string(currentZone) != arguments[0])
+		{
+			std::string::size_type sz;
+			int new_zone = std::stoi(arguments[0], &sz);
+			currentZone = new_zone;
+		}
+	}
 }
 
 void SmashWorld::ExitToMainMenu() {

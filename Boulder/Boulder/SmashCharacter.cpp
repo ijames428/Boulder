@@ -72,6 +72,7 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 
 	topCircleFixture = body->CreateFixture(&topCircleFixtureDef);
 	botCircleFixture = body->CreateFixture(&botCircleFixtureDef);
+	botCircleFixture->SetUseConstantContactEvenIfNotSensor(true);
 	centerBoxFixture = body->CreateFixture(&centerBoxFixtureDef);
 
 	halfBodyHeight = ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y + botCircleShape.m_radius + topCircleShape.m_radius;
@@ -208,7 +209,9 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	RageAscensionSound.setBuffer(RageAscensionSoundBuffer);
 	RageAscensionSound.setLoop(false);
 
-	body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+	body->SetLinearVelocity(b2Vec2(0.0f, 0.0f)); 
+
+	DropThroughPassThroughPlatforms = false;
 }
 
 void SmashCharacter::ReceiveHeal(int heal) {
@@ -579,6 +582,12 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		} else {
 			RageAscensionSound.setVolume(RageAscensionFadeVolume);
 		}
+	}
+
+
+
+	if (DropThroughPassThroughPlatforms && leftStickInputs.y <= 90.0f) {
+		DropThroughPassThroughPlatforms = false;
 	}
 
 	if (IsInTheAir()) {

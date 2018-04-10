@@ -88,13 +88,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\SFML-2.4.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\sfeMovie-master\include;C:\Program Files %28x86%29\SFML-2.4.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\SFML-2.4.2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-audio-d.lib;sfml-system-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\sfeMovie-master\binaries\bin;C:\Program Files %28x86%29\SFML-2.4.2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-audio-d.lib;sfml-system-d.lib;sfeMovie-d.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -104,10 +104,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>C:\sfeMovie\sfeMovie-master\include;C:\Program Files\SFML-2.4.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\sfeMovie\lib\bin;C:\Program Files\SFML-2.4.2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-audio-d.lib;sfml-system-d.lib;sfeMovie.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -119,14 +122,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\SFML-2.4.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\SFML-2.4.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\SFML-2.4.2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\SFML-2.4.2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>sfml-graphics.lib;sfml-window.lib;sfml-audio.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -139,23 +142,30 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>C:\Program Files\SFML-2.4.2\include;C:\Users\Ian\Downloads\sfeMovie-master\binaries\bin;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>sfml-graphics.lib;sfml-window.lib;sfml-audio.lib;sfml-system.lib;sfeMovie.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files\SFML-2.4.2\lib;C:\Users\Ian\Downloads\sfeMovie-master\binaries\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AdvancedInput.h" />
     <ClInclude Include="Attack.h" />
+    <ClInclude Include="BossOne.h" />
+    <ClInclude Include="BoulderCreature.h" />
+    <ClInclude Include="BoulderProjectile.h" />
+    <ClInclude Include="CharacterScreen.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="ControllableCharacter.h" />
     <ClInclude Include="Creature.h" />
+    <ClInclude Include="DialogueLine.h" />
     <ClInclude Include="Door.h" />
     <ClInclude Include="GameLibrary\AssetManager.h" />
     <ClInclude Include="GameLibrary\Camera.h" />
@@ -175,6 +185,9 @@
     <ClInclude Include="GameLibrary\Settings.h" />
     <ClInclude Include="GameLibrary\Singleton.h" />
     <ClInclude Include="GameLibrary\SpriteAnimation.h" />
+    <ClInclude Include="HurtBox.h" />
+    <ClInclude Include="Menu.h" />
+    <ClInclude Include="MenuController.h" />
     <ClInclude Include="PlatformerLibrary\Box2DRigidBody.h" />
     <ClInclude Include="PlatformerLibrary\Box2D\Box2D.h" />
     <ClInclude Include="PlatformerLibrary\Box2D\Collision\b2BroadPhase.h" />
@@ -223,26 +236,27 @@
     <ClInclude Include="PlatformerLibrary\Box2D\Dynamics\Joints\b2WeldJoint.h" />
     <ClInclude Include="PlatformerLibrary\Box2D\Dynamics\Joints\b2WheelJoint.h" />
     <ClInclude Include="PlatformerLibrary\Box2D\Rope\b2Rope.h" />
-    <ClInclude Include="PlatformerLibrary\Checkpoint.h" />
     <ClInclude Include="PlatformerLibrary\Drawable.h" />
-    <ClInclude Include="PlatformerLibrary\EndOfTheGame.h" />
-    <ClInclude Include="PlatformerLibrary\GridHandler.h" />
-    <ClInclude Include="PlatformerLibrary\Platform.h" />
     <ClInclude Include="PlatformerLibrary\RigidBody.h" />
-    <ClInclude Include="PlayerCharacter.h" />
     <ClInclude Include="Projectile.h" />
+    <ClInclude Include="Rune.h" />
     <ClInclude Include="SmashCharacter.h" />
     <ClInclude Include="SmashWorld.h" />
     <ClInclude Include="StatusTimer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Trigger.h" />
+    <ClInclude Include="Utilities.h" />
     <ClInclude Include="Weapon.h" />
-    <ClInclude Include="World.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AdvancedInput.cpp" />
     <ClCompile Include="Attack.cpp" />
+    <ClCompile Include="BossOne.cpp" />
+    <ClCompile Include="BoulderCreature.cpp" />
+    <ClCompile Include="BoulderProjectile.cpp" />
+    <ClCompile Include="CharacterScreen.cpp" />
     <ClCompile Include="Creature.cpp" />
+    <ClCompile Include="DialogueLine.cpp" />
     <ClCompile Include="Door.cpp" />
     <ClCompile Include="GameLibrary\AssetManager.cpp" />
     <ClCompile Include="GameLibrary\Camera.cpp" />
@@ -252,7 +266,10 @@
     <ClCompile Include="GameLibrary\Json\json_writer.cpp" />
     <ClCompile Include="GameLibrary\Settings.cpp" />
     <ClCompile Include="GameLibrary\SpriteAnimation.cpp" />
+    <ClCompile Include="HurtBox.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Menu.cpp" />
+    <ClCompile Include="MenuController.cpp" />
     <ClCompile Include="PlatformerLibrary\Box2DRigidBody.cpp" />
     <ClCompile Include="PlatformerLibrary\Box2D\Collision\b2BroadPhase.cpp" />
     <ClCompile Include="PlatformerLibrary\Box2D\Collision\b2CollideCircle.cpp" />
@@ -300,14 +317,10 @@
     <ClCompile Include="PlatformerLibrary\Box2D\Dynamics\Joints\b2WeldJoint.cpp" />
     <ClCompile Include="PlatformerLibrary\Box2D\Dynamics\Joints\b2WheelJoint.cpp" />
     <ClCompile Include="PlatformerLibrary\Box2D\Rope\b2Rope.cpp" />
-    <ClCompile Include="PlatformerLibrary\Checkpoint.cpp" />
     <ClCompile Include="PlatformerLibrary\Drawable.cpp" />
-    <ClCompile Include="PlatformerLibrary\EndOfTheGame.cpp" />
-    <ClCompile Include="PlatformerLibrary\GridHandler.cpp" />
-    <ClCompile Include="PlatformerLibrary\Platform.cpp" />
     <ClCompile Include="PlatformerLibrary\RigidBody.cpp" />
-    <ClCompile Include="PlayerCharacter.cpp" />
     <ClCompile Include="Projectile.cpp" />
+    <ClCompile Include="Rune.cpp" />
     <ClCompile Include="SmashCharacter.cpp" />
     <ClCompile Include="SmashWorld.cpp" />
     <ClCompile Include="StatusTimer.cpp" />
@@ -317,8 +330,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Trigger.cpp" />
     <ClCompile Include="Weapon.cpp" />
-    <ClCompile Include="World.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
