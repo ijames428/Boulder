@@ -1,0 +1,82 @@
+{
+  "passages": [
+    {
+      "text": "Hello Little One...\nWelcome to the world.\n[[Kaltar's Explanation]]",
+      "links": [
+        {
+          "name": "Kaltar's Explanation",
+          "link": "Kaltar's Explanation",
+          "pid": "2"
+        }
+      ],
+      "name": "Kaltar's Introduction",
+      "pid": "1",
+      "position": {
+        "x": "750",
+        "y": "198"
+      },
+      "tags": [
+        "Intro",
+        "Kaltar"
+      ]
+    },
+    {
+      "text": "I've been captured and held against my will.\n[[Untitled Passage]]",
+      "links": [
+        {
+          "name": "Untitled Passage",
+          "link": "Untitled Passage",
+          "pid": "3"
+        }
+      ],
+      "name": "Kaltar's Explanation",
+      "pid": "2",
+      "position": {
+        "x": "751",
+        "y": "347"
+      },
+      "tags": [
+        "Intro",
+        "Kaltar"
+      ]
+    },
+    {
+      "text": "You have defeated the monter!\n[[Untitled Passage 1]] ",
+      "links": [
+        {
+          "name": "Untitled Passage 1",
+          "link": "Untitled Passage 1",
+          "pid": "4"
+        }
+      ],
+      "name": "Untitled Passage",
+      "pid": "3",
+      "position": {
+        "x": "770",
+        "y": "524"
+      },
+      "tags": [
+        "Kaltar",
+        "AfterFirstBoss"
+      ]
+    },
+    {
+      "text": "You may now leave, for the door has opened.",
+      "name": "Untitled Passage 1",
+      "pid": "4",
+      "position": {
+        "x": "786",
+        "y": "719"
+      },
+      "tags": [
+        "Kaltar",
+        "AfterFirstBoss"
+      ]
+    }
+  ],
+  "name": "Boulder's Story",
+  "startnode": "1",
+  "creator": "Twine",
+  "creator-version": "2.2.1",
+  "ifid": "79F898B8-4F48-46FC-BB43-5368ED63D95E"
+}

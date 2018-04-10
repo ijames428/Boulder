@@ -1,0 +1,42 @@
+{
+  "passages": [
+    {
+      "text": "Hello Little One...\nWelcome to the world.\n[[Kaltar's Explanation]]",
+      "links": [
+        {
+          "name": "Kaltar's Explanation",
+          "link": "Kaltar's Explanation",
+          "pid": "2"
+        }
+      ],
+      "name": "Kaltar's Introduction",
+      "pid": "1",
+      "position": {
+        "x": "751",
+        "y": "198"
+      },
+      "tags": [
+        "Intro",
+        "Kaltar"
+      ]
+    },
+    {
+      "text": "I've been captured and held against my will.",
+      "name": "Kaltar's Explanation",
+      "pid": "2",
+      "position": {
+        "x": "751",
+        "y": "347"
+      },
+      "tags": [
+        "Intro",
+        "Kaltar"
+      ]
+    }
+  ],
+  "name": "Boulder's Story",
+  "startnode": "1",
+  "creator": "Twine",
+  "creator-version": "2.2.1",
+  "ifid": "79F898B8-4F48-46FC-BB43-5368ED63D95E"
+}

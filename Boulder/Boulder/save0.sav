@@ -1,0 +1,20 @@
+{
+	"Player" : 
+	{
+		"AngerTowardsNextRageLevel" : 0,
+		"CharacterExperienceTowardsNextLevel" : 0,
+		"CharacterLevel" : 1,
+		"CurrentHitPoints" : 500,
+		"DpadLeftRuneName" : "",
+		"DpadRightRuneName" : "",
+		"DpadUpRuneName" : "",
+		"MaximumHitPoints" : 500,
+		"PositionX" : 80.300003051757813,
+		"PositionY" : 50.599998474121094,
+		"RageLevel" : 0
+	},
+	"WorldData" : 
+	{
+		"StageOfTheGame" : "Intro"
+	}
+}
