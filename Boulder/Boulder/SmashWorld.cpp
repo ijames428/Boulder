@@ -484,13 +484,11 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 
 		camera->Update(current_frame, frame_delta, PlayerOne->GetBody()->GetPosition().x, PlayerOne->GetBody()->GetPosition().y);
 
-
 		if (unit_type_player_is_talking_to != "") {
 			player_menu_input->Update();
 		} else {
 			player_character_input->Update();
 		}
-		
 
 		for (int i = 0; i < zones[currentZone - 1]->parallax_background_sprites_size; i++) {
 			zones[currentZone - 1]->parallax_background_viewport_position = sf::Vector2f(-(zones[currentZone - 1]->x + camera->viewport_position.x * (i * 3.0f)), -(zones[currentZone - 1]->y + camera->viewport_position.y * (i * 3.0f)));

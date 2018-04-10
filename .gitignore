@@ -1,1 +1,5 @@
 *.obj
+*.ipch
+Boulder/ipch/BOULDER-28bb876a/BOULDER-371aa079.ipch
+*.obj
+*.obj
