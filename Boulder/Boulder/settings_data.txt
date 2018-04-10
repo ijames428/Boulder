@@ -1,6 +1,0 @@
-{
-	"EffectsVolume" : 0.0,
-	"Fullscreen" : false,
-	"LastUsedSaveSlot" : 0,
-	"MusicVolume" : 0.0
-}
