@@ -4,10 +4,12 @@ using namespace std;
 #include "stdafx.h"
 #include <iostream>
 #include "InputHandler.h"
+#include "Singleton.h"
 
 InputHandler::InputHandler(ControllableCharacter* pc) {
 	player_character = pc;
 	number_of_frames_to_eat_inputs = 0;
+	UsingArrowsForMovement = true;
 }
 
 void InputHandler::EatInputsForNumberOfFrames(int number_of_frames) {
@@ -15,6 +17,8 @@ void InputHandler::EatInputsForNumberOfFrames(int number_of_frames) {
 }
 
 void InputHandler::Update() {
+	UsingArrowsForMovement = Singleton<Settings>::Get()->using_arrows_for_movement;
+
 	bool a_button_current = false;
 	bool b_button_current = false;
 	bool x_button_current = false;
@@ -41,35 +45,18 @@ void InputHandler::Update() {
 	float mystery = 0.0f;
 
 	if (sf::Joystick::isConnected(player_character->GetPlayerIndex())) {
-		a_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), a_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
-		b_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), b_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::W);
-		x_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), x_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::E);
-		y_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), y_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::R);
+		a_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), a_button);
+		b_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), b_button);
+		x_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), x_button);
+		y_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), y_button);
 
-		right_bumper_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), right_bumper_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Num4);
-		left_bumper_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), left_bumper_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Num1);
-		select_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), select_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Escape);
-		start_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), start_button) || sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
+		right_bumper_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), right_bumper_button);
+		left_bumper_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), left_bumper_button);
+		select_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), select_button);
+		start_button_current = sf::Joystick::isButtonPressed(player_character->GetPlayerIndex(), start_button);
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-			left_stick_horizontal = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? 0.5f : 1.0f;
-		}
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-			left_stick_horizontal = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? -0.5f : -1.0f;
-		}
-		else {
-			left_stick_horizontal = sf::Joystick::getAxisPosition(player_character->GetPlayerIndex(), sf::Joystick::X);
-		}
-
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-			left_stick_vertical = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? 0.5f : 1.0f;
-		}
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-			left_stick_vertical = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? -0.5f : -1.0f;
-		}
-		else {
-			left_stick_vertical = sf::Joystick::getAxisPosition(player_character->GetPlayerIndex(), sf::Joystick::Y);
-		}
+		left_stick_horizontal = sf::Joystick::getAxisPosition(player_character->GetPlayerIndex(), sf::Joystick::X);
+		left_stick_vertical = sf::Joystick::getAxisPosition(player_character->GetPlayerIndex(), sf::Joystick::Y);
 
 		right_stick_horizontal = sf::Joystick::getAxisPosition(player_character->GetPlayerIndex(), sf::Joystick::U);
 		right_stick_vertical = sf::Joystick::getAxisPosition(player_character->GetPlayerIndex(), sf::Joystick::R);
@@ -83,27 +70,51 @@ void InputHandler::Update() {
 		mystery = sf::Joystick::getAxisPosition(player_character->GetPlayerIndex(), sf::Joystick::V);
 	} else {
 		a_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
-		b_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::W);
-		x_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::E);
-		y_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::R);
+		b_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Num1);
+		x_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Num2);
+		y_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Num3);
 
-		right_bumper_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Num4);
-		left_bumper_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Num1);
+		right_bumper_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift);
+		left_bumper_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::E);
 		select_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Escape);
 		start_button_current = sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+		if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::Right) : sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
 			left_stick_horizontal = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? 50.0f : 100.0f;
-		}
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+		} else if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::Left) : sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
 			left_stick_horizontal = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? -50.0f : -100.0f;
 		}
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-			left_stick_vertical = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? 50.0f : 100.0f;
+		if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::Up) : sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+			left_stick_vertical = -100.0f;
+		} else if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::Down) : sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+			left_stick_vertical = 100.0f;
 		}
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-			left_stick_vertical = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ? -50.0f : -100.0f;
+
+
+		if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::D) : sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+			right_stick_horizontal = 100.0f;
+		} else if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::A) : sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+			right_stick_horizontal = -100.0f;
+		}
+
+		if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::W) : sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+			right_stick_vertical = -100.0f;
+		} else if (UsingArrowsForMovement ? sf::Keyboard::isKeyPressed(sf::Keyboard::S) : sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+			right_stick_vertical = 100.0f;
+		}
+
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Numpad3)) {
+			dpad_horizontal = 100.0f;
+		} else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Numpad1)) {
+			dpad_horizontal = -100.0f;
+		}
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Numpad5)) {
+			dpad_vertical = -100.0f;
+		} else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Numpad2)) {
+			dpad_vertical = 100.0f;
 		}
 	}
 

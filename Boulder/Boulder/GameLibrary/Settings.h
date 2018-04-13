@@ -9,6 +9,7 @@ public:
 	float music_volume;
 	float effects_volume;
 	bool fullscreen;
+	bool using_arrows_for_movement;
 	Settings();
 };
 

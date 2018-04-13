@@ -232,6 +232,7 @@ void LoadSettings() {
 		Singleton<Settings>::Get()->music_volume = save_data["MusicVolume"].asFloat();
 		Singleton<Settings>::Get()->effects_volume = save_data["EffectsVolume"].asFloat();
 		Singleton<Settings>::Get()->fullscreen = save_data["Fullscreen"].asBool();
+		Singleton<Settings>::Get()->using_arrows_for_movement = save_data["UsingArrowsForMovement"].asBool();
 		last_used_save_slot = save_data["LastUsedSaveSlot"].asInt();
 
 		myfile.close();
@@ -246,6 +247,7 @@ void SaveSettings() {
 	save_data["MusicVolume"] = Singleton<Settings>::Get()->music_volume;
 	save_data["EffectsVolume"] = Singleton<Settings>::Get()->effects_volume;
 	save_data["Fullscreen"] = Singleton<Settings>::Get()->fullscreen;
+	save_data["UsingArrowsForMovement"] = Singleton<Settings>::Get()->using_arrows_for_movement;
 	save_data["LastUsedSaveSlot"] = last_used_save_slot;
 
 	Json::StreamWriterBuilder wbuilder;
@@ -254,6 +256,14 @@ void SaveSettings() {
 	ofs << document;
 
 	ofs.close();
+}
+
+void EnableUsingArrowsForMovement() {
+	Singleton<Settings>::Get()->using_arrows_for_movement = true;
+}
+
+void DisableUsingArrowsForMovement() {
+	Singleton<Settings>::Get()->using_arrows_for_movement = false;
 }
 
 void EnableFullscreen() {
@@ -359,6 +369,7 @@ int main()
 	OptionsMenu->AddItem("Music Volume", (int)Singleton<Settings>::Get()->music_volume, 100);
 	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
 	OptionsMenu->AddItem("Fullscreen", Singleton<Settings>::Get()->fullscreen, &EnableFullscreen, &DisableFullscreen);
+	OptionsMenu->AddItem("Use Arrows For Movement", Singleton<Settings>::Get()->using_arrows_for_movement, &EnableUsingArrowsForMovement, &DisableUsingArrowsForMovement);
 	OptionsMenu->AddItem("Save Settings", &SaveSettings);
 	OptionsMenu->AddItem("Back", &ExitOptionsMenu);
 

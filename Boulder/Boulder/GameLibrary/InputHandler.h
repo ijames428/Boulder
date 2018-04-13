@@ -3,6 +3,7 @@
 using namespace std;
 #include <SFML/Graphics.hpp>
 #include "../ControllableCharacter.h"
+#include "Settings.h"
 
 class InputHandler {
 private:
@@ -32,5 +33,6 @@ public:
 	InputHandler(ControllableCharacter* pc);
 	void Update();
 	void EatInputsForNumberOfFrames(int number_of_frames);
+	bool UsingArrowsForMovement;
 	//static int GetAvailablePlayerIndex();
 };

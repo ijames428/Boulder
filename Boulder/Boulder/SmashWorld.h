@@ -547,6 +547,8 @@ public:
 	void CloseDialogue();
 	void EnableFullscreen();
 	void DisableFullscreen();
+	void EnableUsingArrowsForMovement();
+	void DisableUsingArrowsForMovement();
 
 	bool Contains(string string_being_searched, string string_being_searched_for) {
 		std::size_t found = string_being_searched.find(string_being_searched_for);

@@ -202,6 +202,22 @@ void ExternalSaveSettings() {
 	Singleton<SmashWorld>::Get()->SaveSettings();
 }
 
+void ExternalEnableUsingArrowsForMovement() {
+	Singleton<SmashWorld>::Get()->EnableUsingArrowsForMovement();
+}
+
+void ExternalDisableUsingArrowsForMovement() {
+	Singleton<SmashWorld>::Get()->DisableUsingArrowsForMovement();
+}
+
+void SmashWorld::EnableUsingArrowsForMovement() {
+	Singleton<Settings>::Get()->using_arrows_for_movement = true;
+}
+
+void SmashWorld::DisableUsingArrowsForMovement() {
+	Singleton<Settings>::Get()->using_arrows_for_movement = false;
+}
+
 void ExternalEnableFullscreen() {
 	Singleton<SmashWorld>::Get()->EnableFullscreen();
 }
@@ -237,6 +253,8 @@ void SmashWorld::SaveSettings() {
 
 	save_data["MusicVolume"] = Singleton<Settings>::Get()->music_volume;
 	save_data["EffectsVolume"] = Singleton<Settings>::Get()->effects_volume;
+	save_data["Fullscreen"] = Singleton<Settings>::Get()->fullscreen;
+	save_data["UsingArrowsForMovement"] = Singleton<Settings>::Get()->using_arrows_for_movement;
 
 	Json::StreamWriterBuilder wbuilder;
 	std::string document = Json::writeString(wbuilder, save_data);
@@ -358,7 +376,8 @@ void SmashWorld::Setup() {
 	OptionsMenu = new Menu(render_window, camera->viewport_dimensions, "Images/parallax_background0.jpg");
 	OptionsMenu->AddItem("Music Volume", (int)Singleton<Settings>::Get()->music_volume, 100);
 	OptionsMenu->AddItem("Effects Volume", (int)Singleton<Settings>::Get()->effects_volume, 100);
-	OptionsMenu->AddItem("Fullscreen", false, &ExternalEnableFullscreen, &ExternalDisableFullscreen);
+	OptionsMenu->AddItem("Fullscreen", Singleton<Settings>::Get()->fullscreen, &ExternalEnableFullscreen, &ExternalDisableFullscreen);
+	OptionsMenu->AddItem("Use Arrows For Movement", Singleton<Settings>::Get()->using_arrows_for_movement, &ExternalEnableUsingArrowsForMovement, &ExternalDisableUsingArrowsForMovement);
 	OptionsMenu->AddItem("Save Settings", &ExternalSaveSettings);
 	OptionsMenu->AddItem("Back", &ExternalCloseOptionsMenu);
 
@@ -1171,12 +1190,26 @@ void SmashWorld::HandleButtonYRelease() {
 }
 
 void SmashWorld::HandleButtonStartPress() {
-	if (!PauseMenu->IsOpen && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
-		if (CharScreen->IsOpen) {
-			CharScreen->Close();
-		} else {
-			CharScreen->Open();
-			player_menu_input->EatInputsForNumberOfFrames(1);
+	//if (!PauseMenu->IsOpen && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
+	//	if (CharScreen->IsOpen) {
+	//		CharScreen->Close();
+	//	} else {
+	//		CharScreen->Open();
+	//		player_menu_input->EatInputsForNumberOfFrames(1);
+	//	}
+	//}
+	if (PauseMenu->IsOpen) {
+		PauseMenu->ExecuteCurrentSelection();
+	} else if (DeadMenu->IsOpen) {
+		DeadMenu->ExecuteCurrentSelection();
+	} else if (OptionsMenu->IsOpen) {
+		OptionsMenu->ExecuteCurrentSelection();
+	} else if (CharScreen->IsOpen) {
+		if (CharScreen->IsOnAssigningRunesPage) {
+			CharScreen->SwitchToCharacterStats();
+		}
+		else {
+			CharScreen->SwitchToAssigningRunes();
 		}
 	}
 }
@@ -1194,6 +1227,8 @@ void SmashWorld::HandleButtonSelectPress() {
 #endif
 	if (past_setup && !DeadMenu->IsOpen && !OptionsMenu->IsOpen && !CharScreen->IsOpen) {
 		PauseMenu->Open();
+	} else {
+		CloseCurrentMenu();
 	}
 }
 
