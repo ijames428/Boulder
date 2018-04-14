@@ -248,6 +248,7 @@ void Box2DRigidBody::ApplySaveDataToObjectData(Json::Value& save_data) {
 
 void Box2DRigidBody::SetPassThrough(bool pass_through) {
 	passThrough = pass_through;
+	//fixture->SetColor(0.8f, 0.8f, 0.0f, 1.0f);
 }
 
 bool Box2DRigidBody::IsPassThroughable() {

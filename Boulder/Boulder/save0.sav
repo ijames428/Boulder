@@ -8,10 +8,25 @@
 		"DpadLeftRuneName" : "",
 		"DpadRightRuneName" : "",
 		"DpadUpRuneName" : "",
+		"IsFacingRight" : false,
 		"MaximumHitPoints" : 500,
 		"PositionX" : 80.300003051757813,
-		"PositionY" : 50.599998474121094,
-		"RageLevel" : 0
+		"PositionY" : 48.099998474121094,
+		"RageLevel" : 0,
+		"VelocityX" : 0.0,
+		"VelocityY" : 0.0,
+		"Weapon" : 
+		{
+			"AngularVelocity" : 0.0,
+			"GravityScale" : 0.0,
+			"HeldByOwner" : true,
+			"PositionX" : 80.300003051757813,
+			"PositionY" : 48.099998474121094,
+			"Recalling" : false,
+			"Stuck" : false,
+			"VelocityX" : 0.0,
+			"VelocityY" : 0.0
+		}
 	},
 	"WorldData" : 
 	{

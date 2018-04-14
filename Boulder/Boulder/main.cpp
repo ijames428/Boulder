@@ -431,9 +431,9 @@ int main()
 			} else if (GameState == GAME_STATE_INIT_SINGLE_PLAYER) {
 				window->clear();
 				UpdateGameStateLoadingScreen(); 
-				SaveSettings();
 				Singleton<SmashWorld>::Get()->Init(window, camera, (float)frames_per_second, selected_save_slot, load_game);
 				last_used_save_slot = selected_save_slot;
+				SaveSettings();
 				if (playGameWithCommentary) {
 					Singleton<SmashWorld>::Get()->StartAudioCommentary();
 				}
@@ -736,6 +736,7 @@ void BuildMainMenu() {
 
 void BuildLoadMenu() {
 	LoadGameMenu = new Menu(window, camera->viewport_dimensions);
+	int first_empty_save_slot_found_this_time = -1;
 
 	for (int i = 0; i < 10; i++) {
 		string save_data_file_name = "save" + to_string(i) + ".sav";
@@ -755,8 +756,8 @@ void BuildLoadMenu() {
 			LoadGameMenu->AddItem(display, *fn_load_game, i);
 			//LoadGameMenu->AddItem(*stage_of_game + " " + *character_level, std::bind(LoadGame, save_data_file_name));
 		} else {
-			if (first_empty_save_slot_found == -1) {
-				first_empty_save_slot_found = i;
+			if (first_empty_save_slot_found_this_time == -1) {
+				first_empty_save_slot_found = first_empty_save_slot_found_this_time = i;
 			}
 			LoadGameMenu->AddItem("Empty Slot", &Nothing);
 		}

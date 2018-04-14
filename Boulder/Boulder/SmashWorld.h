@@ -90,15 +90,25 @@ class MyContactListener : public b2ContactListener
 			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
 			if (fixtureB->GetBody()->GetLinearVelocity().y > 0.0f) {
 				contact->SetEnabled(true);
+				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+				weapon->Collision(fixtureA);
 			} else if (entityA->IsPassThroughable()) {
 				contact->SetEnabled(false);
+			} else {
+				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+				weapon->Collision(fixtureA);
 			}
 		} else if (fixture_a_category_bits == 0x0020 /* WEAPON */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
 			if (fixtureA->GetBody()->GetLinearVelocity().y > 0.0f) {
 				contact->SetEnabled(true);
+				Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
+				weapon->Collision(fixtureB);
 			} else if (entityB->IsPassThroughable()) {
 				contact->SetEnabled(false);
+			} else {
+				Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
+				weapon->Collision(fixtureB);
 			}
 		}
 
@@ -209,6 +219,10 @@ class MyContactListener : public b2ContactListener
 		//		contact->SetEnabled(false);
 		//	}
 		//}
+
+		if (fixture_b_category_bits == 0x0020 /* WEAPON */ || fixture_a_category_bits == 0x0020 /* WEAPON */) {
+			contact->SetEnabled(true);
+		}
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0100) {
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
@@ -336,15 +350,84 @@ class MyContactListener : public b2ContactListener
 			return;
 		}
 
-		if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
-			if (fixtureA->GetFilterData().categoryBits == 0x0020) {
-				Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
-				weapon->Collision(fixtureB, weapon->GetBody()->GetAngle());
-			} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
-				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
-				weapon->Collision(fixtureA, weapon->GetBody()->GetAngle());
-			}
-		}
+		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
+		//	if (fixtureA->GetFilterData().categoryBits == 0x0020) {
+		//		Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
+		//		weapon->Collision(fixtureB);
+		//	} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
+		//		Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+		//		weapon->Collision(fixtureA);
+		//	}
+		//}
+
+		//if (fixture_a_category_bits == 0x0020 || fixture_b_category_bits == 0x0020) {
+		//	if (fixture_a_category_bits == 0x0020) {
+		//		Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
+		//		if (fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+		//			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+		//			if (entityB->IsPassThroughable()) {
+		//				contact->SetEnabled(false);
+		//			}
+		//			else {
+		//				weapon->Collision(fixtureB);
+		//			}
+		//		}
+		//		else {
+		//			weapon->Collision(fixtureB);
+		//		}
+		//	}
+		//	else if (fixture_b_category_bits == 0x0020) {
+		//		if (fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+		//			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+		//			if (entityA->IsPassThroughable()) {
+		//				contact->SetEnabled(false);
+		//			}
+		//			else {
+		//				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+		//				weapon->Collision(fixtureA);
+		//			}
+		//		}
+		//		else {
+		//			Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+		//			weapon->Collision(fixtureA);
+		//		}
+		//	}
+		//}
+
+		//if (fixture_a_category_bits == 0x0020 || fixture_b_category_bits == 0x0020) {
+		//	if (fixture_a_category_bits == 0x0020) {
+		//		bool normal_collision = true;
+		//
+		//		if (fixture_b_category_bits == 0x0008 /* PLATFORM */) {
+		//			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
+		//			if (entityB->IsPassThroughable()) {
+		//				contact->SetEnabled(false);
+		//				normal_collision = false;
+		//			}
+		//		}
+		//
+		//		if (normal_collision) {
+		//			Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
+		//			weapon->Collision(fixtureB);
+		//		}
+		//	}
+		//	else if (fixture_b_category_bits == 0x0020) {
+		//		bool normal_collision = true;
+		//
+		//		if (fixture_a_category_bits == 0x0008 /* PLATFORM */) {
+		//			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
+		//			if (entityA->IsPassThroughable()) {
+		//				contact->SetEnabled(false);
+		//				normal_collision = false;
+		//			}
+		//		}
+		//
+		//		if (normal_collision) {
+		//			Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
+		//			weapon->Collision(fixtureA);
+		//		}
+		//	}
+		//}
 
 		if (fixtureA->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
 			BoulderProjectile* entityA = static_cast<BoulderProjectile*>(fixtureA->GetBody()->GetUserData());
@@ -542,7 +625,7 @@ public:
 	void StartAudioCommentary(); 
 	void OpenOptionsMenu();
 	void CloseOptionsMenu();
-	void SaveSettings(); 
+	void SaveSettings();
 	void UpdateEffectsSoundsThroughoutGame();
 	void CloseDialogue();
 	void EnableFullscreen();

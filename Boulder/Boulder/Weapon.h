@@ -29,14 +29,16 @@ public:
 	Weapon(sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity, int player_idx, b2Body* owners_body);// , SmashCharacter* player);
 	void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	void Throw(b2Vec2 vector, b2Vec2 starting_position);
-	void Stick(b2Fixture* stuck_fix, float angle);
-	void Collision(b2Fixture* stuck_fix, float angle);
+	void Stick(b2Fixture* stuck_fix);
+	void Collision(b2Fixture* stuck_fix);
 	void Recall();
 	void ForcedRecall();
 	void TeleportedToWeapon();
 	bool CanTeleportToWeapon();
 	bool Throwable();
 	void HandleMaxDistanceRecall();
+	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
+	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 
 	b2Body* GetBody() {
 		return weaponBody;

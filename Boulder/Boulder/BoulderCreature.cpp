@@ -240,11 +240,14 @@ void BoulderCreature::ApplyObjectDataToSaveData(Json::Value& save_data) {
 	//save_data["Name"] = name;
 	save_data["PositionX"] = body->GetPosition().x;
 	save_data["PositionY"] = body->GetPosition().y;
+	save_data["VelocityX"] = body->GetLinearVelocity().x;
+	save_data["VelocityY"] = body->GetLinearVelocity().y;
 	save_data["CurrentHitPoints"] = hit_points;
 }
 
 void BoulderCreature::ApplySaveDataToObjectData(Json::Value& save_data) {
 	body->SetTransform(b2Vec2(save_data["PositionX"].asFloat(), save_data["PositionY"].asFloat()), body->GetAngle());
+	body->SetLinearVelocity(b2Vec2(save_data["VelocityX"].asFloat(), save_data["VelocityY"].asFloat()));
 	hit_points = save_data["CurrentHitPoints"].asInt();
 	cashinable_hit_point_value = hit_points;
 }

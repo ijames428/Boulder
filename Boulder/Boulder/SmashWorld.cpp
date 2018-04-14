@@ -326,7 +326,7 @@ void SmashWorld::Setup() {
 	//ParseWorld("Maps\\ChangingPlayersRectHeightAndWidth");
 	//ParseWorld("Maps\\DemoLevelWithRootDir");
 	//ParseWorld("Maps\\TestingImageOnMovingObjects");
-	ParseWorld("Maps\\TestZones");
+	ParseWorld("Maps\\TestMap");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
 	ParseDialogue("BoulderDialogue.txt");
@@ -1190,28 +1190,28 @@ void SmashWorld::HandleButtonYRelease() {
 }
 
 void SmashWorld::HandleButtonStartPress() {
-	//if (!PauseMenu->IsOpen && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
-	//	if (CharScreen->IsOpen) {
-	//		CharScreen->Close();
-	//	} else {
-	//		CharScreen->Open();
-	//		player_menu_input->EatInputsForNumberOfFrames(1);
-	//	}
-	//}
-	if (PauseMenu->IsOpen) {
+	if (!PauseMenu->IsOpen && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
+		if (CharScreen->IsOpen) {
+			CharScreen->Close();
+		} else {
+			CharScreen->Open();
+			player_menu_input->EatInputsForNumberOfFrames(1);
+		}
+	} else if (PauseMenu->IsOpen) {
 		PauseMenu->ExecuteCurrentSelection();
 	} else if (DeadMenu->IsOpen) {
 		DeadMenu->ExecuteCurrentSelection();
 	} else if (OptionsMenu->IsOpen) {
 		OptionsMenu->ExecuteCurrentSelection();
-	} else if (CharScreen->IsOpen) {
-		if (CharScreen->IsOnAssigningRunesPage) {
-			CharScreen->SwitchToCharacterStats();
-		}
-		else {
-			CharScreen->SwitchToAssigningRunes();
-		}
-	}
+	} 
+	//else if (CharScreen->IsOpen) {
+	//	if (CharScreen->IsOnAssigningRunesPage) {
+	//		CharScreen->SwitchToCharacterStats();
+	//	}
+	//	else {
+	//		CharScreen->SwitchToAssigningRunes();
+	//	}
+	//}
 }
 
 void SmashWorld::HandleButtonStartRelease() {
