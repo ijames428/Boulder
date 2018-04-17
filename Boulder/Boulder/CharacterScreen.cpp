@@ -61,11 +61,11 @@ CharacterScreen::CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_
 	AButtonSprite = new sf::Sprite(*AButtonTexture);
 	AButtonSprite->setPosition(790.0f, 400.0f);
 
-	int runesListSize = (int)Player->OwnedRunesList.size();
-	for (int i = 0; i < runesListSize; i++) {
-		RuneTextsList.push_back(new sf::Text("(" + to_string(i + 1) + "/" + to_string(runesListSize) + ") " + Player->OwnedRunesList[i]->Name, ringbearerFont, 45));
-		RuneTextsList[i]->setFillColor(sf::Color::White);
-	}
+	//int runesListSize = (int)Player->OwnedRunesList.size();
+	//for (int i = 0; i < runesListSize; i++) {
+	//	RuneTextsList.push_back(new sf::Text("(" + to_string(i + 1) + "/" + to_string(runesListSize) + ") " + Player->OwnedRunesList[i]->Name, ringbearerFont, 45));
+	//	RuneTextsList[i]->setFillColor(sf::Color::White);
+	//}
 
 	cursorRectangle = new sf::RectangleShape(sf::Vector2f(500.0f, 55.0f));
 	cursorRectangle->setOutlineThickness(5.0f);
@@ -80,11 +80,11 @@ CharacterScreen::CharacterScreen(SmashCharacter* player, sf::RenderWindow* rndr_
 	RuneDescriptionText.setFillColor(sf::Color::White);
 	RuneDescriptionText.setPosition(700.0f, 100.0f);
 
-	if (runesListSize > indexOfRuneBeingHoveredInInternalRuneList) {
-		RuneDescriptionText.setString(Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
-	} else {
-		RuneDescriptionText.setString("");
-	}
+	//if (runesListSize > indexOfRuneBeingHoveredInInternalRuneList) {
+	//	RuneDescriptionText.setString(Player->OwnedRunesList[indexOfRuneBeingHoveredInInternalRuneList]->Description);
+	//} else {
+	//	RuneDescriptionText.setString("");
+	//}
 
 	scrollBarLengthRectangle = new sf::RectangleShape(sf::Vector2f(4.0f, 50.0f * numberOfRunesToDisplayInList));
 	scrollBarLengthRectangle->setPosition(10.0f, 50.0f);
@@ -135,15 +135,15 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 		render_window->draw(RunesSectionText);
 		render_window->draw(*DpadSprite);
 
-		if (Player->DpadLeftRune != nullptr) {
-			render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
-		}
-		if (Player->DpadUpRune != nullptr) {
-			render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
-		}
-		if (Player->DpadRightRune != nullptr) {
-			render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
-		}
+		//if (Player->DpadLeftRune != nullptr) {
+		//	render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
+		//}
+		//if (Player->DpadUpRune != nullptr) {
+		//	render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
+		//}
+		//if (Player->DpadRightRune != nullptr) {
+		//	render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
+		//}
 	} else {
 		render_window->draw(*WindowSprite);
 		render_window->draw(*runeAreaBackgroundRect);
@@ -157,15 +157,15 @@ void CharacterScreen::Draw(sf::Vector2f camera_dimensions) {
 		render_window->draw(RunesSectionText);
 		render_window->draw(*DpadSprite);
 
-		if (Player->DpadLeftRune != nullptr) {
-			render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
-		}
-		if (Player->DpadUpRune != nullptr) {
-			render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
-		}
-		if (Player->DpadRightRune != nullptr) {
-			render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
-		}
+		//if (Player->DpadLeftRune != nullptr) {
+		//	render_window->draw(*Player->DpadLeftRune->CharacterScreenSprite);
+		//}
+		//if (Player->DpadUpRune != nullptr) {
+		//	render_window->draw(*Player->DpadUpRune->CharacterScreenSprite);
+		//}
+		//if (Player->DpadRightRune != nullptr) {
+		//	render_window->draw(*Player->DpadRightRune->CharacterScreenSprite);
+		//}
 
 		render_window->draw(*AButtonSprite);
 
@@ -178,9 +178,9 @@ void CharacterScreen::Open() {
 
 	ResetPositionOfRuneImagesAroundDpad();
 
-	HitPointsText.setString("Hit Points: " + to_string(Player->GetHitPoints()) + "/" + to_string(Player->GetMaxHitPoints()));
-	CharacterLevelText.setString("Character Level: " + to_string(Player->GetCharacterLevel()));
-	CharacterExperiencePointsText.setString("Character XP: " + to_string(Player->GetExperienceTowardsNextCharacterLevel()) + "/" + to_string(Player->CharacterExperienceNeededForNextLevel(Player->GetCharacterLevel())));
+	//HitPointsText.setString("Hit Points: " + to_string(Player->GetHitPoints()) + "/" + to_string(Player->GetMaxHitPoints()));
+	//CharacterLevelText.setString("Character Level: " + to_string(Player->GetCharacterLevel()));
+	//CharacterExperiencePointsText.setString("Character XP: " + to_string(Player->GetExperienceTowardsNextCharacterLevel()) + "/" + to_string(Player->CharacterExperienceNeededForNextLevel(Player->GetCharacterLevel())));
 	//WeaponLevelText.setString("Weapon Level: " + to_string(Player->GetWeaponLevel()));
 	//WeaponExperiencePointsText.setString("Weapon XP: " + to_string(Player->GetExperienceTowardsNextWeaponLevel()) + "/" + to_string(Player->WeaponExperienceNeededForNextLevel(Player->GetWeaponLevel())));
 }
@@ -379,19 +379,19 @@ void CharacterScreen::ResetEquippedValuesOnRunes() {
 		Player->DpadLeftRune->Equipped = true;
 	}
 
-	if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 3) {
-		if (Player->DpadUpRune != nullptr) {
-			Player->DpadUpRune->Equipped = true;
-		}
-		if (Player->DpadRightRune != nullptr) {
-			Player->DpadRightRune->Equipped = true;
-		}
-	}
-	else if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 2) {
-		if (Player->DpadUpRune != nullptr) {
-			Player->DpadUpRune->Equipped = true;
-		}
-	}
+	//if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 3) {
+	//	if (Player->DpadUpRune != nullptr) {
+	//		Player->DpadUpRune->Equipped = true;
+	//	}
+	//	if (Player->DpadRightRune != nullptr) {
+	//		Player->DpadRightRune->Equipped = true;
+	//	}
+	//}
+	//else if (Player->GetNumberOfRuneSlotsFromLevel(Player->GetCharacterLevel()) >= 2) {
+	//	if (Player->DpadUpRune != nullptr) {
+	//		Player->DpadUpRune->Equipped = true;
+	//	}
+	//}
 }
 
 bool CharacterScreen::AreAnyEquippedRunesActive() {

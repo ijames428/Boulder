@@ -23,7 +23,7 @@ using namespace std;
 #include "Menu.h"
 #include "BossOne.h"
 #include "Utilities.h"
-#include "CharacterScreen.h"
+//#include "CharacterScreen.h"
 #include <thread>
 
 class MyContactListener : public b2ContactListener
@@ -555,7 +555,7 @@ private:
 	std::vector<float> imageYs;
 	std::vector<string> imageNames;
 
-	CharacterScreen* CharScreen;
+	//CharacterScreen* CharScreen;
 
 	bool IsAMenuOpen();
 

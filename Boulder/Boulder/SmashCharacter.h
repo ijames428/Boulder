@@ -32,66 +32,66 @@ private:
 	bool teleportedSinceLastLanding;
 	bool rightStickWasCentered;
 	sf::Vector2f leftStickInputs;
-	int characterLevel;
+	//int characterLevel;
 	//int weaponLevel;
-	int characterLevelForDisplay;
+	//int characterLevelForDisplay;
 	//int weaponLevelForDisplay;
-	int characterExperienceTowardsNextLevel;
-	int characterExperienceTowardsNextLevelForAnimatedBar;
+	//int characterExperienceTowardsNextLevel;
+	//int characterExperienceTowardsNextLevelForAnimatedBar;
 	//int weaponExperienceTowardsNextLevel;
 	//int weaponExperienceTowardsNextLevelForAnimatedBar;
-	sf::RectangleShape* characterExperienceBarRect;
+	//sf::RectangleShape* characterExperienceBarRect;
 	//sf::RectangleShape* weaponExperienceBarRect;
-	sf::RectangleShape* characterExperienceBarAnimatedRect;
+	//sf::RectangleShape* characterExperienceBarAnimatedRect;
 	//sf::RectangleShape* weaponExperienceBarAnimatedRect;
-	sf::RectangleShape* characterExperienceBarBackgroundRect;
+	//sf::RectangleShape* characterExperienceBarBackgroundRect;
 	//sf::RectangleShape* weaponExperienceBarBackgroundRect;
-	void UpdateCharacterExperienceBar();
+	//void UpdateCharacterExperienceBar();
 	//void UpdateWeaponExperienceBar();
 	sf::Font ringbearerFont;
-	sf::Text* characterLevelText;
+	//sf::Text* characterLevelText;
 	//sf::Text* weaponLevelText;
 
-	int rageLevel;
-	int angerTowardsNextRageLevel;
-	int angerNeededForNextRageLevel;
-	sf::Text* rageLevelText;
-	sf::RectangleShape* rageLevelProgressBarRect;
-	sf::RectangleShape* rageLevelBarBackgroundRect;
-	std::vector<sf::Color> tierRageColors; 
-	void UpdateRageLevelBar();
-	void IncreaseRageLevel();
-	void DecreaseRageLevel();
-	void UpdateRuneUiItems();
+	//int rageLevel;
+	//int angerTowardsNextRageLevel;
+	//int angerNeededForNextRageLevel;
+	//sf::Text* rageLevelText;
+	//sf::RectangleShape* rageLevelProgressBarRect;
+	//sf::RectangleShape* rageLevelBarBackgroundRect;
+	//std::vector<sf::Color> tierRageColors; 
+	//void UpdateRageLevelBar();
+	//void IncreaseRageLevel();
+	//void DecreaseRageLevel();
+	//void UpdateRuneUiItems();
 
 	//int numberOfRunesYouCanActivate;
 
-	std::vector<Rune*> tierActivatedRunes;
+	//std::vector<Rune*> tierActivatedRunes;
 
-	sf::Texture* DpadTexture;
-	sf::Sprite* DpadSprite;
-	float readyRuneOffset = 0.0f;
+	//sf::Texture* DpadTexture;
+	//sf::Sprite* DpadSprite;
+	//float readyRuneOffset = 0.0f;
 
-	sf::Vector2f rune_scale = sf::Vector2f(0.5f, 0.5f);
+	//sf::Vector2f rune_scale = sf::Vector2f(0.5f, 0.5f);
 
-	float orbitPeriod1 = 0.0f;
-	float orbitPeriod2 = 0.0f;
-	float orbitPeriod3 = 0.0f;
+	//float orbitPeriod1 = 0.0f;
+	//float orbitPeriod2 = 0.0f;
+	//float orbitPeriod3 = 0.0f;
+	//
+	//Rune* DamageRune;
+	//Rune* LifestealRune;
+	//Rune* SuperJumpRune;
+	//Rune* DefenseRune;
+	//Rune* BerserkerRune;
 
-	Rune* DamageRune;
-	Rune* LifestealRune;
-	Rune* SuperJumpRune;
-	Rune* DefenseRune;
-	Rune* BerserkerRune;
+	//std::vector<SpriteAnimation*> rageTierAuraAnimations;
 
-	std::vector<SpriteAnimation*> rageTierAuraAnimations;
+	//int baseMaxHitPoints;
 
-	int baseMaxHitPoints;
-
-	sf::SoundBuffer RageAscensionSoundBuffer;
-	sf::Sound RageAscensionSound;
-	float RageAscensionStartingVolume;
-	float RageAscensionFadeVolume;
+	//sf::SoundBuffer RageAscensionSoundBuffer;
+	//sf::Sound RageAscensionSound;
+	//float RageAscensionStartingVolume;
+	//float RageAscensionFadeVolume;
 
 	float halfBodyHeight;
 protected:
@@ -108,26 +108,26 @@ public:
 	void ForcedRecall();
 	virtual void Land();
 	void DetermineWhichAttackToUseAndActivateIt(float x_input, float y_input);
-	void ReceiveExperience(int experience_points);
-	void LevelUpCharacter();
+	//void ReceiveExperience(int experience_points);
+	//void LevelUpCharacter();
 	//void LevelUpWeapon();
 	virtual int GetDamageOfCurrentAttack();
 	virtual void UpdateEffectsVolumes(float new_effects_volume);
-	virtual void AddAnger(int anger_amount);
-	int CharacterExperienceNeededForNextLevel(int level);
+	//virtual void AddAnger(int anger_amount);
+	//int CharacterExperienceNeededForNextLevel(int level);
 	//int WeaponExperienceNeededForNextLevel(int level);
-	void ResetRuneUiPositions(sf::Vector2f viewport_dimensions);
-	float GetDamageMultiplierFromLevel(int char_level);
-	int GetNumberOfRuneSlotsFromLevel(int char_level);
-	int GetMaximumHitPointsFromLevel(int char_level);
-	void PickUpRune(string rune_name);
+	//void ResetRuneUiPositions(sf::Vector2f viewport_dimensions);
+	//float GetDamageMultiplierFromLevel(int char_level);
+	//int GetNumberOfRuneSlotsFromLevel(int char_level);
+	//int GetMaximumHitPointsFromLevel(int char_level);
+	//void PickUpRune(string rune_name);
 
-	Rune* DpadLeftRune;
-	Rune* DpadUpRune;
-	Rune* DpadRightRune;
-
-	std::vector<Rune*> OwnedRunesList;
-	std::vector<Rune*> MasterRunesList;
+	//Rune* DpadLeftRune;
+	//Rune* DpadUpRune;
+	//Rune* DpadRightRune;
+	//
+	//std::vector<Rune*> OwnedRunesList;
+	//std::vector<Rune*> MasterRunesList;
 
 	virtual int GetPlayerIndex() {
 		return player_index;
@@ -145,15 +145,15 @@ public:
 		return can_take_input;
 	};
 
-	int GetCharacterLevel() {
-		return characterLevel;
-	};
+	//int GetCharacterLevel() {
+	//	return characterLevel;
+	//};
 	//int GetWeaponLevel() {
 	//	return weaponLevel;
 	//};
-	int GetExperienceTowardsNextCharacterLevel() {
-		return characterExperienceTowardsNextLevel;
-	};
+	//int GetExperienceTowardsNextCharacterLevel() {
+	//	return characterExperienceTowardsNextLevel;
+	//};
 	//int GetExperienceTowardsNextWeaponLevel() {
 	//	return weaponExperienceTowardsNextLevel;
 	//};
