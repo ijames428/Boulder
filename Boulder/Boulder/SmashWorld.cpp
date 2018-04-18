@@ -11,6 +11,18 @@ using namespace std;
 typedef void(*callback_function)(void); // type for conciseness
 
 SmashWorld::SmashWorld() {
+	timeSkateBoardWasPutAway = 0;
+	timeTravelingMusicPlaysForAfterSkateboardIsPutAway = 300;
+	timeAnEnemyWasLastNearby = 0;
+
+	fadingInMenuMusic = false;
+	fadingOutMenuMusic = false;
+	fadingInTravelingMusic = false;
+	fadingOutTravelingMusic = false;
+	fadingInDownTimeMusic = false;
+	fadingOutDownTimeMusic = false;
+	fadingInCombatMusic = false;
+	fadingOutCombatMusic = false;
 }
 
 void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_second, int save_slot, bool load_game) {
@@ -295,6 +307,20 @@ void SmashWorld::CloseCurrentMenu() {
 	if (PauseMenu->IsOpen) {
 		PauseMenu->Close();
 		player_character_input->EatInputsForNumberOfFrames(1);
+
+		fadeStartTime = current_frame;
+		fadingOutMenuMusic = true;
+		fadingInMenuMusic = !fadingOutMenuMusic;
+		if (enemyNearby) {
+			fadingInCombatMusic = true;
+			fadingOutCombatMusic = !fadingInCombatMusic;
+		} else if (PlayerOne->IsSkateboarding) {
+			fadingInTravelingMusic = true;
+			fadingOutTravelingMusic = !fadingInTravelingMusic;
+		} else {
+			fadingInDownTimeMusic = true;
+			fadingOutDownTimeMusic = !fadingInDownTimeMusic;
+		}
 	} else if (DeadMenu->IsOpen) {
 		DeadMenu->Close();
 		player_character_input->EatInputsForNumberOfFrames(1);
@@ -302,18 +328,6 @@ void SmashWorld::CloseCurrentMenu() {
 		CloseOptionsMenu();
 		player_character_input->EatInputsForNumberOfFrames(1);
 	} 
-	//else if (CharScreen->IsOpen) {
-	//	if (CharScreen->IsOnAssigningRunesPage) {
-	//		CharScreen->SwitchToCharacterStats();
-	//	} else {
-	//		CharScreen->Close();
-	//	}
-	//	player_character_input->EatInputsForNumberOfFrames(1);
-	//}
-	//
-	//if (was_a_menu_open && !IsAMenuOpen()) {
-	//	PlayerOne->ResetRuneUiPositions(camera->viewport_dimensions);
-	//}
 }
 
 void SmashWorld::Setup() {
@@ -324,10 +338,8 @@ void SmashWorld::Setup() {
 	gravity = new b2Vec2(0.0f, 30.0f);
 	world = new b2World(*gravity);
 
-	//ParseWorld("Maps\\ChangingPlayersRectHeightAndWidth");
-	//ParseWorld("Maps\\DemoLevelWithRootDir");
-	//ParseWorld("Maps\\TestingImageOnMovingObjects");
-	ParseWorld("Maps\\TestMap");
+	//ParseWorld("Maps\\TestMap");
+	ParseWorld("Maps\\TestSkateboard");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
 	ParseDialogue("BoulderDialogue.txt");
@@ -473,6 +485,8 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	if (!render_window->hasFocus()) {
 		return false;
 	}
+	
+	UpdateMusic();
 
 	render_window->clear();
 
@@ -558,6 +572,14 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 			if (enemies[i]->IfShouldUpdate(player_screen_pos, camera->viewport_dimensions)) {
 				enemies[i]->Update(current_frame, frame_delta);
 				enemies[i]->Draw(camera->viewport_position);
+			}
+		}
+
+		enemyNearby = false;
+		for (int i = 0; i < enemies_size; i++) {
+			if (enemies[i]->IsNearPlayer(player_screen_pos, camera->viewport_dimensions)) {
+				enemyNearby = true;
+				break;
 			}
 		}
 
@@ -1062,8 +1084,6 @@ void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
 				DeadMenu->MoveCursorDown();
 			} else if (OptionsMenu->IsOpen) {
 				OptionsMenu->MoveCursorDown();
-			//} else if (CharScreen->IsOpen && CharScreen->IsOnAssigningRunesPage) {
-			//	CharScreen->MoveCursorDown();
 			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical < -90.0f && can_take_another_left_stick_input_from_menu_controller) {
@@ -1073,8 +1093,6 @@ void SmashWorld::HandleLeftStickInput(float horizontal, float vertical) {
 				DeadMenu->MoveCursorUp();
 			} else if (OptionsMenu->IsOpen) {
 				OptionsMenu->MoveCursorUp();
-			//} else if (CharScreen->IsOpen && CharScreen->IsOnAssigningRunesPage) {
-			//	CharScreen->MoveCursorUp();
 			}
 			can_take_another_left_stick_input_from_menu_controller = false;
 		} else if (vertical >= -90.0f && vertical <= 90.0f) {
@@ -1106,7 +1124,7 @@ void SmashWorld::HandleRightStickInput(float horizontal, float vertical) {
 }
 
 void SmashWorld::HandleButtonBPress() {
-	if ((PauseMenu->IsOpen || OptionsMenu->IsOpen /*|| CharScreen->IsOpen*/) && PlayerOne->hit_points > 0) {
+	if ((PauseMenu->IsOpen || OptionsMenu->IsOpen) && PlayerOne->hit_points > 0) {
 		CloseCurrentMenu();
 	} else if (unit_type_player_is_talking_to != "") {
 		CloseDialogue();
@@ -1122,7 +1140,7 @@ void SmashWorld::CloseDialogue() {
 }
 
 bool SmashWorld::IsAMenuOpen() {
-	return PauseMenu->IsOpen || DeadMenu->IsOpen || OptionsMenu->IsOpen;// || CharScreen->IsOpen;
+	return PauseMenu->IsOpen || DeadMenu->IsOpen || OptionsMenu->IsOpen;
 }
 
 void SmashWorld::UpdateEffectsSoundsThroughoutGame() {
@@ -1171,13 +1189,6 @@ void SmashWorld::HandleButtonAPress() {
 		DeadMenu->ExecuteCurrentSelection();
 	} else if (OptionsMenu->IsOpen) {
 		OptionsMenu->ExecuteCurrentSelection();
-	//} else if (CharScreen->IsOpen) {
-	//	if (CharScreen->IsOnAssigningRunesPage) {
-	//		CharScreen->SwitchToCharacterStats();
-	//	}
-	//	else {
-	//		CharScreen->SwitchToAssigningRunes();
-	//	}
 	}
 }
 
@@ -1191,29 +1202,13 @@ void SmashWorld::HandleButtonYRelease() {
 }
 
 void SmashWorld::HandleButtonStartPress() {
-	//if (!PauseMenu->IsOpen && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
-	//	if (CharScreen->IsOpen) {
-	//		CharScreen->Close();
-	//	} else {
-	//		CharScreen->Open();
-	//		player_menu_input->EatInputsForNumberOfFrames(1);
-	//	}
-	//} else 
 	if (PauseMenu->IsOpen) {
 		PauseMenu->ExecuteCurrentSelection();
 	} else if (DeadMenu->IsOpen) {
 		DeadMenu->ExecuteCurrentSelection();
 	} else if (OptionsMenu->IsOpen) {
 		OptionsMenu->ExecuteCurrentSelection();
-	} 
-	//else if (CharScreen->IsOpen) {
-	//	if (CharScreen->IsOnAssigningRunesPage) {
-	//		CharScreen->SwitchToCharacterStats();
-	//	}
-	//	else {
-	//		CharScreen->SwitchToAssigningRunes();
-	//	}
-	//}
+	}
 }
 
 void SmashWorld::HandleButtonStartRelease() {
@@ -1227,8 +1222,18 @@ void SmashWorld::HandleButtonSelectPress() {
 	//else
 #else
 #endif
-	if (past_setup && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {// && !CharScreen->IsOpen) {
+	if (past_setup && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
 		PauseMenu->Open();
+
+		fadeStartTime = current_frame;
+		fadingInMenuMusic = true;
+		fadingOutDownTimeMusic = true;
+		fadingOutTravelingMusic = true;
+		fadingOutCombatMusic = true;
+		fadingOutMenuMusic = !fadingInMenuMusic;
+		fadingInDownTimeMusic = !fadingOutDownTimeMusic;
+		fadingInTravelingMusic = !fadingOutTravelingMusic;
+		fadingInCombatMusic = !fadingOutCombatMusic;
 	} else {
 		CloseCurrentMenu();
 	}
@@ -1243,37 +1248,202 @@ void SmashWorld::StartAudioCommentary() {
 }
 
 void SmashWorld::EnemyDied(int experience_points) {
-	//PlayerOne->ReceiveExperience(experience_points);
 }
 
 void SmashWorld::HandleDpadRightPress() {
-	//CharScreen->HandleDpadRightPress();
 }
 
 void SmashWorld::HandleDpadRightRelease() {
-	//CharScreen->HandleDpadRightRelease();
 }
 
 void SmashWorld::HandleDpadLeftPress() {
-	//CharScreen->HandleDpadLeftPress();
 }
 
 void SmashWorld::HandleDpadLeftRelease() {
-	//CharScreen->HandleDpadLeftRelease();
 }
 
 void SmashWorld::HandleDpadUpPress() {
-	//CharScreen->HandleDpadUpPress();
 }
 
 void SmashWorld::HandleDpadUpRelease() {
-	//CharScreen->HandleDpadUpRelease();
 }
 
 void SmashWorld::HandleDpadDownPress() {
-	//CharScreen->HandleDpadDownPress();
 }
 
 void SmashWorld::HandleDpadDownRelease() {
-	//CharScreen->HandleDpadDownRelease();
+}
+
+void SmashWorld::UpdateMusic() {
+	if (CombatMusic->getStatus() == sf::Music::Status::Playing) {
+		if (!enemyNearby) {
+			fadingOutCombatMusic = true;
+			fadingInCombatMusic = !fadingOutCombatMusic;
+			if (PlayerOne->IsSkateboarding) {
+				fadingInTravelingMusic = true;
+				fadingOutTravelingMusic = !fadingInTravelingMusic;
+			} else {
+				fadingInDownTimeMusic = true;
+				fadingOutDownTimeMusic = !fadingInDownTimeMusic;
+			}
+		}
+	} else if (MenuMusic->getVolume() > 0.0f && !IsAMenuOpen()) {
+		if (!fadingOutMenuMusic) {
+			fadeStartTime = current_frame;
+		}
+		fadingOutMenuMusic = true;
+		fadingInMenuMusic = !fadingOutMenuMusic;
+		if (enemyNearby) {
+			fadingInCombatMusic = true;
+			fadingOutCombatMusic = !fadingInCombatMusic;
+		} else if (PlayerOne->IsSkateboarding) {
+			fadingInTravelingMusic = true;
+			fadingOutTravelingMusic = !fadingInTravelingMusic;
+		} else {
+			fadingInDownTimeMusic = true;
+			fadingOutDownTimeMusic = !fadingInDownTimeMusic;
+		}
+	} else if (!PlayerOne->IsSkateboarding && TravelingMusic->getVolume() > 0.0f && timeSkateBoardWasPutAway + timeTravelingMusicPlaysForAfterSkateboardIsPutAway < current_frame) {
+		if (!fadingOutTravelingMusic) {
+			fadingOutTravelingMusic = true;
+			fadingInDownTimeMusic = true;
+			fadingInTravelingMusic = !fadingOutTravelingMusic;
+			fadingOutDownTimeMusic = !fadingInDownTimeMusic;
+			fadeStartTime = current_frame;
+		}
+	//	float fade_in_percent = (current_frame - (timeSkateBoardWasPutAway + timeTravelingMusicPlaysForAfterSkateboardIsPutAway)) / 180.0f;
+	//	float fade_out_percent = 1.0f - fade_in_percent;
+	//
+	//	TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
+	//	DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
+	}
+
+	float fade_in_percent = (current_frame - fadeStartTime) / (float)fadeTime;
+	if (fade_in_percent > 1.0f) {
+		fade_in_percent = 1.0f;
+	} else if (fade_in_percent < 0.0f) {
+		fade_in_percent = 0.0f;
+	}
+
+	float fade_out_percent = 1.0f - fade_in_percent;
+
+	if (fadingInMenuMusic) {
+		if (MenuMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
+			MenuMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
+		}
+
+		if (fade_in_percent >= 1.0f) {
+			fadingInMenuMusic = false;
+			MenuMusic->setVolume(Singleton<Settings>::Get()->music_volume);
+		}
+	}
+	if (fadingOutMenuMusic) {
+		if (MenuMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
+			MenuMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
+		}
+
+		if (fade_out_percent <= 0.0f) {
+			fadingOutMenuMusic = false;
+			MenuMusic->setVolume(0.0f);
+		}
+	}
+
+	if (fadingInDownTimeMusic) {
+		if (DownTimeMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
+			DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
+		}
+
+		if (fade_in_percent >= 1.0f) {
+			fadingInDownTimeMusic = false;
+			DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume);
+		}
+	} 
+	if (fadingOutDownTimeMusic) {
+		if (DownTimeMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
+			DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
+		}
+
+		if (fade_out_percent <= 0.0f) {
+			fadingOutDownTimeMusic = false;
+			DownTimeMusic->setVolume(0.0f);
+		}
+	}
+
+	if (fadingInTravelingMusic) {
+		if (TravelingMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
+			TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
+		}
+
+		if (fade_in_percent >= 1.0f) {
+			fadingInTravelingMusic = false;
+			TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume);
+		}
+	} 
+	if (fadingOutTravelingMusic) {
+		if (TravelingMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
+			TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
+		}
+
+		if (fade_out_percent <= 0.0f) {
+			fadingOutTravelingMusic = false;
+			TravelingMusic->setVolume(0.0f);
+		}
+	}
+
+	if (fadingInCombatMusic) {
+		if (CombatMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
+			CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
+		}
+
+		if (fade_in_percent >= 1.0f) {
+			fadingInCombatMusic = false;
+			CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume);
+		}
+	}
+	if (fadingOutCombatMusic) {
+		if (CombatMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
+			CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
+		}
+
+		if (fade_out_percent <= 0.0f) {
+			fadingOutCombatMusic = false;
+			CombatMusic->setVolume(0.0f);
+			CombatMusic->stop();
+		}
+	}
+}
+
+void SmashWorld::StartCombatMusic() {
+	if (CombatMusic->getStatus() != sf::Music::Status::Playing) {
+		fadingInCombatMusic = true;
+		fadingOutMenuMusic = true;
+		fadingOutTravelingMusic = true;
+		fadingOutDownTimeMusic = true;
+		fadingOutCombatMusic = !fadingInCombatMusic;
+		fadingInMenuMusic = !fadingOutMenuMusic;
+		fadingInTravelingMusic = !fadingOutTravelingMusic;
+		fadingInDownTimeMusic = !fadingOutDownTimeMusic;
+
+		fadeStartTime = current_frame;
+
+		CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume);
+		CombatMusic->play();
+	}
+}
+
+void SmashWorld::PutAwaySkateBoard() {
+	timeSkateBoardWasPutAway = current_frame;
+}
+
+void SmashWorld::StartedUsingSkateBoard() {
+	if (TravelingMusic->getVolume() < Singleton<Settings>::Get()->music_volume) {
+		fadingInTravelingMusic = true;
+		fadingOutMenuMusic = true;
+		fadingOutDownTimeMusic = true;
+		fadingOutTravelingMusic = !fadingInTravelingMusic;
+		fadingInMenuMusic = !fadingOutMenuMusic;
+		fadingInDownTimeMusic = !fadingOutDownTimeMusic;
+
+		fadeStartTime = current_frame;
+	}
 }

@@ -214,8 +214,9 @@ public:
 	virtual void ApplyObjectDataToSaveData(Json::Value& save_data);
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 	void AddActivaty(string activity);
-	virtual void UpdateBehavior(); 
-	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions); 
+	virtual void UpdateBehavior();
+	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions);
+	bool IsNearPlayer(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions);
 	void ReverseHorizontalDirectionIfInHitStun();
 	virtual int GetDamageOfCurrentAttack();
 	virtual void UpdateEffectsVolumes(float new_effects_volume);

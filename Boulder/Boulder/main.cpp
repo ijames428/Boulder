@@ -62,8 +62,10 @@ float window_height;
 sf::RenderWindow* window;
 Camera* camera;
 
-sf::Music background_music;
-sf::Music combat_music;
+sf::Music* menuMusic;
+sf::Music* combatMusic;
+sf::Music* travelingMusic;
+sf::Music* downTimeMusic;
 
 sf::Texture logo_screen_texture;
 sf::Sprite logo_screen_sprite;
@@ -311,17 +313,32 @@ int main()
 	
 	LoadSettings();
 
-	if (!background_music.openFromFile("Sound/background_music0.ogg"))
+	menuMusic = new sf::Music();
+	if (!menuMusic->openFromFile("Sound/MenuMusic.wav"))
 		return -1;
-	background_music.setVolume(Singleton<Settings>::Get()->music_volume);
-	background_music.play();
-	background_music.setLoop(true);
+	menuMusic->setVolume(Singleton<Settings>::Get()->music_volume / 2.0f);
+	menuMusic->play();
+	menuMusic->setLoop(true);
 
-	if (!combat_music.openFromFile("Sound/combat_music.ogg"))
+	combatMusic = new sf::Music();
+	if (!combatMusic->openFromFile("Sound/CombatMusic.wav"))
 		return -1;
-	combat_music.setVolume(0.0f);
-	combat_music.play();
-	combat_music.setLoop(true);
+	combatMusic->setVolume(Singleton<Settings>::Get()->music_volume);
+	combatMusic->setLoop(true);
+
+	travelingMusic = new sf::Music();
+	if (!travelingMusic->openFromFile("Sound/SkateBoardingMusic.wav"))
+		return -1;
+	travelingMusic->setVolume(0.0f);
+	travelingMusic->play();
+	travelingMusic->setLoop(true);
+
+	downTimeMusic = new sf::Music();
+	if (!downTimeMusic->openFromFile("Sound/DownTimeMusic.wav"))
+		return -1;
+	downTimeMusic->setVolume(0.0f);
+	downTimeMusic->play();
+	downTimeMusic->setLoop(true);
 
 	camera = new Camera(sf::Vector2f(0, 0), sf::Vector2f(viewport_width, viewport_height));
 	if (Singleton<Settings>::Get()->fullscreen) {
@@ -388,6 +405,11 @@ int main()
 		souls[i]->setPosition(soulOriginPoint);
 		soulVectors.push_back(new sf::Vector2f(0.0f + ((float)((rand() % 100) - 50) / 1000.0f), -0.51f + ((float)((rand() % 100) - 50) / 1000.0f)));
 	}
+
+	Singleton<SmashWorld>::Get()->MenuMusic = menuMusic;
+	Singleton<SmashWorld>::Get()->CombatMusic = combatMusic;
+	Singleton<SmashWorld>::Get()->DownTimeMusic = downTimeMusic;
+	Singleton<SmashWorld>::Get()->TravelingMusic = travelingMusic;
 
 	while (window->isOpen())
 	{
@@ -468,10 +490,6 @@ int main()
 			//std::printf("%4.2f pct good frames\t%4.2f pct bad frames.  \r", (((float)good_frames / (float)current_frame) * 100.0f), (((float)bad_frames / (float)current_frame) * 100.0f));
 			//cout << (((float)good_frames / (float)current_frame) * 100.0f) << "% of frames are good\t\t" << (((float)bad_frames / (float)current_frame) * 100.0f) << "% of frames are bad\r";
 		}
-
-		if (background_music.getVolume() != Singleton<Settings>::Get()->music_volume) {
-			background_music.setVolume(Singleton<Settings>::Get()->music_volume);
-		}
 	}
 
 	return 0;
@@ -529,6 +547,10 @@ void UpdateGameStateStartMenu() {
 		souls[i]->setPosition(old_position.x + soulVectors[i]->x, old_position.y + soulVectors[i]->y);
 
 		window->draw(*souls[i]);
+	}
+
+	if (menuMusic->getVolume() != Singleton<Settings>::Get()->music_volume) {
+		menuMusic->setVolume(Singleton<Settings>::Get()->music_volume);
 	}
 
 	window->draw(title_text);

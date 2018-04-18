@@ -1,18 +1,19 @@
 {
+	"Pit 27" : 
+	{
+		"CurrentHitPoints" : 50,
+		"PositionX" : 83.599998474121094,
+		"PositionY" : 52.299999237060547,
+		"VelocityX" : 0.0,
+		"VelocityY" : 0.0
+	},
 	"Player" : 
 	{
-		"AngerTowardsNextRageLevel" : 0,
-		"CharacterExperienceTowardsNextLevel" : 0,
-		"CharacterLevel" : 1,
-		"CurrentHitPoints" : 500,
-		"DpadLeftRuneName" : "",
-		"DpadRightRuneName" : "",
-		"DpadUpRuneName" : "",
+		"CurrentHitPoints" : 400,
 		"IsFacingRight" : false,
-		"MaximumHitPoints" : 500,
+		"MaximumHitPoints" : 400,
 		"PositionX" : 80.300003051757813,
-		"PositionY" : 48.099998474121094,
-		"RageLevel" : 0,
+		"PositionY" : 50.599998474121094,
 		"VelocityX" : 0.0,
 		"VelocityY" : 0.0,
 		"Weapon" : 
@@ -21,7 +22,7 @@
 			"GravityScale" : 0.0,
 			"HeldByOwner" : true,
 			"PositionX" : 80.300003051757813,
-			"PositionY" : 48.099998474121094,
+			"PositionY" : 50.599998474121094,
 			"Recalling" : false,
 			"Stuck" : false,
 			"VelocityX" : 0.0,

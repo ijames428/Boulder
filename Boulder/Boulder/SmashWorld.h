@@ -115,6 +115,7 @@ class MyContactListener : public b2ContactListener
 		if (fixture_b_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
 			BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
+			contact->SetFriction(0.05f);
 			if (fixtureB->GetBody()->GetLinearVelocity().y > 0.0f && !entityB->DropThroughPassThroughPlatforms) {
 				contact->SetEnabled(true);
 			} else if (entityA->IsPassThroughable()) {
@@ -123,6 +124,7 @@ class MyContactListener : public b2ContactListener
 		} else if (fixture_a_category_bits == 0x1000 /* BOT_CIRCLE */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
 			BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
+			contact->SetFriction(0.05f);
 			if (fixtureA->GetBody()->GetLinearVelocity().y > 0.0f && !entityA->DropThroughPassThroughPlatforms) {
 				contact->SetEnabled(true);
 			} else if (entityB->IsPassThroughable()) {
@@ -576,6 +578,23 @@ private:
 
 	int currentZone;
 	std::vector<Zone*> zones;
+
+	/* MUSIC */
+	sf::Int64 timeSkateBoardWasPutAway;
+	sf::Int64 timeTravelingMusicPlaysForAfterSkateboardIsPutAway;
+	sf::Int64 timeAnEnemyWasLastNearby;
+	void UpdateMusic();
+	sf::Int64 fadeTime = 240;
+	sf::Int64 fadeStartTime = 0;
+	bool fadingInMenuMusic;
+	bool fadingOutMenuMusic;
+	bool fadingInTravelingMusic;
+	bool fadingOutTravelingMusic;
+	bool fadingInDownTimeMusic;
+	bool fadingOutDownTimeMusic;
+	bool fadingInCombatMusic;
+	bool fadingOutCombatMusic;
+	bool enemyNearby = false;
 public:
 	SmashWorld();
 	void Init(sf::RenderWindow* window, Camera* cam, float frames_per_second, int save_slot, bool load_game);
@@ -632,6 +651,15 @@ public:
 	void DisableFullscreen();
 	void EnableUsingArrowsForMovement();
 	void DisableUsingArrowsForMovement();
+
+	/* MUSIC */
+	sf::Music* MenuMusic;
+	sf::Music* CombatMusic;
+	sf::Music* TravelingMusic;
+	sf::Music* DownTimeMusic;
+	void StartCombatMusic();
+	void PutAwaySkateBoard();
+	void StartedUsingSkateBoard();
 
 	bool Contains(string string_being_searched, string string_being_searched_for) {
 		std::size_t found = string_being_searched.find(string_being_searched_for);

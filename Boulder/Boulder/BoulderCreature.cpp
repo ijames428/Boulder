@@ -388,6 +388,24 @@ bool BoulderCreature::IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2
 	return true;
 }
 
+bool BoulderCreature::IsNearPlayer(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions) {
+	if (hit_points <= 0) {
+		return false;
+	}
+
+	sf::Vector2f body_screen_pos = GetScreenPosition();
+
+	if (abs(player_screen_pos.x - body_screen_pos.x) > viewport_dimensions.x * 0.25f) {
+		return false;
+	}
+
+	if (abs(player_screen_pos.y - body_screen_pos.y) > viewport_dimensions.y * 0.25f) {
+		return false;
+	}
+
+	return true;
+}
+
 void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
@@ -993,12 +1011,16 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			if (player_index != 0) {
 				Singleton<SmashWorld>::Get()->EnemyDied(50);
 			}
+
+			Singleton<SmashWorld>::Get()->StartCombatMusic();
 		} else {
 			hit_points -= damage;
 
 			if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
 				health_cash_in_timer->Start();
 			}
+
+			Singleton<SmashWorld>::Get()->StartCombatMusic();
 		}
 	} else {
 		Singleton<SmashWorld>::Get()->ScreenShake(1.5f);
