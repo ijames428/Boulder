@@ -125,6 +125,15 @@ int Menu::GetCurrentSliderValueByText(string menu_item_text) {
 	return 0;
 }
 
+void Menu::SetEnabled(string menu_item_text, bool enabled) {
+	int menu_items_size = (int)menu_items.size();
+	for (int i = 0; i < menu_items_size; i++) {
+		if (menu_items[i].GetString() == menu_item_text) {
+			menu_items[i].SetEnabled(enabled);
+		}
+	}
+}
+
 MenuItem::MenuItem(string text, callback_function action) {
 	Text = text;
 	Action = action;
@@ -276,6 +285,10 @@ void MenuItem::Draw(sf::RenderWindow* window, sf::Vector2f position) {
 }
 
 bool MenuItem::Enabled() {
+	if (!IsEnabled) {
+		return false;
+	}
+
 	if (Text == "Empty Slot") {
 		return false;
 	}
@@ -289,4 +302,8 @@ void MenuItem::SetCurrentSliderValue(int new_value) {
 
 int MenuItem::GetCurrentSliderValue() {
 	return CurrentSliderValue;
+}
+
+void MenuItem::SetEnabled(bool enabled) {
+	IsEnabled = enabled;
 }

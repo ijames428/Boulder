@@ -26,6 +26,7 @@ private:
 	callback_function OnUnchecked;
 	int CallBackIntParam;
 	bool UseCallBackWithIntParam;
+	bool IsEnabled = true;
 public:
 	MenuItem(string text, callback_function pFunc);
 	MenuItem(string text, callback_function_with_param pFunc, int callback_int_param);
@@ -40,6 +41,7 @@ public:
 	int MoveSliderLeft();
 	void SetCurrentSliderValue(int new_value);
 	int GetCurrentSliderValue();
+	void SetEnabled(bool enabled);
 };
 
 class Menu {
@@ -62,6 +64,7 @@ public:
 	string GetCurrentSelectionText();
 	void SetCurrentSliderValueByText(string menu_item_text, int new_value);
 	int GetCurrentSliderValueByText(string menu_item_text);
+	void SetEnabled(string menu_item_text, bool enabled);
 	sf::Texture* BackgroundTexture;
 	sf::Sprite* BackgroundSprite;
 private:

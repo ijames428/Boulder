@@ -115,6 +115,7 @@ bool load_game = false;
 int selected_save_slot = -1;
 int first_empty_save_slot_found = -1;
 int last_used_save_slot = 99;
+int maxNumberOfSaveSlots = 10;
 
 int good_frames = 0;
 int bad_frames = 0;
@@ -127,11 +128,13 @@ std::vector<sf::Vector2f*> soulVectors;
 std::vector<float> soulAlphas;
 
 void NewGame() {
-	MainMenu->Close();
-	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
-	load_game = false;
-	playGameWithCommentary = false;
-	selected_save_slot = first_empty_save_slot_found;
+	if (first_empty_save_slot_found < maxNumberOfSaveSlots && first_empty_save_slot_found > -1) {
+		MainMenu->Close();
+		GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+		load_game = false;
+		playGameWithCommentary = false;
+		selected_save_slot = first_empty_save_slot_found;
+	}
 }
 
 void NewGameWithCommentary() {
@@ -169,8 +172,9 @@ void DeleteSave() {
 		if (last_used_save_slot == selected_save_slot) {
 			last_used_save_slot = 99;
 			SaveSettings();
-			BuildMainMenu();
 		}
+		BuildLoadMenu();
+		BuildMainMenu();
 	}
 
 	ExitConfirmDeleteSaveMenu();
@@ -394,6 +398,7 @@ int main()
 	credits_text = sf::Text("Made by Ian James\n\n\n\n\nThank you for playing Project Boulder", ringbearer_font);
 	credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 
+	BuildLoadMenu();
 	BuildMainMenu();
 
 	OptionsMenu = new Menu(window, camera->viewport_dimensions);
@@ -408,8 +413,6 @@ int main()
 	ConfirmDeleteSaveMenu->AddItem("Do you wish to delete this save, permanently?", &Nothing);
 	ConfirmDeleteSaveMenu->AddItem("Yes", &DeleteSave);
 	ConfirmDeleteSaveMenu->AddItem("No", &ExitConfirmDeleteSaveMenu);
-
-	BuildLoadMenu();
 
 	soulOriginPoint = sf::Vector2f(viewport_width - 478.0f, viewport_height);
 	for (int i = 0; i < numberOfSouls; i++) {
@@ -481,9 +484,9 @@ int main()
 					credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 					GameState = GAME_STATE_CREDITS;
 				} else if (Singleton<SmashWorld>::Get()->ShouldExitToMainMenu()) {
+					BuildLoadMenu();
 					BuildMainMenu();
 					MainMenu->Open();
-					BuildLoadMenu();
 					GameState = GAME_STATE_START_MENU;
 				}
 
@@ -765,18 +768,24 @@ void BuildMainMenu() {
 		MainMenu->AddItem("Continue", &LoadGameOfLastUsedSavedSlot);
 	}
 
-	MainMenu->AddItem("New Game", &NewGame);
+	if (first_empty_save_slot_found == -1) {
+		MainMenu->AddItem("New Game (All Save Slots are Full)", &NewGame);
+		MainMenu->SetEnabled("New Game (All Save Slots are Full)", false);
+	} else {
+		MainMenu->AddItem("New Game", &NewGame);
+	}
 	//MainMenu->AddItem("Play Game With Audio Commentary", &NewGameWithCommentary);
 	MainMenu->AddItem("Load Saved Game", &OpenLoadGameMenu);
 	MainMenu->AddItem("Options", &OpenOptionsMenu);
 	MainMenu->AddItem("Exit", &Exit);
+
 }
 
 void BuildLoadMenu() {
 	LoadGameMenu = new Menu(window, camera->viewport_dimensions);
 	int first_empty_save_slot_found_this_time = -1;
 
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < maxNumberOfSaveSlots; i++) {
 		string save_data_file_name = "save" + to_string(i) + ".sav";
 		ifstream f(save_data_file_name.c_str());
 		if (f.good()) {
@@ -795,11 +804,13 @@ void BuildLoadMenu() {
 			//LoadGameMenu->AddItem(*stage_of_game + " " + *character_level, std::bind(LoadGame, save_data_file_name));
 		} else {
 			if (first_empty_save_slot_found_this_time == -1) {
-				first_empty_save_slot_found = first_empty_save_slot_found_this_time = i;
+				first_empty_save_slot_found_this_time = i;
 			}
 			LoadGameMenu->AddItem("Empty Slot", &Nothing);
 		}
 	}
+
+	first_empty_save_slot_found = first_empty_save_slot_found_this_time;
 }
 
 void ExtractSavedGameDisplayInformation(string file_path, string* stage_of_game, string* character_level) {
