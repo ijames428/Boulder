@@ -395,11 +395,11 @@ bool BoulderCreature::IsNearPlayer(sf::Vector2f player_screen_pos, sf::Vector2f 
 
 	sf::Vector2f body_screen_pos = GetScreenPosition();
 
-	if (abs(player_screen_pos.x - body_screen_pos.x) > viewport_dimensions.x * 0.25f) {
+	if (abs(player_screen_pos.x - body_screen_pos.x) > viewport_dimensions.x * 0.75f) {
 		return false;
 	}
 
-	if (abs(player_screen_pos.y - body_screen_pos.y) > viewport_dimensions.y * 0.25f) {
+	if (abs(player_screen_pos.y - body_screen_pos.y) > viewport_dimensions.y * 0.75f) {
 		return false;
 	}
 

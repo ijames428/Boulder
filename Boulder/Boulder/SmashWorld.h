@@ -23,6 +23,7 @@ using namespace std;
 #include "Menu.h"
 #include "BossOne.h"
 #include "Utilities.h"
+#include "MusicManager.h"
 //#include "CharacterScreen.h"
 #include <thread>
 
@@ -49,30 +50,6 @@ class MyContactListener : public b2ContactListener
 		b2Fixture* fixtureB = contact->GetFixtureB();
 		uint16 fixture_a_category_bits = fixtureA->GetFilterData().categoryBits;
 		uint16 fixture_b_category_bits = fixtureB->GetFilterData().categoryBits;
-
-		//if (fixture_a_category_bits == 0x0002) {
-		//	if (fixture_b_category_bits == 0x0008) { // PLATFORM
-		//		BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-		//		entityA->ReverseHorizontalDirectionIfInHitStun();
-		//	}
-		//} else if (fixture_b_category_bits == 0x0002) {
-		//	if (fixture_a_category_bits == 0x0008) { // PLATFORM
-		//		BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
-		//		entityB->ReverseHorizontalDirectionIfInHitStun();
-		//	}
-		//}
-		//
-		//if (fixture_a_category_bits == 0x0004) {
-		//	if (fixture_b_category_bits == 0x0008) { // PLATFORM
-		//		BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-		//		entityA->Land();
-		//	}
-		//} else if (fixture_b_category_bits == 0x0004) {
-		//	if (fixture_a_category_bits == 0x0008) { // PLATFORM
-		//		BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
-		//		entityB->Land();
-		//	}
-		//}
 
 		if (fixture_b_category_bits == 0x0001 /* PLAYER_CHARACTER */ && fixture_a_category_bits == 0x0008 /* PLATFORM */) {
 			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
@@ -197,16 +174,6 @@ class MyContactListener : public b2ContactListener
 				entityB->Triggered();
 			}
 		}
-
-		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
-		//	if (fixtureA->GetFilterData().categoryBits == 0x0020) {
-		//		Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
-		//		weapon->Collision(fixtureB, weapon->GetBody()->GetAngle());
-		//	} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
-		//		Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
-		//		weapon->Collision(fixtureA, weapon->GetBody()->GetAngle());
-		//	}
-		//}
 	}
 
 	void EndContact(b2Contact* contact) {
@@ -214,13 +181,6 @@ class MyContactListener : public b2ContactListener
 		b2Fixture* fixtureB = contact->GetFixtureB();
 		uint16 fixture_a_category_bits = fixtureA->GetFilterData().categoryBits;
 		uint16 fixture_b_category_bits = fixtureB->GetFilterData().categoryBits;
-
-		//if (fixture_a_category_bits == 0x0001 /* PLAYER_CHARACTER */ && fixture_b_category_bits == 0x0008 /* PLATFORM */) {
-		//	BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-		//	if (entityA->GetBody()->GetLinearVelocity().y < 0.0f) {
-		//		contact->SetEnabled(false);
-		//	}
-		//}
 
 		if (fixture_b_category_bits == 0x0020 /* WEAPON */ || fixture_a_category_bits == 0x0020 /* WEAPON */) {
 			contact->SetEnabled(true);
@@ -352,85 +312,6 @@ class MyContactListener : public b2ContactListener
 			return;
 		}
 
-		//if (fixtureA->GetFilterData().categoryBits == 0x0020 || fixtureB->GetFilterData().categoryBits == 0x0020) {
-		//	if (fixtureA->GetFilterData().categoryBits == 0x0020) {
-		//		Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
-		//		weapon->Collision(fixtureB);
-		//	} else if (fixtureB->GetFilterData().categoryBits == 0x0020) {
-		//		Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
-		//		weapon->Collision(fixtureA);
-		//	}
-		//}
-
-		//if (fixture_a_category_bits == 0x0020 || fixture_b_category_bits == 0x0020) {
-		//	if (fixture_a_category_bits == 0x0020) {
-		//		Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
-		//		if (fixture_b_category_bits == 0x0008 /* PLATFORM */) {
-		//			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
-		//			if (entityB->IsPassThroughable()) {
-		//				contact->SetEnabled(false);
-		//			}
-		//			else {
-		//				weapon->Collision(fixtureB);
-		//			}
-		//		}
-		//		else {
-		//			weapon->Collision(fixtureB);
-		//		}
-		//	}
-		//	else if (fixture_b_category_bits == 0x0020) {
-		//		if (fixture_a_category_bits == 0x0008 /* PLATFORM */) {
-		//			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
-		//			if (entityA->IsPassThroughable()) {
-		//				contact->SetEnabled(false);
-		//			}
-		//			else {
-		//				Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
-		//				weapon->Collision(fixtureA);
-		//			}
-		//		}
-		//		else {
-		//			Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
-		//			weapon->Collision(fixtureA);
-		//		}
-		//	}
-		//}
-
-		//if (fixture_a_category_bits == 0x0020 || fixture_b_category_bits == 0x0020) {
-		//	if (fixture_a_category_bits == 0x0020) {
-		//		bool normal_collision = true;
-		//
-		//		if (fixture_b_category_bits == 0x0008 /* PLATFORM */) {
-		//			Box2DRigidBody* entityB = static_cast<Box2DRigidBody*>(fixtureB->GetBody()->GetUserData());
-		//			if (entityB->IsPassThroughable()) {
-		//				contact->SetEnabled(false);
-		//				normal_collision = false;
-		//			}
-		//		}
-		//
-		//		if (normal_collision) {
-		//			Weapon* weapon = static_cast<Weapon*>(fixtureA->GetBody()->GetUserData());
-		//			weapon->Collision(fixtureB);
-		//		}
-		//	}
-		//	else if (fixture_b_category_bits == 0x0020) {
-		//		bool normal_collision = true;
-		//
-		//		if (fixture_a_category_bits == 0x0008 /* PLATFORM */) {
-		//			Box2DRigidBody* entityA = static_cast<Box2DRigidBody*>(fixtureA->GetBody()->GetUserData());
-		//			if (entityA->IsPassThroughable()) {
-		//				contact->SetEnabled(false);
-		//				normal_collision = false;
-		//			}
-		//		}
-		//
-		//		if (normal_collision) {
-		//			Weapon* weapon = static_cast<Weapon*>(fixtureB->GetBody()->GetUserData());
-		//			weapon->Collision(fixtureA);
-		//		}
-		//	}
-		//}
-
 		if (fixtureA->GetFilterData().categoryBits == 0x0800) { // PROJECTILE
 			BoulderProjectile* entityA = static_cast<BoulderProjectile*>(fixtureA->GetBody()->GetUserData());
 
@@ -455,18 +336,6 @@ class MyContactListener : public b2ContactListener
 				}
 			}
 		}
-
-		//if (fixture_b_category_bits == 0x0008) { // PLATFORM
-		//	if (fixture_a_category_bits == 0x0004) {
-		//		BoulderCreature* entityA = static_cast<BoulderCreature*>(fixtureA->GetBody()->GetUserData());
-		//		entityA->SetInTheAir(false);
-		//	}
-		//} else if (fixture_a_category_bits == 0x0008) { // PLATFORM
-		//	if (fixture_b_category_bits == 0x0004) {
-		//		BoulderCreature* entityB = static_cast<BoulderCreature*>(fixtureB->GetBody()->GetUserData());
-		//		entityB->SetInTheAir(false);
-		//	}
-		//}
 	}
 };
 
@@ -580,20 +449,22 @@ private:
 	std::vector<Zone*> zones;
 
 	/* MUSIC */
+	MusicManager* musicManager;
 	sf::Int64 timeSkateBoardWasPutAway;
 	sf::Int64 timeTravelingMusicPlaysForAfterSkateboardIsPutAway;
 	sf::Int64 timeAnEnemyWasLastNearby;
+	bool playingSkateboardingMusic = false;
 	void UpdateMusic();
-	sf::Int64 fadeTime = 240;
-	sf::Int64 fadeStartTime = 0;
-	bool fadingInMenuMusic;
-	bool fadingOutMenuMusic;
-	bool fadingInTravelingMusic;
-	bool fadingOutTravelingMusic;
-	bool fadingInDownTimeMusic;
-	bool fadingOutDownTimeMusic;
-	bool fadingInCombatMusic;
-	bool fadingOutCombatMusic;
+	//sf::Int64 fadeTime = 240;
+	//sf::Int64 fadeStartTime = 0;
+	//bool fadingInMenuMusic;
+	//bool fadingOutMenuMusic;
+	//bool fadingInTravelingMusic;
+	//bool fadingOutTravelingMusic;
+	//bool fadingInDownTimeMusic;
+	//bool fadingOutDownTimeMusic;
+	//bool fadingInCombatMusic;
+	//bool fadingOutCombatMusic;
 	bool enemyNearby = false;
 public:
 	SmashWorld();
@@ -653,10 +524,21 @@ public:
 	void DisableUsingArrowsForMovement();
 
 	/* MUSIC */
-	sf::Music* MenuMusic;
-	sf::Music* CombatMusic;
-	sf::Music* TravelingMusic;
-	sf::Music* DownTimeMusic;
+	MusicManager* GetMusicManager() {
+		if (musicManager == nullptr) {
+			musicManager = new MusicManager();
+		}
+
+		return musicManager;
+	};
+	//sf::Music* MenuMusic;
+	//sf::Music* CombatMusic;
+	//sf::Music* TravelingMusic;
+	//sf::Music* DownTimeMusic;
+	string menuMusicFileName;
+	string combatMusicFileName;
+	string travelingMusicFileName;
+	string downTimeMusicFileName;
 	void StartCombatMusic();
 	void PutAwaySkateBoard();
 	void StartedUsingSkateBoard();

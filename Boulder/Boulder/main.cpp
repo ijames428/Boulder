@@ -62,10 +62,14 @@ float window_height;
 sf::RenderWindow* window;
 Camera* camera;
 
+string menuMusicFileName = "Sound/MenuMusic.wav";
+string combatMusicFileName = "Sound/CombatMusic.wav";
+string travelingMusicFileName = "Sound/SkateBoardingMusic.wav";
+string downTimeMusicFileName = "Sound/DownTimeMusic.wav";
 sf::Music* menuMusic;
-sf::Music* combatMusic;
-sf::Music* travelingMusic;
-sf::Music* downTimeMusic;
+//sf::Music* combatMusic;
+//sf::Music* travelingMusic;
+//sf::Music* downTimeMusic;
 
 sf::Texture logo_screen_texture;
 sf::Sprite logo_screen_sprite;
@@ -313,32 +317,42 @@ int main()
 	
 	LoadSettings();
 
-	menuMusic = new sf::Music();
-	if (!menuMusic->openFromFile("Sound/MenuMusic.wav"))
-		return -1;
-	menuMusic->setVolume(Singleton<Settings>::Get()->music_volume / 2.0f);
-	menuMusic->play();
-	menuMusic->setLoop(true);
+	Singleton<SmashWorld>::Get()->menuMusicFileName = menuMusicFileName;
+	Singleton<SmashWorld>::Get()->combatMusicFileName = combatMusicFileName;
+	Singleton<SmashWorld>::Get()->travelingMusicFileName = travelingMusicFileName;
+	Singleton<SmashWorld>::Get()->downTimeMusicFileName = downTimeMusicFileName;
 
-	combatMusic = new sf::Music();
-	if (!combatMusic->openFromFile("Sound/CombatMusic.wav"))
-		return -1;
-	combatMusic->setVolume(Singleton<Settings>::Get()->music_volume);
-	combatMusic->setLoop(true);
+	menuMusic = Singleton<SmashWorld>::Get()->GetMusicManager()->AddSong(menuMusicFileName);
+	Singleton<SmashWorld>::Get()->GetMusicManager()->AddSong(combatMusicFileName);
+	Singleton<SmashWorld>::Get()->GetMusicManager()->AddSong(travelingMusicFileName);
+	Singleton<SmashWorld>::Get()->GetMusicManager()->AddSong(downTimeMusicFileName);
 
-	travelingMusic = new sf::Music();
-	if (!travelingMusic->openFromFile("Sound/SkateBoardingMusic.wav"))
-		return -1;
-	travelingMusic->setVolume(0.0f);
-	travelingMusic->play();
-	travelingMusic->setLoop(true);
-
-	downTimeMusic = new sf::Music();
-	if (!downTimeMusic->openFromFile("Sound/DownTimeMusic.wav"))
-		return -1;
-	downTimeMusic->setVolume(0.0f);
-	downTimeMusic->play();
-	downTimeMusic->setLoop(true);
+	//menuMusic = new sf::Music();
+	//if (!menuMusic->openFromFile("Sound/MenuMusic.wav"))
+	//	return -1;
+	//menuMusic->setVolume(Singleton<Settings>::Get()->music_volume / 2.0f);
+	//menuMusic->play();
+	//menuMusic->setLoop(true);
+	//
+	//combatMusic = new sf::Music();
+	//if (!combatMusic->openFromFile("Sound/CombatMusic.wav"))
+	//	return -1;
+	//combatMusic->setVolume(Singleton<Settings>::Get()->music_volume);
+	//combatMusic->setLoop(true);
+	//
+	//travelingMusic = new sf::Music();
+	//if (!travelingMusic->openFromFile("Sound/SkateBoardingMusic.wav"))
+	//	return -1;
+	//travelingMusic->setVolume(0.0f);
+	//travelingMusic->play();
+	//travelingMusic->setLoop(true);
+	//
+	//downTimeMusic = new sf::Music();
+	//if (!downTimeMusic->openFromFile("Sound/DownTimeMusic.wav"))
+	//	return -1;
+	//downTimeMusic->setVolume(0.0f);
+	//downTimeMusic->play();
+	//downTimeMusic->setLoop(true);
 
 	camera = new Camera(sf::Vector2f(0, 0), sf::Vector2f(viewport_width, viewport_height));
 	if (Singleton<Settings>::Get()->fullscreen) {
@@ -406,10 +420,10 @@ int main()
 		soulVectors.push_back(new sf::Vector2f(0.0f + ((float)((rand() % 100) - 50) / 1000.0f), -0.51f + ((float)((rand() % 100) - 50) / 1000.0f)));
 	}
 
-	Singleton<SmashWorld>::Get()->MenuMusic = menuMusic;
-	Singleton<SmashWorld>::Get()->CombatMusic = combatMusic;
-	Singleton<SmashWorld>::Get()->DownTimeMusic = downTimeMusic;
-	Singleton<SmashWorld>::Get()->TravelingMusic = travelingMusic;
+	//Singleton<SmashWorld>::Get()->MenuMusic = menuMusic;
+	//Singleton<SmashWorld>::Get()->CombatMusic = combatMusic;
+	//Singleton<SmashWorld>::Get()->DownTimeMusic = downTimeMusic;
+	//Singleton<SmashWorld>::Get()->TravelingMusic = travelingMusic;
 
 	while (window->isOpen())
 	{
@@ -511,6 +525,8 @@ void UpdateGameStateLogos() {
 
 	if (WasButtonAPressed() || WasButtonStartPressed()) {
 		proceed = true;
+		Singleton<SmashWorld>::Get()->GetMusicManager()->RestartSong(menuMusicFileName);
+		Singleton<SmashWorld>::Get()->GetMusicManager()->FadeToSong(menuMusicFileName);
 	}
 
 	if (proceed) {

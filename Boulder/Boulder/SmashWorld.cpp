@@ -14,15 +14,6 @@ SmashWorld::SmashWorld() {
 	timeSkateBoardWasPutAway = 0;
 	timeTravelingMusicPlaysForAfterSkateboardIsPutAway = 300;
 	timeAnEnemyWasLastNearby = 0;
-
-	fadingInMenuMusic = false;
-	fadingOutMenuMusic = false;
-	fadingInTravelingMusic = false;
-	fadingOutTravelingMusic = false;
-	fadingInDownTimeMusic = false;
-	fadingOutDownTimeMusic = false;
-	fadingInCombatMusic = false;
-	fadingOutCombatMusic = false;
 }
 
 void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_second, int save_slot, bool load_game) {
@@ -308,18 +299,12 @@ void SmashWorld::CloseCurrentMenu() {
 		PauseMenu->Close();
 		player_character_input->EatInputsForNumberOfFrames(1);
 
-		fadeStartTime = current_frame;
-		fadingOutMenuMusic = true;
-		fadingInMenuMusic = !fadingOutMenuMusic;
 		if (enemyNearby) {
-			fadingInCombatMusic = true;
-			fadingOutCombatMusic = !fadingInCombatMusic;
+			musicManager->FadeToSong(combatMusicFileName);
 		} else if (PlayerOne->IsSkateboarding) {
-			fadingInTravelingMusic = true;
-			fadingOutTravelingMusic = !fadingInTravelingMusic;
+			musicManager->FadeToSong(travelingMusicFileName);
 		} else {
-			fadingInDownTimeMusic = true;
-			fadingOutDownTimeMusic = !fadingInDownTimeMusic;
+			musicManager->FadeToSong(downTimeMusicFileName);
 		}
 	} else if (DeadMenu->IsOpen) {
 		DeadMenu->Close();
@@ -485,8 +470,9 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 	if (!render_window->hasFocus()) {
 		return false;
 	}
-	
+
 	UpdateMusic();
+	musicManager->Update();
 
 	render_window->clear();
 
@@ -575,12 +561,17 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 			}
 		}
 
+		bool was_enemy_nearby = enemyNearby;
 		enemyNearby = false;
 		for (int i = 0; i < enemies_size; i++) {
 			if (enemies[i]->IsNearPlayer(player_screen_pos, camera->viewport_dimensions)) {
 				enemyNearby = true;
 				break;
 			}
+		}
+
+		if (was_enemy_nearby && !enemyNearby) {
+			musicManager->FadeToSong(downTimeMusicFileName);
 		}
 
 		int platform_sprites_size = (int)imageSprites.size();
@@ -1225,15 +1216,7 @@ void SmashWorld::HandleButtonSelectPress() {
 	if (past_setup && !DeadMenu->IsOpen && !OptionsMenu->IsOpen) {
 		PauseMenu->Open();
 
-		fadeStartTime = current_frame;
-		fadingInMenuMusic = true;
-		fadingOutDownTimeMusic = true;
-		fadingOutTravelingMusic = true;
-		fadingOutCombatMusic = true;
-		fadingOutMenuMusic = !fadingInMenuMusic;
-		fadingInDownTimeMusic = !fadingOutDownTimeMusic;
-		fadingInTravelingMusic = !fadingOutTravelingMusic;
-		fadingInCombatMusic = !fadingOutCombatMusic;
+		musicManager->FadeToSong(menuMusicFileName);
 	} else {
 		CloseCurrentMenu();
 	}
@@ -1275,160 +1258,14 @@ void SmashWorld::HandleDpadDownRelease() {
 }
 
 void SmashWorld::UpdateMusic() {
-	if (CombatMusic->getStatus() == sf::Music::Status::Playing) {
-		if (!enemyNearby) {
-			fadingOutCombatMusic = true;
-			fadingInCombatMusic = !fadingOutCombatMusic;
-			if (PlayerOne->IsSkateboarding) {
-				fadingInTravelingMusic = true;
-				fadingOutTravelingMusic = !fadingInTravelingMusic;
-			} else {
-				fadingInDownTimeMusic = true;
-				fadingOutDownTimeMusic = !fadingInDownTimeMusic;
-			}
-		}
-	} else if (MenuMusic->getVolume() > 0.0f && !IsAMenuOpen()) {
-		if (!fadingOutMenuMusic) {
-			fadeStartTime = current_frame;
-		}
-		fadingOutMenuMusic = true;
-		fadingInMenuMusic = !fadingOutMenuMusic;
-		if (enemyNearby) {
-			fadingInCombatMusic = true;
-			fadingOutCombatMusic = !fadingInCombatMusic;
-		} else if (PlayerOne->IsSkateboarding) {
-			fadingInTravelingMusic = true;
-			fadingOutTravelingMusic = !fadingInTravelingMusic;
-		} else {
-			fadingInDownTimeMusic = true;
-			fadingOutDownTimeMusic = !fadingInDownTimeMusic;
-		}
-	} else if (!PlayerOne->IsSkateboarding && TravelingMusic->getVolume() > 0.0f && timeSkateBoardWasPutAway + timeTravelingMusicPlaysForAfterSkateboardIsPutAway < current_frame) {
-		if (!fadingOutTravelingMusic) {
-			fadingOutTravelingMusic = true;
-			fadingInDownTimeMusic = true;
-			fadingInTravelingMusic = !fadingOutTravelingMusic;
-			fadingOutDownTimeMusic = !fadingInDownTimeMusic;
-			fadeStartTime = current_frame;
-		}
-	//	float fade_in_percent = (current_frame - (timeSkateBoardWasPutAway + timeTravelingMusicPlaysForAfterSkateboardIsPutAway)) / 180.0f;
-	//	float fade_out_percent = 1.0f - fade_in_percent;
-	//
-	//	TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
-	//	DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
-	}
-
-	float fade_in_percent = (current_frame - fadeStartTime) / (float)fadeTime;
-	if (fade_in_percent > 1.0f) {
-		fade_in_percent = 1.0f;
-	} else if (fade_in_percent < 0.0f) {
-		fade_in_percent = 0.0f;
-	}
-
-	float fade_out_percent = 1.0f - fade_in_percent;
-
-	if (fadingInMenuMusic) {
-		if (MenuMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
-			MenuMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
-		}
-
-		if (fade_in_percent >= 1.0f) {
-			fadingInMenuMusic = false;
-			MenuMusic->setVolume(Singleton<Settings>::Get()->music_volume);
-		}
-	}
-	if (fadingOutMenuMusic) {
-		if (MenuMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
-			MenuMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
-		}
-
-		if (fade_out_percent <= 0.0f) {
-			fadingOutMenuMusic = false;
-			MenuMusic->setVolume(0.0f);
-		}
-	}
-
-	if (fadingInDownTimeMusic) {
-		if (DownTimeMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
-			DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
-		}
-
-		if (fade_in_percent >= 1.0f) {
-			fadingInDownTimeMusic = false;
-			DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume);
-		}
-	} 
-	if (fadingOutDownTimeMusic) {
-		if (DownTimeMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
-			DownTimeMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
-		}
-
-		if (fade_out_percent <= 0.0f) {
-			fadingOutDownTimeMusic = false;
-			DownTimeMusic->setVolume(0.0f);
-		}
-	}
-
-	if (fadingInTravelingMusic) {
-		if (TravelingMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
-			TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
-		}
-
-		if (fade_in_percent >= 1.0f) {
-			fadingInTravelingMusic = false;
-			TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume);
-		}
-	} 
-	if (fadingOutTravelingMusic) {
-		if (TravelingMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
-			TravelingMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
-		}
-
-		if (fade_out_percent <= 0.0f) {
-			fadingOutTravelingMusic = false;
-			TravelingMusic->setVolume(0.0f);
-		}
-	}
-
-	if (fadingInCombatMusic) {
-		if (CombatMusic->getVolume() < Singleton<Settings>::Get()->music_volume * fade_in_percent) {
-			CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_in_percent);
-		}
-
-		if (fade_in_percent >= 1.0f) {
-			fadingInCombatMusic = false;
-			CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume);
-		}
-	}
-	if (fadingOutCombatMusic) {
-		if (CombatMusic->getVolume() > Singleton<Settings>::Get()->music_volume * fade_out_percent) {
-			CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume * fade_out_percent);
-		}
-
-		if (fade_out_percent <= 0.0f) {
-			fadingOutCombatMusic = false;
-			CombatMusic->setVolume(0.0f);
-			CombatMusic->stop();
-		}
+	if (timeSkateBoardWasPutAway + timeTravelingMusicPlaysForAfterSkateboardIsPutAway < current_frame && !PlayerOne->IsSkateboarding && !enemyNearby && playingSkateboardingMusic) {
+		playingSkateboardingMusic = false;
+		musicManager->FadeToSong(downTimeMusicFileName);
 	}
 }
 
 void SmashWorld::StartCombatMusic() {
-	if (CombatMusic->getStatus() != sf::Music::Status::Playing) {
-		fadingInCombatMusic = true;
-		fadingOutMenuMusic = true;
-		fadingOutTravelingMusic = true;
-		fadingOutDownTimeMusic = true;
-		fadingOutCombatMusic = !fadingInCombatMusic;
-		fadingInMenuMusic = !fadingOutMenuMusic;
-		fadingInTravelingMusic = !fadingOutTravelingMusic;
-		fadingInDownTimeMusic = !fadingOutDownTimeMusic;
-
-		fadeStartTime = current_frame;
-
-		CombatMusic->setVolume(Singleton<Settings>::Get()->music_volume);
-		CombatMusic->play();
-	}
+	musicManager->FadeToSong(combatMusicFileName, 20);
 }
 
 void SmashWorld::PutAwaySkateBoard() {
@@ -1436,14 +1273,6 @@ void SmashWorld::PutAwaySkateBoard() {
 }
 
 void SmashWorld::StartedUsingSkateBoard() {
-	if (TravelingMusic->getVolume() < Singleton<Settings>::Get()->music_volume) {
-		fadingInTravelingMusic = true;
-		fadingOutMenuMusic = true;
-		fadingOutDownTimeMusic = true;
-		fadingOutTravelingMusic = !fadingInTravelingMusic;
-		fadingInMenuMusic = !fadingOutMenuMusic;
-		fadingInDownTimeMusic = !fadingOutDownTimeMusic;
-
-		fadeStartTime = current_frame;
-	}
+	playingSkateboardingMusic = true;
+	musicManager->FadeToSong(travelingMusicFileName);
 }
