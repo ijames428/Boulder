@@ -86,6 +86,10 @@ BoulderProjectile::BoulderProjectile(sf::RenderWindow* window, b2Body* throwers_
 
 	body->SetFixedRotation(true);
 	body->SetUserData(this);
+
+	if (projectile_json_data["ArcProjectile"].asBool()) {
+		isArcProjectile = true;
+	}
 }
 
 void BoulderProjectile::Update() {//sf::Int64 curr_frame, sf::Int64 delta_time) {
@@ -124,6 +128,10 @@ void BoulderProjectile::Activate(float pos_x, float pos_y, bool facing_right) {
 	body->SetTransform(b2Vec2(pos_x, pos_y), 0);
 	body->SetLinearVelocity(b2Vec2(facing_right ? travel_vector.x : -travel_vector.x, travel_vector.y));
 
+	if (isArcProjectile) {
+		body->SetGravityScale(1.0f);
+	}
+
 	is_facing_right = facing_right;
 }
 
@@ -132,6 +140,10 @@ void BoulderProjectile::Hit() {
 		state = STATE_DYING;
 
 		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+
+		if (isArcProjectile) {
+			body->SetGravityScale(0.0f);
+		}
 
 		dying_status_timer->Start();
 	}

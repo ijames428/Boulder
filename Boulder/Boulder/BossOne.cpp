@@ -78,16 +78,16 @@ void BossOne::UpdateBehavior() {
 					if (rng == 0) {
 						if (target->GetBody()->GetPosition().x < body->GetPosition().x)
 						{
-							movement = -100.0f;
+							movementX = -100.0f;
 							running = false;
 						}
 						else if (target->GetBody()->GetPosition().x > body->GetPosition().x)
 						{
-							movement = 100.0f;
+							movementX = 100.0f;
 							running = false;
 						}
 					} else if (rng == 1) {
-						movement = 0.0f;
+						movementX = 0.0f;
 						running = false;
 					} else if (rng == 2) {
 						if (!IsAnAttackActive()) {
@@ -101,12 +101,12 @@ void BossOne::UpdateBehavior() {
 		} else {
 			if (target->GetBody()->GetPosition().x < body->GetPosition().x)
 			{
-				movement = -100.0f;
+				movementX = -100.0f;
 				running = true;
 			}
 			else if (target->GetBody()->GetPosition().x > body->GetPosition().x)
 			{
-				movement = 100.0f;
+				movementX = 100.0f;
 				running = true;
 			}
 		}
@@ -116,15 +116,15 @@ void BossOne::UpdateBehavior() {
 		int rng = rand() % 5;
 
 		if (rng == 0) {
-			movement = -100.0f;
+			movementX = -100.0f;
 			running = false;
 		}
 		else if (rng == 1) {
-			movement = 0.0f;
+			movementX = 0.0f;
 			running = false;
 		}
 		else if (rng == 2) {
-			movement = 100.0f;
+			movementX = 100.0f;
 			running = false;
 		}
 	}
@@ -138,7 +138,7 @@ void BossOne::UpdateBehavior() {
 			State = STATE_IDLE;
 		}
 	} else {
-		Move(movement, 0.0f);
+		Move(movementX, 0.0f);
 
 		if (hovering && !hit_stun_timer->IsActive()) {
 			body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));

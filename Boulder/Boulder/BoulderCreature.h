@@ -56,7 +56,8 @@ protected:
 	BoulderCreature* interactable = nullptr;
 
 	int GetActiveAttackIndex();
-	float movement;
+	float movementX;
+	float movementY;
 	bool running;
 	float running_speed_multiplier;
 	BoulderCreature(int player_idx, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
@@ -121,6 +122,8 @@ protected:
 	std::vector<SpriteAnimation*> projectile_hit_animations = std::vector<SpriteAnimation*>();
 
 	std::vector<ProjectileFiringFrame> projectile_firing_frames = std::vector<ProjectileFiringFrame>();
+
+	bool wasInHitStun = false;
 
 	StatusTimer* hit_stun_timer;
 	StatusTimer* dying_animation_timer;
@@ -195,6 +198,8 @@ protected:
 	std::vector<Box2DRigidBody*> platformContacts;
 
 	int damageTakenSinceAttackStarted = 0;
+
+	bool flyingUnit = false;
 public:
 	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	virtual void Draw(sf::Vector2f camera_position);
@@ -226,6 +231,8 @@ public:
 	bool IsInteractable() {
 		return is_interactable;
 	};
+
+	void MakeIntoFlyingUnit();
 
 	string GetName() {
 		return name;

@@ -24,7 +24,8 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	SetEntityType(Constants::ENTITY_TYPE_CREATURE);
 	name = unit_name;
 	type = unit_type;
-	movement = 0.0f;
+	movementX = 0.0f;
+	movementY = 0.0f;
 	SetFacingRight(true);
 	player_index = 1; 
 	attacksAreInterruptible = true;
@@ -234,6 +235,10 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	}
 
 	DropThroughPassThroughPlatforms = false;
+
+	if (unit_type_json_data["Flying"].asBool()) {
+		MakeIntoFlyingUnit();
+	}
 }
 
 void BoulderCreature::ApplyObjectDataToSaveData(Json::Value& save_data) {
@@ -409,6 +414,11 @@ bool BoulderCreature::IsNearPlayer(sf::Vector2f player_screen_pos, sf::Vector2f 
 void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
+	if (flyingUnit && wasInHitStun && !hit_stun_timer->IsActive() && hit_points > 0) {
+		body->SetGravityScale(0.0f);
+	}
+	wasInHitStun = hit_stun_timer->IsActive();
+
 	b2Vec2 body_lin_vel = body->GetLinearVelocity();
 
 	if ((int)platformContacts.size() > 0) {
@@ -502,6 +512,8 @@ void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 }
 
 void BoulderCreature::UpdateBehavior() {
+	movementY = 0.0f;
+
 	if (target != nullptr)
 	{
 		float delta_x = target->GetBody()->GetPosition().x - body->GetPosition().x;
@@ -522,24 +534,32 @@ void BoulderCreature::UpdateBehavior() {
 			}
 		} else {
 			if (target->GetBody()->GetPosition().x < body->GetPosition().x) {
-				movement = -100.0f;
+				movementX = -100.0f;
 				running = true;
 			} else if (target->GetBody()->GetPosition().x > body->GetPosition().x) {
-				movement = 100.0f;
+				movementX = 100.0f;
 				running = true;
+			}
+		}
+
+		if (flyingUnit) {
+			if (target->GetBody()->GetPosition().y < body->GetPosition().y) {
+				movementY = -100.0f;
+			} else if (target->GetBody()->GetPosition().y > body->GetPosition().y) {
+				movementY = 100.0f;
 			}
 		}
 	} else if (current_frame % 60 == 0) {
 		int rng = rand() % 5;
 
 		if (rng == 0) {
-			movement = -100.0f;
+			movementX = -100.0f;
 			running = false;
 		} else if (rng == 1) {
-			movement = 0.0f;
+			movementX = 0.0f;
 			running = false;
 		} else if (rng == 2) {
-			movement = 100.0f;
+			movementX = 100.0f;
 			running = false;
 		}
 	}
@@ -554,7 +574,7 @@ void BoulderCreature::UpdateBehavior() {
 			State = STATE_IDLE;
 		}
 	} else {
-		Move(movement, 0.0f);
+		Move(movementX, movementY);
 
 		if (hit_points <= 0) {
 			if (dying_animation_timer->IsActive()) {
@@ -570,7 +590,7 @@ void BoulderCreature::UpdateBehavior() {
 		else if (IsAnAttackActive()) {
 			State = STATE_ATTACKING;
 		}
-		else if (movement != 0) {
+		else if (movementX != 0) {
 			if (running) {
 				State = STATE_RUNNING;
 			}
@@ -708,9 +728,17 @@ void BoulderCreature::FlipAnimationsIfNecessary(std::vector<SpriteAnimation*> an
 	}
 }
 
+void BoulderCreature::MakeIntoFlyingUnit() {
+	flyingUnit = true;
+
+	body->SetGravityScale(0.0f);
+};
+
 void BoulderCreature::Move(float horizontal, float vertical) {
 	if (can_take_input && hit_points > 0 && !landing_animation_timer->IsActive()) {
-		if (!IsInTheAir()) {
+		if (flyingUnit) {
+			body->SetLinearVelocity(b2Vec2(horizontal / 50.0f, vertical / 50.0f));
+		} else if (!IsInTheAir()) {
 			if (!IsAnAttackActive()) {
 				b2Vec2 lin_vel = body->GetLinearVelocity();
 				float hyp = (horizontal / 100.0f) * speed * (running ? running_speed_multiplier : 1.0f);
@@ -1012,12 +1040,20 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 				Singleton<SmashWorld>::Get()->EnemyDied(50);
 			}
 
+			if (flyingUnit) {
+				body->SetGravityScale(1.0f);
+			}
+
 			Singleton<SmashWorld>::Get()->StartCombatMusic();
 		} else {
 			hit_points -= damage;
 
 			if (health_cash_in_timer != nullptr && !health_cash_in_timer->IsActive()) {
 				health_cash_in_timer->Start();
+			}
+
+			if (flyingUnit) {
+				body->SetGravityScale(1.0f);
 			}
 
 			Singleton<SmashWorld>::Get()->StartCombatMusic();

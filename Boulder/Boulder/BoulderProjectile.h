@@ -35,6 +35,8 @@ private:
 	b2Fixture* fixture;
 
 	StatusTimer* dying_status_timer;
+
+	bool isArcProjectile = false;
 public:
 	BoulderProjectile(sf::RenderWindow* window, b2Body* throwers_body, Json::Value projectile_json_data, SpriteAnimation* travel_anim, SpriteAnimation* on_hit_anim);
 	void Update();// sf::Int64 curr_frame, sf::Int64 delta_time);
