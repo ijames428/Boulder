@@ -50,6 +50,7 @@ protected:
 
 	bool is_hostile = false;
 	bool is_interactable = false;
+	bool is_destructible = false;
 	bool is_hittable = false;
 	float interaction_radius = 0.0f;
 
@@ -120,6 +121,7 @@ protected:
 	std::vector<SpriteAnimation*> talking_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> projectile_active_animations = std::vector<SpriteAnimation*>();
 	std::vector<SpriteAnimation*> projectile_hit_animations = std::vector<SpriteAnimation*>();
+	std::vector<SpriteAnimation*> miscellaneous_animations = std::vector<SpriteAnimation*>();
 
 	std::vector<ProjectileFiringFrame> projectile_firing_frames = std::vector<ProjectileFiringFrame>();
 
@@ -200,8 +202,10 @@ protected:
 	int damageTakenSinceAttackStarted = 0;
 
 	bool flyingUnit = false;
+
+	virtual void DrawAnimationsBasedOnState(sf::Vector2f camera_position);
 public:
-	BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
+	BoulderCreature(Json::Value jsonUnitInMapData, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	virtual void Draw(sf::Vector2f camera_position);
 	virtual void Update(sf::Int64 curr_frame, sf::Int64 delta_time);
 	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies);
@@ -210,7 +214,7 @@ public:
 	Attack* GetActiveAttack();
 	bool IsAnAttackActive();
 	virtual void Land();
-	void AddPlatformContact(Box2DRigidBody* platform);
+	virtual void AddPlatformContact(Box2DRigidBody* platform);
 	void RemovePlatformContact(Box2DRigidBody* platform);
 	void Aggro(BoulderCreature* new_target);
 	virtual void Deaggro();
@@ -228,8 +232,12 @@ public:
 	virtual void AddAnger(int anger_amount);
 	bool DropThroughPassThroughPlatforms;
 	bool IsInHitStun();
+	void ExecuteActions();
 	bool IsInteractable() {
 		return is_interactable;
+	};
+	bool IsDestructible() {
+		return is_destructible;
 	};
 
 	void MakeIntoFlyingUnit();

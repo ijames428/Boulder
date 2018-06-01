@@ -279,6 +279,10 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		State = STATE_HIT_STUN;
 	} else if (IsAnAttackActive()) {
 		State = STATE_ATTACKING;
+	} else if (timerForMinimumTimeBetweenSpeedUps->IsActive()) {
+		State = STATE_SKATE_KICKING;
+	} else if (IsSkateboarding) {
+		State = STATE_SKATING;
 	} else if (IsInTheAir()) {
 		if (body->GetLinearVelocity().y < -1.0f) {
 			State = STATE_JUMPING;
@@ -317,6 +321,14 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			if (attacking_animations[currentAttackIndex]->GetCurrentFrame() == AttackAnimationSoundFrames[currentAttackIndex]) {
 				AttackAnimationSounds[currentAttackIndex]->play();
 			}
+		}
+	}
+
+	if (State == STATE_SKATING || State == STATE_SKATE_KICKING) {
+		if (IsFacingRight() && body->GetLinearVelocity().x < 0) {
+			SetFacingRight(false);
+		} else if(!IsFacingRight() && body->GetLinearVelocity().x > 0) {
+			SetFacingRight(true);
 		}
 	}
 }
@@ -375,10 +387,22 @@ void SmashCharacter::Draw(sf::Vector2f camera_position) {
 	BoulderCreature::Draw(camera_position);
 }
 
+void SmashCharacter::DrawAnimationsBasedOnState(sf::Vector2f camera_position) {
+	BoulderCreature::DrawAnimationsBasedOnState(camera_position);
+
+	float half_height = ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y + botCircleShape.m_radius;// - ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y;
+
+	if (State == STATE_SKATING) {
+		miscellaneous_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
+	} else if (State == STATE_SKATE_KICKING) {
+		miscellaneous_animations[1]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
+	}
+}
+
 void SmashCharacter::HandleButtonXPress() {
 	if (interactable != nullptr) {
 		interactable->StartTalking();
-		Singleton<SmashWorld>::Get()->StartDialogue(interactable->GetType());
+		Singleton<SmashWorld>::Get()->StartDialogue(interactable->GetType(), interactable->GetName());
 	} else {
 		DetermineWhichAttackToUseAndActivateIt(leftStickInputs.x, leftStickInputs.y);
 	}
@@ -602,11 +626,17 @@ void SmashCharacter::HandleButtonLeftBumperPress() {
 		timerForMinimumTimeBetweenSpeedUps->Start();
 
 		b2Vec2 vel = body->GetLinearVelocity();
-		body->SetLinearVelocity(b2Vec2(vel.x * 1.5f, vel.y * 1.5f));
+		body->SetLinearVelocity(b2Vec2(vel.x * 2.5f, vel.y * 2.5f));
 	}
 	//running = true;
 }
 
 void SmashCharacter::HandleButtonLeftBumperRelease() {
 	//running = false;
+}
+
+void SmashCharacter::AddPlatformContact(Box2DRigidBody* platform) {
+	BoulderCreature::AddPlatformContact(platform);
+
+	//platform->
 }

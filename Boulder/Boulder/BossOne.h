@@ -17,7 +17,7 @@ private:
 	sf::RectangleShape* healthBarBackgroundRect;
 	bool hitStunWasActiveLastFrame;
 public:
-	BossOne(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
+	BossOne(Json::Value jsonUnitInMapData, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	virtual void UpdateBehavior();
 	virtual void Deaggro();
 	virtual void Land();

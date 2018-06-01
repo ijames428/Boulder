@@ -21,6 +21,7 @@ void UpdateGameStateLogos();
 void UpdateGameStateStartMenu();
 void UpdateGameStateLoadingScreen();
 void UpdateGameStateCredits();
+void UpdateGameStateNewSinglePlayer();
 
 void HandleClosingEvent();
 bool WasButtonAPressed();
@@ -81,6 +82,7 @@ sf::Text title_text;
 sf::Text start_text;
 sf::Text how_to_delete_save_text;
 sf::Text credits_text;
+sf::Text story_text;
 
 int a_button = 0;
 int b_button = 1; 
@@ -131,6 +133,7 @@ void NewGame() {
 	if (first_empty_save_slot_found < maxNumberOfSaveSlots && first_empty_save_slot_found > -1) {
 		MainMenu->Close();
 		GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+		story_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 		load_game = false;
 		playGameWithCommentary = false;
 		selected_save_slot = first_empty_save_slot_found;
@@ -140,20 +143,21 @@ void NewGame() {
 void NewGameWithCommentary() {
 	MainMenu->Close();
 	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+	story_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 	load_game = false;
 	playGameWithCommentary = true;
 }
 
 void LoadGameOfLastUsedSavedSlot() {
 	MainMenu->Close();
-	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+	GameState = GAME_STATE_INIT_SINGLE_PLAYER;
 	load_game = true;
 	selected_save_slot = last_used_save_slot;
 }
 
 void LoadGame(int save_slot) {
 	MainMenu->Close();
-	GameState = GAME_STATE_NEW_SINGLE_PLAYER;
+	GameState = GAME_STATE_INIT_SINGLE_PLAYER;
 	load_game = true;
 	selected_save_slot = save_slot;
 }
@@ -398,6 +402,9 @@ int main()
 	credits_text = sf::Text("Made by Ian James\n\n\n\n\nThank you for playing Project Boulder", ringbearer_font);
 	credits_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
 
+	story_text = sf::Text("Oh, yeah, no, that was a bad thing you just did...\n\n\n\n\nThat experiment went real bad.", ringbearer_font);
+	story_text.setPosition(viewport_width / 2.0f - 220.0f, viewport_height + 50.0f);
+
 	BuildLoadMenu();
 	BuildMainMenu();
 
@@ -466,7 +473,7 @@ int main()
 			} else if (GameState == GAME_STATE_START_MENU) {
 				UpdateGameStateStartMenu();
 			} else if (GameState == GAME_STATE_NEW_SINGLE_PLAYER) {
-				GameState = GAME_STATE_INIT_SINGLE_PLAYER;
+				UpdateGameStateNewSinglePlayer();
 			} else if (GameState == GAME_STATE_INIT_SINGLE_PLAYER) {
 				window->clear();
 				UpdateGameStateLoadingScreen(); 
@@ -686,6 +693,22 @@ void UpdateGameStateLoadingScreen() {
 	window->display();
 }
 
+void UpdateGameStateNewSinglePlayer() {
+	window->clear();
+
+	story_text.setPosition(story_text.getPosition().x, story_text.getPosition().y - 1.0f);
+	window->draw(story_text);
+
+	if (story_text.getPosition().y < -350.0f || WasButtonStartPressed()) {
+		GameState = GAME_STATE_INIT_SINGLE_PLAYER;
+	}
+
+	HandleClosingEvent();
+	SetPreviousButtonValues();
+
+	window->display();
+}
+
 void UpdateGameStateCredits() {
 	window->clear();
 
@@ -778,7 +801,6 @@ void BuildMainMenu() {
 	MainMenu->AddItem("Load Saved Game", &OpenLoadGameMenu);
 	MainMenu->AddItem("Options", &OpenOptionsMenu);
 	MainMenu->AddItem("Exit", &Exit);
-
 }
 
 void BuildLoadMenu() {

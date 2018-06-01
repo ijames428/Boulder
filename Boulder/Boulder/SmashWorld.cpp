@@ -324,10 +324,11 @@ void SmashWorld::Setup() {
 	world = new b2World(*gravity);
 
 	//ParseWorld("Maps\\TestMap");
-	ParseWorld("Maps\\TestSkateboard");
+	//ParseWorld("Maps\\TestSkateboard");
+	ParseWorld("Maps\\PreAlphaMap");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
-	ParseDialogue("BoulderDialogue.txt");
+	ParseDialogue("SirensStory.txt");
 
 	BuildWorld();
 
@@ -813,13 +814,11 @@ void SmashWorld::BuildWorld() {
 		//string test1 = thisBestiary["DictOfUnits"]["Gelly"]["IdleAnimations"][0]["FilePath"].asString();
 
 		if (Contains(unit_data["UnitType"].asString(), "BossOne")) {
-			boss_one = new BossOne(unit_data["InstanceOfUnitName"].asString(), unit_data["UnitType"].asString(),
-				unit_data["BestiaryName"].asString(), unit_data["IsInteractable"].asBool(), thisBestiary,
+			boss_one = new BossOne(unit_data, thisBestiary,
 				render_window, sf::Vector2f(x, y), sf::Vector2f(width, height));
 			boss_one->AddActivaty(unit_data["activity"].asString());
 		} else {
-			enemies.push_back(new BoulderCreature(unit_data["InstanceOfUnitName"].asString(), unit_data["UnitType"].asString(),
-				unit_data["BestiaryName"].asString(), unit_data["IsInteractable"].asBool(), thisBestiary,
+			enemies.push_back(new BoulderCreature(unit_data, thisBestiary,
 				render_window, sf::Vector2f(x, y), sf::Vector2f(width, height)));
 			if (!unit_data["activity"].isNull()) {
 				string test = unit_data["activity"].asString();
@@ -920,8 +919,15 @@ void SmashWorld::ParseBestiaries() {
 }
 
 void SmashWorld::ParseBestiary(string file_path) {
-	size_t findResult = file_path.find("Units\\");
-	string relativeFilePath = file_path.substr(findResult);
+	string relativeFilePath = "";
+
+	if (Utilities::Contains(file_path, "Units\\")) {
+		size_t findResult = file_path.find("Units\\");
+		relativeFilePath = file_path.substr(findResult);
+	} else if (Utilities::Contains(file_path, "Destructibles\\")) {
+		size_t findResult = file_path.find("Destructibles\\");
+		relativeFilePath = file_path.substr(findResult);
+	}
 
 	string rawData = "";
 	Json::Value jsonData = "";
@@ -948,8 +954,17 @@ void SmashWorld::SetDialogueText(string new_text) {
 	dialogue_text.setString(new_text);
 }
 
-void SmashWorld::StartDialogue(string unit_type) {
+void SmashWorld::StartDialogue(string unit_type, string unit_name) {
 	unit_type_player_is_talking_to = unit_type;
+
+	int enemies_size = (int)enemies.size();
+	for (int i = 0; i < enemies_size; i++) {
+		if (enemies[i]->GetName() == unit_name) {
+			UnitBeingTalkedTo = enemies[i];
+			break;
+		}
+	}
+
 	ProgressDialogueText();
 }
 
@@ -966,6 +981,10 @@ void SmashWorld::ProgressDialogueText() {
 
 	if (CurrentDialogueLine != nullptr) {
 		dialogue_text.setString(CurrentDialogueLine->Line);
+
+		if (CurrentDialogueLine->ExecuteActionsWhenLineIsHit) {
+			UnitBeingTalkedTo->ExecuteActions();
+		}
 	}
 }
 
@@ -1050,6 +1069,15 @@ void SmashWorld::ExecuteAction(string action_call) {
 			std::string::size_type sz;
 			int new_zone = std::stoi(arguments[0], &sz);
 			currentZone = new_zone;
+		}
+	} else if (Utilities::Contains(call, "HealPlayer")) {
+		std::string::size_type sz;
+		int randChance = std::stoi(arguments[0], &sz);
+		int randOutOf = std::stoi(arguments[1], &sz);
+		int healingValue = std::stoi(arguments[2], &sz);
+
+		if (randChance <= rand() % randOutOf + 1) {
+			PlayerOne->ReceiveHeal(healingValue);
 		}
 	}
 }

@@ -44,6 +44,9 @@ private:
 	std::vector<sf::RectangleShape*> speedUpRects;
 protected:
 	virtual void ActuallyJump(bool short_hop = false);
+	virtual void DrawAnimationsBasedOnState(sf::Vector2f camera_position);
+	const int STATE_SKATING = 100;
+	const int STATE_SKATE_KICKING = 101;
 public:
 	SmashCharacter(int player_idx, Json::Value playerBestiaryData, sf::RenderWindow *window, sf::Vector2f position = sf::Vector2f(0.0f, 0.0f), sf::Vector2f dimensions = sf::Vector2f(0.0f, 0.0f), bool subject_to_gravity = true);
 	virtual void Draw(sf::Vector2f camera_position);
@@ -59,6 +62,7 @@ public:
 	virtual int GetDamageOfCurrentAttack();
 	virtual void UpdateEffectsVolumes(float new_effects_volume);
 	void UpdateSpeedUpValues();
+	virtual void AddPlatformContact(Box2DRigidBody* platform);
 
 	/* SKATEBOARDING VARIABLES */
 	bool IsSkateboarding;

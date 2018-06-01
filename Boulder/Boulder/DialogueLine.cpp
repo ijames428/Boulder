@@ -18,6 +18,12 @@ DialogueLine::DialogueLine(string pid, DialogueLine* previous_dialogue_line, Jso
 
 			std::vector<string> vstrings = Utilities::Split(Line, '[');
 			Line = vstrings[0];
+			
+			if (Utilities::Contains(Line, "|ExecuteActions|")) {
+				vstrings = Utilities::Split(Line, '|');
+				Line = vstrings[0];
+				ExecuteActionsWhenLineIsHit = true;
+			}
 
 			Name = jsonData["passages"][i]["name"].asString();
 

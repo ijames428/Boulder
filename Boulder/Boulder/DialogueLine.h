@@ -15,6 +15,7 @@ public:
 	string PID;
 	string Line;
 	string Name;
+	bool ExecuteActionsWhenLineIsHit;
 	std::vector<string> Tags;
 	DialogueLine* GetNextDialogueLine(string stage_of_the_game);
 	DialogueLine* GetFirstRelevantDialogueLine(string stage_of_the_game);

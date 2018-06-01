@@ -1,9 +1,39 @@
 {
-	"Pit 27" : 
+	"Computer 6" : 
 	{
-		"CurrentHitPoints" : 50,
-		"PositionX" : 83.599998474121094,
-		"PositionY" : 52.299999237060547,
+		"CurrentHitPoints" : 1,
+		"PositionX" : 242.76608276367188,
+		"PositionY" : 251.0,
+		"VelocityX" : 0.0,
+		"VelocityY" : 0.0
+	},
+	"Door 4" : 
+	{
+		"closing" : false,
+		"opening" : false,
+		"percent_open" : 0
+	},
+	"GemOrange 10" : 
+	{
+		"CurrentHitPoints" : 1,
+		"PositionX" : 224.76359558105469,
+		"PositionY" : 250.60000610351563,
+		"VelocityX" : 0.0,
+		"VelocityY" : 0.0
+	},
+	"GemOrange 11" : 
+	{
+		"CurrentHitPoints" : 1,
+		"PositionX" : 234.46359252929688,
+		"PositionY" : 250.5,
+		"VelocityX" : 0.0,
+		"VelocityY" : 0.0
+	},
+	"GemOrange 9" : 
+	{
+		"CurrentHitPoints" : 1,
+		"PositionX" : 229.36360168457031,
+		"PositionY" : 250.5,
 		"VelocityX" : 0.0,
 		"VelocityY" : 0.0
 	},
@@ -12,8 +42,8 @@
 		"CurrentHitPoints" : 400,
 		"IsFacingRight" : false,
 		"MaximumHitPoints" : 400,
-		"PositionX" : 80.300003051757813,
-		"PositionY" : 50.599998474121094,
+		"PositionX" : 250.30000305175781,
+		"PositionY" : 250.60000610351563,
 		"VelocityX" : 0.0,
 		"VelocityY" : 0.0,
 		"Weapon" : 
@@ -21,8 +51,8 @@
 			"AngularVelocity" : 0.0,
 			"GravityScale" : 0.0,
 			"HeldByOwner" : true,
-			"PositionX" : 80.300003051757813,
-			"PositionY" : 50.599998474121094,
+			"PositionX" : 250.30000305175781,
+			"PositionY" : 250.60000610351563,
 			"Recalling" : false,
 			"Stuck" : false,
 			"VelocityX" : 0.0,

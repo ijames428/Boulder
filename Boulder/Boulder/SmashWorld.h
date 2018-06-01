@@ -401,6 +401,7 @@ private:
 	sf::Font ringbearer_font;
 	sf::Text dialogue_text;
 	string unit_type_player_is_talking_to;
+	BoulderCreature* UnitBeingTalkedTo;
 	DialogueLine* RootDialogueLine;
 	DialogueLine* CurrentDialogueLine;
 #ifdef _DEBUG
@@ -475,7 +476,7 @@ public:
 	b2World* GetB2World() { return world; };
 	sf::Int64 GetCurrentFrame() { return current_frame; };
 	void SetDialogueText(string new_text);
-	void StartDialogue(string unit_type);
+	void StartDialogue(string unit_type, string unit_name);
 	void ProgressDialogueText();
 	string GetCurrentPointInGame();
 	void UpdateVideo();

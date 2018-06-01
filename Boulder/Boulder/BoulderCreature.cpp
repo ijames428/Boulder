@@ -19,18 +19,18 @@ BoulderCreature::BoulderCreature(int player_idx, sf::RenderWindow *window, sf::V
 	Creature::Creature(window, position, dimensions, subject_to_gravity) {
 }
 
-BoulderCreature::BoulderCreature(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
+BoulderCreature::BoulderCreature(Json::Value jsonUnitInMapData, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
 	Creature::Creature(window, position, dimensions, subject_to_gravity) {
 	SetEntityType(Constants::ENTITY_TYPE_CREATURE);
-	name = unit_name;
-	type = unit_type;
+	name = jsonUnitInMapData["InstanceOfUnitName"].asString();
+	type = jsonUnitInMapData["UnitType"].asString();
 	movementX = 0.0f;
 	movementY = 0.0f;
 	SetFacingRight(true);
 	player_index = 1; 
 	attacksAreInterruptible = true;
 
-	unit_type_json_data = jsonBestiariesData["DictOfUnits"][unit_type];
+	unit_type_json_data = jsonBestiariesData["DictOfUnits"][type];
 
 	cashinable_hit_point_value = hit_points = max_hit_points = unit_type_json_data["HitPoints"].asInt();
 	interaction_radius = unit_type_json_data["InteractionRadius"].asFloat();
@@ -42,9 +42,10 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 	running_speed_multiplier = 3.0f;
 	jump_power = 10.0f;
 
-	is_interactable = is_npc;
+	is_interactable = jsonUnitInMapData["IsInteractable"].asBool();
+	is_destructible = jsonUnitInMapData["IsDestructible"].asBool();
 	is_hittable = !is_interactable;
-	is_hostile = !is_interactable;
+	is_hostile = !is_interactable && !is_destructible;
 
 	sf::RectangleShape shape(dimensions);
 	shape.setFillColor(sf::Color::Yellow);
@@ -192,9 +193,9 @@ BoulderCreature::BoulderCreature(string unit_name, string unit_type, string best
 		GettingHitSounds[i]->setBuffer(*GettingHitSoundBuffers[i]);
 	}
 
-	LoadAllAnimations(unit_type, jsonBestiariesData);
+	LoadAllAnimations(type, jsonBestiariesData);
 
-	 attacks_size = (int)attacks.size();
+	attacks_size = (int)attacks.size();
 
 	int projectile_active_animations_size = (int)projectile_active_animations.size();
 	for (int i = 0; i < projectile_active_animations_size; i++) {
@@ -257,22 +258,23 @@ void BoulderCreature::ApplySaveDataToObjectData(Json::Value& save_data) {
 	cashinable_hit_point_value = hit_points;
 }
 
-void BoulderCreature::LoadAllAnimations(string unit_type, Json::Value jsonBestiariesData) {
-	idle_animations = LoadAnimations("IdleAnimations", unit_type, jsonBestiariesData);
-	walking_animations = LoadAnimations("WalkingAnimations", unit_type, jsonBestiariesData);
-	running_animations = LoadAnimations("RunningAnimations", unit_type, jsonBestiariesData);
-	dying_animations = LoadAnimations("DyingAnimations", unit_type, jsonBestiariesData);
-	dead_animations = LoadAnimations("DeadAnimations", unit_type, jsonBestiariesData);
-	attacking_animations = LoadAnimations("AttackingAnimations", unit_type, jsonBestiariesData);
-	blocking_animations = LoadAnimations("BlockingAnimations", unit_type, jsonBestiariesData);
-	hit_stun_animations = LoadAnimations("HitStunAnimations", unit_type, jsonBestiariesData);
-	jumping_animations = LoadAnimations("JumpingAnimations", unit_type, jsonBestiariesData);
-	jump_apex_animations = LoadAnimations("JumpApexAnimations", unit_type, jsonBestiariesData);
-	falling_animations = LoadAnimations("FallingAnimations", unit_type, jsonBestiariesData);
-	landing_animations = LoadAnimations("LandingAnimations", unit_type, jsonBestiariesData);
-	talking_animations = LoadAnimations("TalkingAnimations", unit_type, jsonBestiariesData);
-	projectile_active_animations = LoadAnimations("ProjectileActiveAnimations", unit_type, jsonBestiariesData);
-	projectile_hit_animations = LoadAnimations("ProjectileHitAnimations", unit_type, jsonBestiariesData);
+void BoulderCreature::LoadAllAnimations(string unit_type, Json::Value jsonBeastiariesData) {
+	idle_animations = LoadAnimations("IdleAnimations", unit_type, jsonBeastiariesData);
+	walking_animations = LoadAnimations("WalkingAnimations", unit_type, jsonBeastiariesData);
+	running_animations = LoadAnimations("RunningAnimations", unit_type, jsonBeastiariesData);
+	dying_animations = LoadAnimations("DyingAnimations", unit_type, jsonBeastiariesData);
+	dead_animations = LoadAnimations("DeadAnimations", unit_type, jsonBeastiariesData);
+	attacking_animations = LoadAnimations("AttackingAnimations", unit_type, jsonBeastiariesData);
+	blocking_animations = LoadAnimations("BlockingAnimations", unit_type, jsonBeastiariesData);
+	hit_stun_animations = LoadAnimations("HitStunAnimations", unit_type, jsonBeastiariesData);
+	jumping_animations = LoadAnimations("JumpingAnimations", unit_type, jsonBeastiariesData);
+	jump_apex_animations = LoadAnimations("JumpApexAnimations", unit_type, jsonBeastiariesData);
+	falling_animations = LoadAnimations("FallingAnimations", unit_type, jsonBeastiariesData);
+	landing_animations = LoadAnimations("LandingAnimations", unit_type, jsonBeastiariesData);
+	talking_animations = LoadAnimations("TalkingAnimations", unit_type, jsonBeastiariesData);
+	projectile_active_animations = LoadAnimations("ProjectileActiveAnimations", unit_type, jsonBeastiariesData);
+	projectile_hit_animations = LoadAnimations("ProjectileHitAnimations", unit_type, jsonBeastiariesData);
+	miscellaneous_animations = LoadAnimations("MiscellaneousAnimations", unit_type, jsonBeastiariesData);
 }
 
 std::vector<SpriteAnimation*> BoulderCreature::LoadAnimations(string animations_name, string unit_type, Json::Value jsonData) {
@@ -285,8 +287,16 @@ std::vector<SpriteAnimation*> BoulderCreature::LoadAnimations(string animations_
 		string filePath = unit_type_json_bestiary_data[animations_name][i]["FilePath"].asString();
 
 		if (filePath != "") {
-			size_t findResult = filePath.find("Units\\");
-			string relativeFilePath = filePath.substr(findResult);
+			string relativeFilePath = "";
+
+			if (Utilities::Contains(filePath, "Units\\")) {
+				size_t findResult = filePath.find("Units\\");
+				relativeFilePath = filePath.substr(findResult);
+			}
+			else if (Utilities::Contains(filePath, "Destructibles\\")) {
+				size_t findResult = filePath.find("Destructibles\\");
+				relativeFilePath = filePath.substr(findResult);
+			}
 
 			animations.push_back(new SpriteAnimation(render_window,
 				relativeFilePath,
@@ -573,6 +583,19 @@ void BoulderCreature::UpdateBehavior() {
 		else {
 			State = STATE_IDLE;
 		}
+	} else if (is_destructible) {
+		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
+
+
+		if (hit_points <= 0) {
+			if (dying_animation_timer->IsActive()) {
+				State = STATE_DYING;
+			} else {
+				State = STATE_DEAD;
+			}
+		} else {
+			State = STATE_IDLE;
+		}
 	} else {
 		Move(movementX, movementY);
 
@@ -623,12 +646,45 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 	FlipAnimationsIfNecessary(falling_animations);
 	FlipAnimationsIfNecessary(landing_animations);
 	FlipAnimationsIfNecessary(talking_animations);
+	FlipAnimationsIfNecessary(miscellaneous_animations);
 
 	int projectiles_size = (int)projectiles.size();
 	for (int i = 0; i < projectiles_size; i++) {
 		projectiles[i]->Draw(camera_position);
 	}
 
+	DrawAnimationsBasedOnState(camera_position);
+
+	std::size_t foundPlayer = name.find("Player");
+	std::size_t foundBoss = name.find("Boss");
+	if (foundPlayer == std::string::npos && foundBoss == std::string::npos) {
+		float percent_health = ((float)hit_points / (float)max_hit_points);
+
+		healthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_health, 5.0f));
+		healthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
+		healthBarRect->setFillColor(sf::Color((int)(0.0f + (255.0f - (float)hit_points / (float)max_hit_points) * 255.0f), (int)((float)hit_points / (float)max_hit_points * 255.0f), 0, 255));
+
+		float percent_cash_in_health = ((float)cashinable_hit_point_value / (float)max_hit_points);
+
+		cashInHealthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_cash_in_health, 5.0f));
+		cashInHealthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
+
+		render_window->draw(*cashInHealthBarRect);
+	}
+
+	if (hit_points > 0) {
+		render_window->draw(*healthBarRect);
+	}
+
+	if (is_interactable && draw_interaction_button) {
+		current_y_offset += (int)((current_frame % 60) - 30) / 120.0f;
+
+		interaction_button_sprite->setPosition(sf::Vector2f((body->GetPosition().x - camera_position.x) * 40.0f - 20.0f, (body->GetPosition().y - camera_position.y) * 40.0f + current_y_offset - 10.0f));
+		render_window->draw(*interaction_button_sprite);
+	}
+}
+
+void BoulderCreature::DrawAnimationsBasedOnState(sf::Vector2f camera_position) {
 	float half_height = ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y + botCircleShape.m_radius;// - ((b2PolygonShape*)centerBoxFixture->GetShape())->m_vertices[3].y;
 
 	if (State == STATE_IDLE) {
@@ -675,34 +731,6 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 		if ((int)talking_animations.size() > 0) {
 			talking_animations[0]->Draw(camera_position, sf::Vector2f((body->GetPosition().x), (body->GetPosition().y)), half_height);
 		}
-	}
-
-	std::size_t foundPlayer = name.find("Player");
-	std::size_t foundBoss = name.find("Boss");
-	if (foundPlayer == std::string::npos && foundBoss == std::string::npos) {
-		float percent_health = ((float)hit_points / (float)max_hit_points);
-
-		healthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_health, 5.0f));
-		healthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
-		healthBarRect->setFillColor(sf::Color((int)(0.0f + (255.0f - (float)hit_points / (float)max_hit_points) * 255.0f), (int)((float)hit_points / (float)max_hit_points * 255.0f), 0, 255));
-
-		float percent_cash_in_health = ((float)cashinable_hit_point_value / (float)max_hit_points);
-
-		cashInHealthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_cash_in_health, 5.0f));
-		cashInHealthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
-
-		render_window->draw(*cashInHealthBarRect);
-	}
-
-	if (hit_points > 0) {
-		render_window->draw(*healthBarRect);
-	}
-
-	if (is_interactable && draw_interaction_button) {
-		current_y_offset += (int)((current_frame % 60) - 30) / 120.0f;
-
-		interaction_button_sprite->setPosition(sf::Vector2f((body->GetPosition().x - camera_position.x) * 40.0f - 20.0f, (body->GetPosition().y - camera_position.y) * 40.0f + current_y_offset - 10.0f));
-		render_window->draw(*interaction_button_sprite);
 	}
 }
 
@@ -1136,4 +1164,13 @@ void BoulderCreature::AddAnger(int anger_amount) {
 
 bool BoulderCreature::IsInHitStun() {
 	return hit_stun_timer->IsActive();
+}
+
+void BoulderCreature::ExecuteActions() {
+	int activities_size = (int)activities.size();
+	for (int a = 0; a < activities_size; a++) {
+		if (!Contains(activities[a], "OnDeath")) {
+			Singleton<SmashWorld>::Get()->ExecuteAction(activities[a]);
+		}
+	}
 }

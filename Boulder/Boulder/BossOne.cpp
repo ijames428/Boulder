@@ -7,8 +7,8 @@ using namespace std;
 #include "SmashWorld.h"
 //#include "..\PlatformerLibrary\Test.h"
 
-BossOne::BossOne(string unit_name, string unit_type, string bestiary_name, bool is_npc, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
-	BoulderCreature::BoulderCreature(unit_name, unit_type, bestiary_name, is_npc, jsonBestiariesData, window, position, dimensions, subject_to_gravity) {
+BossOne::BossOne(Json::Value jsonUnitInMapData, Json::Value jsonBestiariesData, sf::RenderWindow *window, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity) :
+	BoulderCreature::BoulderCreature(jsonUnitInMapData, jsonBestiariesData, window, position, dimensions, subject_to_gravity) {
 	jump_power = 15.0f;
 	distance_from_target_last_frame = 10.0f;
 	hovering = false;
