@@ -117,6 +117,41 @@ Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, sf::Vector
 	body->SetUserData(this);
 }
 
+Box2DRigidBody::Box2DRigidBody(sf::RenderWindow *window, string name, float x1, float y1, float x2, float y2, bool subject_to_gravity, bool subject_to_collision) {
+	render_window = window;
+
+	bodyDef.position.Set(x1, y1);
+	bodyDef.type = b2_staticBody;
+	body = Singleton<SmashWorld>::Get()->GetB2World()->CreateBody(&bodyDef);
+	body->SetGravityScale(0.0f);
+
+	float scalingRatio = 1.0f;
+	edge.Set(b2Vec2(x1 / scalingRatio, y1 / scalingRatio), b2Vec2(x2 / scalingRatio, y2 / scalingRatio));
+
+	Name = name;
+
+	startingPosition = sf::Vector2f (x1, y1);
+
+	fixtureDef.shape = &edge;
+	fixtureDef.density = 0.0f;
+	fixtureDef.friction = 1.0f;
+	fixtureDef.m_color = new b2Color(0.0f, 0.0f, 1.0f, 1.0f);
+	fixtureDef.filter.categoryBits = Singleton<SmashWorld>::Get()->PLATFORM;
+
+	fixture = body->CreateFixture(&fixtureDef);
+
+	entity_type = Constants::ENTITY_TYPE_RIGID_BODY;
+	in_the_air = true;
+	facing_right = true;
+	isMovingPlatform = false;
+	isElevator = false;
+	isElevatorStopped = true;
+	previousMovingVelocity = sf::Vector2f(0.0f, 0.0f);
+	TiedArtImageFileName = "";
+
+	body->SetUserData(this);
+}
+
 void Box2DRigidBody::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	current_frame = curr_frame;
 

@@ -145,7 +145,7 @@ BoulderCreature::BoulderCreature(Json::Value jsonUnitInMapData, Json::Value json
 
 	//interactionCircleFixture->SetActive(is_interactable && interaction_radius > 0.0f);
 
-	if (is_interactable) {
+	if (is_interactable || is_destructible) {
 		topCircleFixture->SetSensor(true);
 		botCircleFixture->SetSensor(true);
 		centerBoxFixture->SetSensor(true);
@@ -424,7 +424,7 @@ bool BoulderCreature::IsNearPlayer(sf::Vector2f player_screen_pos, sf::Vector2f 
 void BoulderCreature::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
-	if (flyingUnit && wasInHitStun && !hit_stun_timer->IsActive() && hit_points > 0) {
+	if ((flyingUnit && wasInHitStun && !hit_stun_timer->IsActive() && hit_points > 0) || is_destructible) {
 		body->SetGravityScale(0.0f);
 	}
 	wasInHitStun = hit_stun_timer->IsActive();
@@ -533,11 +533,12 @@ void BoulderCreature::UpdateBehavior() {
 
 		if (distance < attackDistance) {
 			if (!IsAnAttackActive()) {
-				if (target->GetBody()->GetPosition().x < body->GetPosition().x && IsFacingRight()) {
-					SetFacingRight(false);
-				}
-				else if (target->GetBody()->GetPosition().x > body->GetPosition().x && !IsFacingRight()) {
-					SetFacingRight(true);
+				if (hit_points > 0) {
+					if (target->GetBody()->GetPosition().x < body->GetPosition().x && IsFacingRight()) {
+						SetFacingRight(false);
+					} else if (target->GetBody()->GetPosition().x > body->GetPosition().x && !IsFacingRight()) {
+						SetFacingRight(true);
+					}
 				}
 
 				UseAttack(0);
@@ -585,7 +586,6 @@ void BoulderCreature::UpdateBehavior() {
 		}
 	} else if (is_destructible) {
 		body->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
-
 
 		if (hit_points <= 0) {
 			if (dying_animation_timer->IsActive()) {
@@ -655,25 +655,27 @@ void BoulderCreature::Draw(sf::Vector2f camera_position) {
 
 	DrawAnimationsBasedOnState(camera_position);
 
-	std::size_t foundPlayer = name.find("Player");
-	std::size_t foundBoss = name.find("Boss");
-	if (foundPlayer == std::string::npos && foundBoss == std::string::npos) {
-		float percent_health = ((float)hit_points / (float)max_hit_points);
+	if (!is_destructible) {
+		std::size_t foundPlayer = name.find("Player");
+		std::size_t foundBoss = name.find("Boss");
+		if (foundPlayer == std::string::npos && foundBoss == std::string::npos) {
+			float percent_health = ((float)hit_points / (float)max_hit_points);
 
-		healthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_health, 5.0f));
-		healthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
-		healthBarRect->setFillColor(sf::Color((int)(0.0f + (255.0f - (float)hit_points / (float)max_hit_points) * 255.0f), (int)((float)hit_points / (float)max_hit_points * 255.0f), 0, 255));
+			healthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_health, 5.0f));
+			healthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
+			healthBarRect->setFillColor(sf::Color((int)(0.0f + (255.0f - (float)hit_points / (float)max_hit_points) * 255.0f), (int)((float)hit_points / (float)max_hit_points * 255.0f), 0, 255));
 
-		float percent_cash_in_health = ((float)cashinable_hit_point_value / (float)max_hit_points);
+			float percent_cash_in_health = ((float)cashinable_hit_point_value / (float)max_hit_points);
 
-		cashInHealthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_cash_in_health, 5.0f));
-		cashInHealthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
+			cashInHealthBarRect->setSize(sf::Vector2f(starting_health_bar_width * percent_cash_in_health, 5.0f));
+			cashInHealthBarRect->setPosition(sf::Vector2f((body->GetPosition().x - 0.5f - camera_position.x) * 40.0f, (body->GetPosition().y - 0.6f - camera_position.y) * 40.0f));
 
-		render_window->draw(*cashInHealthBarRect);
-	}
+			render_window->draw(*cashInHealthBarRect);
+		}
 
-	if (hit_points > 0) {
-		render_window->draw(*healthBarRect);
+		if (hit_points > 0) {
+			render_window->draw(*healthBarRect);
+		}
 	}
 
 	if (is_interactable && draw_interaction_button) {
@@ -886,6 +888,10 @@ void BoulderCreature::ReverseHorizontalDirectionIfInHitStun() {
 }
 
 void BoulderCreature::AddPlatformContact(Box2DRigidBody* platform) {
+	//if (CanGrind && !IsGrinding && platform->IsGrindRail) {
+	//	IsGrinding = true;
+	//}
+
 	if ((int)platformContacts.size() == 0) {
 		Land();
 	}
@@ -903,6 +909,7 @@ void BoulderCreature::RemovePlatformContact(Box2DRigidBody* platform) {
 	std::vector<Box2DRigidBody*>::iterator found_item = std::find(platformContacts.begin(), platformContacts.end(), platform);
 	if (found_item != platformContacts.end())
 	{
+
 		platformContacts.erase(found_item);
 	}
 }
@@ -1032,7 +1039,7 @@ void BoulderCreature::TakeDamage(int damage, sf::Vector2f knock_back, int hit_st
 			knockBackMultiplier = 1.0f;
 		}
 
-		if (interrupt_attack) {
+		if (interrupt_attack && !is_destructible) {
 			hit_stun_timer = new StatusTimer((int)((hit_stun_frames > 0 ? hit_stun_frames : -hit_stun_frames) * hitStunMultiplier));
 			hit_stun_timer->Start();
 

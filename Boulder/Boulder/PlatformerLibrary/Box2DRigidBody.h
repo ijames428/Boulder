@@ -20,6 +20,8 @@ protected:
 	b2Vec2 points[3];
 	b2Body* body;
 	b2Fixture *fixture;
+
+	b2EdgeShape edge;
 private:
 	int entity_type;
 	sf::Vector2f current_position;
@@ -59,6 +61,7 @@ public:
 	Box2DRigidBody(sf::RenderWindow *window, bool subject_to_gravity = false, bool subject_to_collision = true);
 	Box2DRigidBody(sf::RenderWindow *window, string name, vector<string> json_points, bool subject_to_gravity = false, bool subject_to_collision = true);
 	Box2DRigidBody(sf::RenderWindow *window, string name, sf::Vector2f position, sf::Vector2f dimensions, bool subject_to_gravity = false, bool subject_to_collision = true);
+	Box2DRigidBody(sf::RenderWindow *window, string name, float x1, float y1, float x2, float y2, bool subject_to_gravity = false, bool subject_to_collision = true);
 	virtual void Update(sf::Int64 curr_time, sf::Int64 delta_time);
 	virtual void Draw(sf::Vector2f camera_position);
 	static float GetDistanceBetweenTwoPoints(sf::Vector2f point_a, sf::Vector2f point_b);
@@ -73,6 +76,7 @@ public:
 	void HandleCollision();
 	bool IfShouldUpdate(sf::Vector2f player_screen_pos, sf::Vector2f viewport_dimensions);
 	string Name;
+	bool IsGrindRail = false;
 	void SetPassThrough(bool pass_through);
 	bool IsPassThroughable();
 	string TiedArtImageFileName;

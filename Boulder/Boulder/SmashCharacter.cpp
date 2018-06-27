@@ -15,6 +15,7 @@ SmashCharacter::SmashCharacter(int player_idx, Json::Value playerBestiaryData, s
 	player_index = player_idx;
 	is_interactable = false;
 	can_take_input = true;
+	CanGrind = true;
 
 	hit_points = max_hit_points = playerBestiaryData["DictOfUnits"]["Player"]["HitPoints"].asInt();
 
@@ -205,6 +206,24 @@ void SmashCharacter::ApplySaveDataToObjectData(Json::Value& save_data) {
 void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	Creature::Update(curr_frame, delta_time);
 
+	bool grind_rail_found = false;
+	int platforms_contacts_size = platformContacts.size();
+	for (int i = 0; i < platforms_contacts_size; i++) {
+		if (platformContacts[i]->IsGrindRail) {
+			grind_rail_found = true;
+				
+			if (IsSkateboarding) {
+				IsGrinding = true;
+			}
+
+			break;
+		}
+	}
+
+	if (!grind_rail_found) {
+		IsGrinding = false;
+	}
+
 	UpdateSpeedUpValues();
 
 	b2Vec2 body_lin_vel = body->GetLinearVelocity();
@@ -235,7 +254,7 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 	}
 	
 	if (jumpStartUpTimerWasActiveLastFrame && !jumpStartUpTimer->IsActive()) {
-		ActuallyJump(releasedJumpButton);
+		ActuallyJump(releasedJumpButton || IsSkateboarding || IsGrinding);
 	} else if (anAttackWasActiveLastFrame && !IsAnAttackActive() && !landing_animation_timer->IsActive()) {
 		if (jumpInputBufferWasActiveLastFrame && !jumpInputBuffer->IsActive()) {
 			StartJump();
@@ -281,7 +300,7 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 		State = STATE_ATTACKING;
 	} else if (timerForMinimumTimeBetweenSpeedUps->IsActive()) {
 		State = STATE_SKATE_KICKING;
-	} else if (IsSkateboarding) {
+	} else if (IsSkateboarding || IsGrinding) {
 		State = STATE_SKATING;
 	} else if (IsInTheAir()) {
 		if (body->GetLinearVelocity().y < -1.0f) {
@@ -316,6 +335,9 @@ void SmashCharacter::Update(sf::Int64 curr_frame, sf::Int64 delta_time) {
 			LeftFootStepSound.play();
 		}
 	} else if (State == STATE_ATTACKING) {
+		if (!IsInTheAir()) {
+			body->SetLinearVelocity(b2Vec2(body_lin_vel.x * 0.9f, body_lin_vel.y * 0.9f));
+		}
 		int currentAttackIndex = GetActiveAttackIndex();
 		if (currentAttackIndex < (int)AttackAnimationSounds.size()) {
 			if (attacking_animations[currentAttackIndex]->GetCurrentFrame() == AttackAnimationSoundFrames[currentAttackIndex]) {
@@ -504,9 +526,17 @@ void SmashCharacter::HandleDpadUpRelease() {
 }
 
 void SmashCharacter::HandleDpadDownPress() {
+	Singleton<SmashWorld>::Get()->TakeHeadphonesOff();
 }
 
 void SmashCharacter::HandleDpadDownRelease() {
+	Singleton<SmashWorld>::Get()->PutHeadphonesOn();
+}
+
+void SmashCharacter::StartJump() {
+	//if (!IsGrinding) {
+		BoulderCreature::StartJump();
+	//}
 }
 
 void SmashCharacter::ActuallyJump(bool short_hop) {
@@ -524,7 +554,7 @@ void SmashCharacter::ActuallyJump(bool short_hop) {
 		if (jumping) {
 			maxAirSpeed = body->GetLinearVelocity().x;
 
-			body->SetLinearVelocity(b2Vec2(maxAirSpeed, short_hop ? -jump_power * 0.8f : -jump_power));
+			body->SetLinearVelocity(b2Vec2(maxAirSpeed, short_hop ? -jump_power * 0.6f : -jump_power));
 			SetInTheAir(true);
 		}
 	}
@@ -540,7 +570,7 @@ void SmashCharacter::UpdateSpeedUpValues() {
 }
 
 void SmashCharacter::HandleLeftStickInput(float horizontal, float vertical) {
-	if (!IsSkateboarding || IsInTheAir()) {
+	if ((!IsSkateboarding && !IsGrinding) || IsInTheAir()) {
 		Move(horizontal, vertical);
 	}
 
@@ -606,7 +636,6 @@ void SmashCharacter::HandleButtonYRelease() {
 void SmashCharacter::HandleButtonRightBumperPress() {
 	IsSkateboarding = true;
 	botCircleFixture->SetFriction(0.0f);
-	centerBoxFixture->SetFriction(0.0f);
 
 	Singleton<SmashWorld>::Get()->StartedUsingSkateBoard();
 }
@@ -614,19 +643,33 @@ void SmashCharacter::HandleButtonRightBumperPress() {
 void SmashCharacter::HandleButtonRightBumperRelease() {
 	IsSkateboarding = false;
 	botCircleFixture->SetFriction(1.0f);
-	centerBoxFixture->SetFriction(1.0f);
 
 	Singleton<SmashWorld>::Get()->PutAwaySkateBoard();
 }
 
 void SmashCharacter::HandleButtonLeftBumperPress() {
-	if (IsSkateboarding && currentNumberOfSpeedUpsAvailable > 0 && !IsInTheAir() && !timerForMinimumTimeBetweenSpeedUps->IsActive()) {
-		currentNumberOfSpeedUpsAvailable--;
-		timeOfLastSpeedUpUse = current_frame;
-		timerForMinimumTimeBetweenSpeedUps->Start();
-
+	if (IsSkateboarding && !IsGrinding && currentNumberOfSpeedUpsAvailable > 0 && !IsInTheAir() && !timerForMinimumTimeBetweenSpeedUps->IsActive()) {
 		b2Vec2 vel = body->GetLinearVelocity();
-		body->SetLinearVelocity(b2Vec2(vel.x * 2.5f, vel.y * 2.5f));
+		int speed_tier = (int)vel.Length() / (int)speed;
+		cout << to_string(speed_tier) << "\n";
+		float new_speed = speed * (speed_tier + 2);
+
+		if (vel.Length() < new_speed) {
+			currentNumberOfSpeedUpsAvailable--;
+			timeOfLastSpeedUpUse = current_frame;
+			timerForMinimumTimeBetweenSpeedUps->Start();
+
+			if (vel.Length() <= 0.001f) {
+				if (IsFacingRight()) {
+					body->SetLinearVelocity(b2Vec2(1.0f * new_speed, 0.0f));
+				} else {
+					body->SetLinearVelocity(b2Vec2(-1.0f * new_speed, 0.0f));
+				}
+			} else {
+				vel.Normalize();
+				body->SetLinearVelocity(b2Vec2(vel.x * new_speed, vel.y * new_speed));
+			}
+		}
 	}
 	//running = true;
 }
@@ -637,6 +680,8 @@ void SmashCharacter::HandleButtonLeftBumperRelease() {
 
 void SmashCharacter::AddPlatformContact(Box2DRigidBody* platform) {
 	BoulderCreature::AddPlatformContact(platform);
+}
 
-	//platform->
+void SmashCharacter::RemovePlatformContact(Box2DRigidBody* platform) {
+	BoulderCreature::RemovePlatformContact(platform);
 }

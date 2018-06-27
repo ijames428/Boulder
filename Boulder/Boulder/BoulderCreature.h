@@ -93,7 +93,7 @@ protected:
 	bool has_double_jump;
 	void Move(float horizontal, float vertical);
 	bool IsJumping();
-	void StartJump();
+	virtual void StartJump();
 	virtual void ActuallyJump(bool short_hop = false);
 	void UseAttack(int move_type, bool activate_buffer = true);
 	sf::RectangleShape* healthBarRect;
@@ -215,7 +215,7 @@ public:
 	bool IsAnAttackActive();
 	virtual void Land();
 	virtual void AddPlatformContact(Box2DRigidBody* platform);
-	void RemovePlatformContact(Box2DRigidBody* platform);
+	virtual void RemovePlatformContact(Box2DRigidBody* platform);
 	void Aggro(BoulderCreature* new_target);
 	virtual void Deaggro();
 	void SetInteractable(BoulderCreature* new_interactable);
@@ -239,6 +239,11 @@ public:
 	bool IsDestructible() {
 		return is_destructible;
 	};
+
+	/* SKATEBOARDING VARIABLES */
+	bool IsSkateboarding;
+	bool IsGrinding;
+	bool CanGrind = false;
 
 	void MakeIntoFlyingUnit();
 

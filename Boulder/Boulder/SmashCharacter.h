@@ -25,6 +25,7 @@ private:
 	void DashPunch();
 	void ThrowWeapon();
 	void TeleportToWeapon();
+
 	sf::RectangleShape* healthBarBackgroundRect;
 	bool teleportedSinceLastLanding;
 	bool rightStickWasCentered;
@@ -43,8 +44,10 @@ private:
 	sf::Color speedUpRectColor;
 	std::vector<sf::RectangleShape*> speedUpRects;
 protected:
+	virtual void StartJump();
 	virtual void ActuallyJump(bool short_hop = false);
 	virtual void DrawAnimationsBasedOnState(sf::Vector2f camera_position);
+
 	const int STATE_SKATING = 100;
 	const int STATE_SKATE_KICKING = 101;
 public:
@@ -55,17 +58,15 @@ public:
 	virtual void ApplySaveDataToObjectData(Json::Value& save_data);
 	virtual void TakeDamage(int damage, sf::Vector2f knock_back, int hit_stun_frames, bool pop_up_grounded_enemies);
 	virtual void ReceiveHeal(int heal);
+	virtual void Land();
+	virtual void UpdateEffectsVolumes(float new_effects_volume);
+	virtual void AddPlatformContact(Box2DRigidBody* platform);
+	virtual void RemovePlatformContact(Box2DRigidBody* platform);
+	virtual int GetDamageOfCurrentAttack();
 	void UpdateHealthBar();
 	void ForcedRecall();
-	virtual void Land();
 	void DetermineWhichAttackToUseAndActivateIt(float x_input, float y_input);
-	virtual int GetDamageOfCurrentAttack();
-	virtual void UpdateEffectsVolumes(float new_effects_volume);
 	void UpdateSpeedUpValues();
-	virtual void AddPlatformContact(Box2DRigidBody* platform);
-
-	/* SKATEBOARDING VARIABLES */
-	bool IsSkateboarding;
 
 	virtual int GetPlayerIndex() {
 		return player_index;

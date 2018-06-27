@@ -65,6 +65,16 @@ public:
 
 	/// Draw a line segment.
 	virtual void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color) {
+		std::vector<sf::Vertex> drawable_vertices;
+		sf::Color vertex_color = sf::Color((sf::Uint8)color.r * (sf::Uint8)255.0f, (sf::Uint8)color.g * (sf::Uint8)255.0f, (sf::Uint8)color.b * (sf::Uint8)255.0f, (sf::Uint8)color.a * (sf::Uint8)255.0f);
+
+		drawable_vertices.push_back(sf::Vertex(sf::Vector2f((p1.x - camera->viewport_position.x) * PIXEL_SCALE, (p1.y - camera->viewport_position.y) * PIXEL_SCALE - 2.0f), vertex_color));
+		drawable_vertices.push_back(sf::Vertex(sf::Vector2f((p2.x - camera->viewport_position.x) * PIXEL_SCALE, (p2.y - camera->viewport_position.y) * PIXEL_SCALE - 2.0f), vertex_color));
+		drawable_vertices.push_back(sf::Vertex(sf::Vector2f((p2.x - camera->viewport_position.x) * PIXEL_SCALE, (p2.y - camera->viewport_position.y) * PIXEL_SCALE + 2.0f), vertex_color));
+		drawable_vertices.push_back(sf::Vertex(sf::Vector2f((p1.x - camera->viewport_position.x) * PIXEL_SCALE, (p1.y - camera->viewport_position.y) * PIXEL_SCALE + 2.0f), vertex_color));
+		drawable_vertices.push_back(sf::Vertex(sf::Vector2f((p1.x - camera->viewport_position.x) * PIXEL_SCALE, (p1.y - camera->viewport_position.y) * PIXEL_SCALE - 2.0f), vertex_color));
+
+		render_window->draw(&drawable_vertices[0], drawable_vertices.size(), sf::Quads);
 	}
 
 	/// Draw a transform. Choose your own length scale.

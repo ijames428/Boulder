@@ -23,6 +23,13 @@ void SmashWorld::Init(sf::RenderWindow* window, Camera* cam, float frames_per_se
 	past_setup = false;
 	saveSlot = save_slot;
 
+	framesBetweenDialogueCharactersAppearing = 10;
+	frameOfLastDialogueCharacterAppeared = 0;
+	doesPlayerHaveHeadphonesOn = true;
+	dialogueStringThatIsBeingSaid = "";
+	dialogueStringThatIsAppearing = "";
+	numberOfDialogueCharactersBeingDisplayed = 0;
+
 	//if (!shader.loadFromFile("Shaders/colorShading.vert", "Shaders/colorShading.frag"))
 	//{
 	//	cout << "Unable to find colorShading.vert\n";
@@ -319,12 +326,11 @@ void SmashWorld::Setup() {
 	exit_to_main_menu = false;
 	unit_type_player_is_talking_to = "";
 	boss_one_fight_started = false;
-
+	
 	gravity = new b2Vec2(0.0f, 30.0f);
 	world = new b2World(*gravity);
 
-	//ParseWorld("Maps\\TestMap");
-	//ParseWorld("Maps\\TestSkateboard");
+	//ParseWorld("Maps\\TestRails");
 	ParseWorld("Maps\\PreAlphaMap");
 	ParsePlayerBestiary("Units\\PlayerBestiary.txt");
 	ParseBestiaries();
@@ -506,11 +512,12 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		camera->Update(current_frame, frame_delta, PlayerOne->GetBody()->GetPosition().x, PlayerOne->GetBody()->GetPosition().y);
 
 		if (unit_type_player_is_talking_to != "") {
+			b2Vec2 body_lin_vel = PlayerOne->GetBody()->GetLinearVelocity();
+			PlayerOne->GetBody()->SetLinearVelocity(b2Vec2(body_lin_vel.x * 0.9f, body_lin_vel.y));
 			player_menu_input->Update();
 		} else {
 			player_character_input->Update();
 		}
-
 
 		for (int i = 0; i < zones[currentZone - 1]->parallax_background_sprites_size; i++) {
 			zones[currentZone - 1]->parallax_background_viewport_position = sf::Vector2f(-(zones[currentZone - 1]->x + camera->viewport_position.x * (i * 3.0f)), -(zones[currentZone - 1]->y + camera->viewport_position.y * (i * 3.0f)));
@@ -594,6 +601,8 @@ bool SmashWorld::Update(sf::Int64 curr_frame, sf::Int64 frame_delta) {
 		}
 
 		render_window->draw(*ButtonsSprite);
+
+		HandleDisplayingNextDialogueCharacter();
 		render_window->draw(dialogue_text);
 	}
 
@@ -687,6 +696,7 @@ void SmashWorld::BuildWorld() {
 	Json::Value player_data = jsonWorldData["player"];
 	Json::Value rectangles_data = jsonWorldData["rectangles"];
 	Json::Value triangles_data = jsonWorldData["triangles"];
+	Json::Value rails_data = jsonWorldData["rails"];
 	Json::Value doors_data = jsonWorldData["doors"];
 	Json::Value triggers_data = jsonWorldData["triggers"];
 	Json::Value units_data = jsonWorldData["units"];
@@ -749,6 +759,24 @@ void SmashWorld::BuildWorld() {
 		vects.push_back(triangle_data["points"][2].asString());
 
 		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, triangle_data["name"].asString(), vects));
+	}
+
+	Json::Value rail_data;
+	int rails_data_size = (int)rails_data.size();
+	for (int i = 0; i < rails_data_size; i++) {
+		rail_data = rails_data[i];
+
+		float x1 = rail_data["x"].asFloat() / (scalingRatio * 2.0f);
+		float y1 = rail_data["y"].asFloat() / (scalingRatio * 2.0f);
+		float x2 = rail_data["x_prime"].asFloat() / (scalingRatio * 2.0f);
+		float y2 = rail_data["y_prime"].asFloat() / (scalingRatio * 2.0f);
+		x2 += x2 - x1;
+		y2 += y2 - y1;
+		
+		cout << x1 << " " << y1 << " " << x2 << " " << y2 << "\n";
+
+		box2dRigidBodies.push_back(new Box2DRigidBody(render_window, rail_data["name"].asString(), x1, y1, x2, y2));
+		box2dRigidBodies.back()->IsGrindRail = true;
 	}
 
 	doors.clear();
@@ -969,21 +997,73 @@ void SmashWorld::StartDialogue(string unit_type, string unit_name) {
 }
 
 void SmashWorld::ProgressDialogueText() {
-	if (CurrentDialogueLine == nullptr) {
-		CurrentDialogueLine = RootDialogueLine->GetFirstRelevantDialogueLine(StageOfTheGame);
-	} else if (CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame) != nullptr) {
-		CurrentDialogueLine = CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame);
+	if (dialogueStringThatIsBeingSaid != "" && numberOfDialogueCharactersBeingDisplayed != (int)dialogueStringThatIsBeingSaid.length() - 1) {
+		for (int i = numberOfDialogueCharactersBeingDisplayed; i < (int)dialogueStringThatIsBeingSaid.length(); i++) {
+			if (doesPlayerHaveHeadphonesOn) {
+				string newCharacter = dialogueStringThatIsBeingSaid.substr(i, 1);
+
+				if (newCharacter == " " || newCharacter == "\n") {
+					dialogueStringThatIsAppearing.append(newCharacter);
+				} else {
+					dialogueStringThatIsAppearing.append("X");
+				}
+			} else {
+				dialogueStringThatIsAppearing.append(dialogueStringThatIsBeingSaid.substr(i, 1));
+			}
+		}
+
+		dialogue_text.setString(dialogueStringThatIsAppearing);
+
+		numberOfDialogueCharactersBeingDisplayed = (int)dialogueStringThatIsBeingSaid.length() - 1;
 	} else {
-		CloseDialogue();
+		if (CurrentDialogueLine == nullptr) {
+			CurrentDialogueLine = RootDialogueLine->GetFirstRelevantDialogueLine(StageOfTheGame);
+		} else if (CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame) != nullptr) {
+			CurrentDialogueLine = CurrentDialogueLine->GetNextDialogueLine(StageOfTheGame);
+		} else {
+			CloseDialogue();
+		}
+
+		player_menu_input->EatInputsForNumberOfFrames(1);
+
+		if (CurrentDialogueLine != nullptr) {
+			numberOfDialogueCharactersBeingDisplayed = 0;
+			dialogueStringThatIsAppearing = "";
+			dialogueStringThatIsBeingSaid = CurrentDialogueLine->Line;
+
+			if (CurrentDialogueLine->ExecuteActionsWhenLineIsHit) {
+				UnitBeingTalkedTo->ExecuteActions();
+			}
+		}
 	}
+}
 
-	player_menu_input->EatInputsForNumberOfFrames(1);
+void SmashWorld::HandleDisplayingNextDialogueCharacter() {
+	if (unit_type_player_is_talking_to != "") {
 
-	if (CurrentDialogueLine != nullptr) {
-		dialogue_text.setString(CurrentDialogueLine->Line);
+		if (frameOfLastDialogueCharacterAppeared + framesBetweenDialogueCharactersAppearing < current_frame &&
+			dialogueStringThatIsAppearing.length() != dialogueStringThatIsBeingSaid.length()) {
+			frameOfLastDialogueCharacterAppeared = current_frame;
 
-		if (CurrentDialogueLine->ExecuteActionsWhenLineIsHit) {
-			UnitBeingTalkedTo->ExecuteActions();
+			if (doesPlayerHaveHeadphonesOn) {
+				string newCharacter = dialogueStringThatIsBeingSaid.substr(numberOfDialogueCharactersBeingDisplayed, 1);
+
+				if (newCharacter == " " || newCharacter == "\n") {
+					dialogueStringThatIsAppearing.append(dialogueStringThatIsBeingSaid.substr(numberOfDialogueCharactersBeingDisplayed, 1));
+				} else {
+					dialogueStringThatIsAppearing.append("X");
+				}
+			} else {
+				dialogueStringThatIsAppearing.append(dialogueStringThatIsBeingSaid.substr(numberOfDialogueCharactersBeingDisplayed, 1));
+			}
+
+			dialogue_text.setString(dialogueStringThatIsAppearing.substr(0, numberOfDialogueCharactersBeingDisplayed));
+
+			numberOfDialogueCharactersBeingDisplayed++;
+
+			if (numberOfDialogueCharactersBeingDisplayed == (int)dialogueStringThatIsBeingSaid.length()) {
+				numberOfDialogueCharactersBeingDisplayed = (int)dialogueStringThatIsBeingSaid.length() - 1;
+			}
 		}
 	}
 }
@@ -1155,6 +1235,7 @@ void SmashWorld::CloseDialogue() {
 		unit_type_player_is_talking_to = "";
 		CurrentDialogueLine = nullptr;
 		dialogue_text.setString("");
+		dialogueStringThatIsBeingSaid = "";
 	}
 }
 
@@ -1280,9 +1361,11 @@ void SmashWorld::HandleDpadUpRelease() {
 }
 
 void SmashWorld::HandleDpadDownPress() {
+	TakeHeadphonesOff();
 }
 
 void SmashWorld::HandleDpadDownRelease() {
+	PutHeadphonesOn();
 }
 
 void SmashWorld::UpdateMusic() {
@@ -1303,4 +1386,12 @@ void SmashWorld::PutAwaySkateBoard() {
 void SmashWorld::StartedUsingSkateBoard() {
 	playingSkateboardingMusic = true;
 	musicManager->FadeToSong(travelingMusicFileName);
+}
+
+void SmashWorld::TakeHeadphonesOff() {
+	doesPlayerHaveHeadphonesOn = false;
+}
+
+void SmashWorld::PutHeadphonesOn() {
+	doesPlayerHaveHeadphonesOn = true;
 }
